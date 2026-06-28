@@ -49,6 +49,9 @@ public class AppDbContext : DbContext
     public DbSet<Project> Projects => Set<Project>();
     public DbSet<Attendance> Attendances => Set<Attendance>();
     public DbSet<Payroll> Payrolls => Set<Payroll>();
+    public DbSet<AtfForm> AtfForms => Set<AtfForm>();
+    public DbSet<DtrReport> DtrReports => Set<DtrReport>();
+    public DbSet<ElevatorOrder> ElevatorOrders => Set<ElevatorOrder>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -70,6 +73,9 @@ public class AppDbContext : DbContext
         b.Entity<Product>().HasQueryFilter(e => e.DeletedAt == null && e.TenantId == CurrentTenantId);
         b.Entity<Supplier>().HasQueryFilter(e => e.DeletedAt == null && e.TenantId == CurrentTenantId);
         b.Entity<Project>().HasQueryFilter(e => e.DeletedAt == null && e.TenantId == CurrentTenantId);
+        b.Entity<AtfForm>().HasQueryFilter(e => e.DeletedAt == null && e.TenantId == CurrentTenantId);
+        b.Entity<DtrReport>().HasQueryFilter(e => e.DeletedAt == null && e.TenantId == CurrentTenantId);
+        b.Entity<ElevatorOrder>().HasQueryFilter(e => e.DeletedAt == null && e.TenantId == CurrentTenantId);
 
         b.Entity<WorkOrder>().HasQueryFilter(e => e.DeletedAt == null && e.TenantId == CurrentTenantId);
 
@@ -98,6 +104,16 @@ public class AppDbContext : DbContext
         {
             e.Property(p => p.AssignedUsers).HasColumnType("jsonb");
             e.Property(p => p.Tasks).HasColumnType("jsonb");
+        });
+        b.Entity<AtfForm>(e =>
+        {
+            e.Property(a => a.FormData).HasColumnType("jsonb");
+            e.Property(a => a.Attachments).HasColumnType("jsonb");
+        });
+        b.Entity<DtrReport>(e =>
+        {
+            e.Property(d => d.ChecklistItems).HasColumnType("jsonb");
+            e.Property(d => d.Photos).HasColumnType("jsonb");
         });
 
         b.Entity<OtpCode>().Property(o => o.CreatedAt).HasDefaultValueSql("now()");
