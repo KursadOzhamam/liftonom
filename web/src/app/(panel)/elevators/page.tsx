@@ -1,8 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { api } from "@/lib/api";
-import { Search } from "lucide-react";
+import { api, ApiError } from "@/lib/api";
+import { useOptions } from "@/lib/hooks";
+import Modal, { Field } from "@/components/Modal";
+import { Search, Plus } from "lucide-react";
 
 type Elevator = {
   id: number;
@@ -23,6 +25,7 @@ const TSE: Record<string, { bg: string; text: string; label: string }> = {
   gray:   { bg: "#F3F4F6", text: "#6B7280", label: "Belge Yok" },
 };
 const STATUS: Record<string, string> = { active: "Aktif", passive: "Pasif", faulty: "Arızalı" };
+const emptyForm = { building_id: "", name: "", brand: "", type: "electric", tse_end_date: "", status: "active" };
 
 export default function ElevatorsPage() {
   const [rows, setRows] = useState<Elevator[]>([]);
@@ -30,6 +33,11 @@ export default function ElevatorsPage() {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
+  const [modal, setModal] = useState(false);
+  const [form, setForm] = useState(emptyForm);
+  const [saving, setSaving] = useState(false);
+
+  const buildings = useOptions("/buildings");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -44,10 +52,29 @@ export default function ElevatorsPage() {
 
   useEffect(() => { load(); }, [load]);
 
+  async function create() {
+    setSaving(true);
+    try {
+      await api("/elevators", { method: "POST", body: {
+        building_id: form.building_id ? Number(form.building_id) : null,
+        name: form.name, brand: form.brand || null, type: form.type,
+        tse_end_date: form.tse_end_date || null, status: form.status,
+      } });
+      setModal(false); setForm(emptyForm); load();
+    } catch (e) {
+      alert(e instanceof ApiError ? e.message : "Kaydedilemedi.");
+    } finally { setSaving(false); }
+  }
+
   return (
     <div>
-      <h1 className="text-2xl font-bold text-ink">Asansörler</h1>
-      <p className="mt-1 text-sm text-muted">{meta?.total ?? 0} asansör</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-ink">Asansörler</h1>
+          <p className="mt-1 text-sm text-muted">{meta?.total ?? 0} asansör</p>
+        </div>
+        <button onClick={() => setModal(true)} className="btn-primary"><Plus size={16} /> Yeni</button>
+      </div>
 
       <div className="mt-5 flex items-center gap-2">
         <div className="relative flex-1 max-w-sm">
@@ -112,6 +139,49 @@ export default function ElevatorsPage() {
         <b style={{ color: "#DC2626" }}> Kırmızı</b> geçmiş ·
         <b style={{ color: "#6B7280" }}> Gri</b> belge yok
       </p>
+
+      {modal && (
+        <Modal title="Yeni Asansör" onClose={() => setModal(false)} footer={
+          <>
+            <button onClick={() => setModal(false)} className="rounded-lg border border-line px-4 py-2 text-sm">İptal</button>
+            <button onClick={create} disabled={saving || !form.name} className="btn-primary">
+              {saving ? "Kaydediliyor…" : "Kaydet"}
+            </button>
+          </>
+        }>
+          <Field label="Asansör Adı *">
+            <input className="input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+          </Field>
+          <Field label="Bina">
+            <select className="input" value={form.building_id} onChange={(e) => setForm({ ...form, building_id: e.target.value })}>
+              <option value="">Seçiniz…</option>
+              {buildings.map((b) => <option key={b.id} value={b.id}>{b.label}</option>)}
+            </select>
+          </Field>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Marka">
+              <input className="input" value={form.brand} onChange={(e) => setForm({ ...form, brand: e.target.value })} />
+            </Field>
+            <Field label="Tip">
+              <select className="input" value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })}>
+                <option value="electric">Elektrikli</option>
+                <option value="hydraulic">Hidrolik</option>
+                <option value="escalator">Yürüyen Merdiven</option>
+              </select>
+            </Field>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="TSE Bitiş Tarihi">
+              <input type="date" className="input" value={form.tse_end_date} onChange={(e) => setForm({ ...form, tse_end_date: e.target.value })} />
+            </Field>
+            <Field label="Durum">
+              <select className="input" value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}>
+                <option value="active">Aktif</option><option value="passive">Pasif</option><option value="faulty">Arızalı</option>
+              </select>
+            </Field>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }
