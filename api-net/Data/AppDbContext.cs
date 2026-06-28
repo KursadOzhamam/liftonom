@@ -33,6 +33,7 @@ public class AppDbContext : DbContext
     public DbSet<FaultReport> FaultReports => Set<FaultReport>();
     public DbSet<Region> Regions => Set<Region>();
     public DbSet<WorkOrder> WorkOrders => Set<WorkOrder>();
+    public DbSet<FaultReportComment> FaultReportComments => Set<FaultReportComment>();
 
     // Finans
     public DbSet<Cashbox> Cashboxes => Set<Cashbox>();
@@ -61,6 +62,15 @@ public class AppDbContext : DbContext
         // Ledger / soft-delete'siz — sadece tenant
         b.Entity<CashboxTransaction>().HasQueryFilter(e => e.TenantId == CurrentTenantId);
         b.Entity<Region>().HasQueryFilter(e => e.TenantId == CurrentTenantId);
+
+        // jsonb kolonlar (string olarak ham JSON tutulur)
+        b.Entity<MaintenanceRecord>(e =>
+        {
+            e.Property(m => m.AssignedUsers).HasColumnType("jsonb");
+            e.Property(m => m.Checklist).HasColumnType("jsonb");
+            e.Property(m => m.MaterialsUsed).HasColumnType("jsonb");
+            e.Property(m => m.Photos).HasColumnType("jsonb");
+        });
 
         b.Entity<OtpCode>().Property(o => o.CreatedAt).HasDefaultValueSql("now()");
 
