@@ -3,9 +3,13 @@
 
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\BuildingController;
+use App\Http\Controllers\Api\CashboxController;
+use App\Http\Controllers\Api\CollectionController;
+use App\Http\Controllers\Api\CurrentAccountController;
 use App\Http\Controllers\Api\CustomerController;
 use App\Http\Controllers\Api\ElevatorController;
 use App\Http\Controllers\Api\FaultReportController;
+use App\Http\Controllers\Api\FinanceController;
 use App\Http\Controllers\Api\MaintenanceController;
 use App\Http\Controllers\Api\PublicFaultController;
 use App\Http\Controllers\Api\RegionController;
@@ -89,5 +93,20 @@ Route::prefix('v1')->group(function () {
 
         Route::post('work-orders/{workOrder}/complete', [WorkOrderController::class, 'complete']);
         Route::apiResource('work-orders', WorkOrderController::class)->parameter('work-orders', 'workOrder');
+
+        // --- PHASE 6: Cari & Kasa & Finans ---
+        Route::get('cashboxes', [CashboxController::class, 'index']);
+        Route::post('cashboxes', [CashboxController::class, 'store']);
+        Route::post('cashboxes/transfer', [CashboxController::class, 'transfer']);
+        Route::get('cashboxes/{cashbox}', [CashboxController::class, 'show']);
+        Route::put('cashboxes/{cashbox}', [CashboxController::class, 'update']);
+
+        Route::get('current-accounts', [CurrentAccountController::class, 'index']);
+        Route::get('current-accounts/{customer}', [CurrentAccountController::class, 'show']);
+
+        Route::post('collections', [CollectionController::class, 'store']);
+
+        Route::get('finance/summary', [FinanceController::class, 'summary']);
+        Route::get('finance/monthly', [FinanceController::class, 'monthly']);
     });
 });
