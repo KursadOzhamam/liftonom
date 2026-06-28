@@ -66,6 +66,32 @@ class LedgerService
         });
     }
 
+    /** Kasadan çıkış (gider/maaş vb.) — atomik. */
+    public function cashOut(int $cashboxId, float $amount, ?string $description, string $sourceType, ?int $sourceId, ?int $userId): float
+    {
+        return DB::transaction(function () use ($cashboxId, $amount, $description, $sourceType, $sourceId, $userId) {
+            $cashbox = Cashbox::lockForUpdate()->findOrFail($cashboxId);
+            abort_if((float) $cashbox->balance < $amount, 422, 'Kasada yeterli bakiye yok.');
+
+            $cashbox->balance = (float) $cashbox->balance - $amount;
+            $cashbox->save();
+
+            CashboxTransaction::create([
+                'cashbox_id'    => $cashbox->id,
+                'type'          => 'out',
+                'amount'        => $amount,
+                'balance_after' => $cashbox->balance,
+                'description'   => $description,
+                'source_type'   => $sourceType,
+                'source_id'     => $sourceId,
+                'created_by'    => $userId,
+                'created_at'    => now(),
+            ]);
+
+            return $cashbox->balance;
+        });
+    }
+
     /** Kasalar arası transfer (atomik). */
     public function transfer(int $fromId, int $toId, float $amount, ?int $userId): array
     {

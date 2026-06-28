@@ -11,8 +11,14 @@ use App\Http\Controllers\Api\ElevatorController;
 use App\Http\Controllers\Api\FaultReportController;
 use App\Http\Controllers\Api\ContractController;
 use App\Http\Controllers\Api\FinanceController;
+use App\Http\Controllers\Api\AttendanceController;
 use App\Http\Controllers\Api\InvoiceController;
+use App\Http\Controllers\Api\PayrollController;
+use App\Http\Controllers\Api\ProductController;
+use App\Http\Controllers\Api\ProjectController;
 use App\Http\Controllers\Api\QuoteController;
+use App\Http\Controllers\Api\SupplierController;
+use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\MaintenanceController;
 use App\Http\Controllers\Api\PublicFaultController;
 use App\Http\Controllers\Api\RegionController;
@@ -125,5 +131,22 @@ Route::prefix('v1')->group(function () {
         Route::post('invoices/{invoice}/send', [InvoiceController::class, 'send']);
         Route::post('invoices/{invoice}/pay', [InvoiceController::class, 'pay']);
         Route::apiResource('invoices', InvoiceController::class);
+
+        // --- PHASE 8: Stok & Proje ---
+        Route::get('inventory/low-stock', [ProductController::class, 'lowStock']);
+        Route::get('inventory/movements', [ProductController::class, 'movements']);
+        Route::post('inventory/{product}/stock-in', [ProductController::class, 'stockIn']);
+        Route::post('inventory/{product}/stock-out', [ProductController::class, 'stockOut']);
+        Route::apiResource('inventory', ProductController::class)->parameter('inventory', 'product');
+        Route::apiResource('suppliers', SupplierController::class);
+        Route::apiResource('projects', ProjectController::class);
+
+        // --- PHASE 9: Personel & Devamsızlık & Bordro ---
+        Route::apiResource('users', UserController::class)->middleware('role:manager');
+        Route::get('attendance', [AttendanceController::class, 'index']);
+        Route::post('attendance', [AttendanceController::class, 'store']);
+        Route::delete('attendance/{attendance}', [AttendanceController::class, 'destroy']);
+        Route::get('payroll', [PayrollController::class, 'index']);
+        Route::post('payroll', [PayrollController::class, 'store'])->middleware('role:manager,accounting');
     });
 });
