@@ -2,7 +2,7 @@
 import {
   LayoutDashboard, Users, Building2, ArrowUpDown, ShieldCheck, MapPin,
   Wrench, AlertTriangle, ClipboardList, Wallet, Landmark, FileText,
-  Receipt, Package, MessageSquare, Settings, type LucideIcon,
+  Receipt, Package, MessageSquare, Settings, Crown, type LucideIcon,
 } from "lucide-react";
 
 export type NavItem = { label: string; href: string; icon: LucideIcon };
@@ -51,6 +51,7 @@ export const NAV: NavGroup[] = [
     title: "Sistem",
     items: [
       { label: "SMS", href: "/sms", icon: MessageSquare },
+      { label: "Abonelik", href: "/subscription", icon: Crown },
       { label: "Ayarlar", href: "/settings", icon: Settings },
     ],
   },
