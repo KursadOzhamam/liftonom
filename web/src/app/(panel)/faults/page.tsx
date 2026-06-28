@@ -10,6 +10,7 @@ import { Plus } from "lucide-react";
 
 type Row = {
   id: number; priority: string; status: string; description: string; created_at: string;
+  estimated_repair?: string | null;
   elevator?: { name: string } | null;
 };
 type Paginated = { data: Row[]; meta: { total: number } };
@@ -28,6 +29,7 @@ export default function FaultsPage() {
   const [modal, setModal] = useState(false);
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
+  const [diagnose, setDiagnose] = useState<null | { id: number; estimate: string }>(null);
 
   const elevators = useOptions("/elevators");
 
@@ -53,8 +55,18 @@ export default function FaultsPage() {
     } finally { setSaving(false); }
   }
 
-  async function changeStatus(id: number, newStatus: string) {
-    await api(`/fault-reports/${id}/status`, { method: "PUT", body: { status: newStatus } });
+  async function dispatch(id: number) {
+    await api(`/fault-reports/${id}/dispatch`, { method: "POST", body: {} });
+    load();
+  }
+  async function doDiagnose() {
+    if (!diagnose) return;
+    await api(`/fault-reports/${diagnose.id}/diagnose`, { method: "POST", body: { estimated_repair: diagnose.estimate } });
+    setDiagnose(null); load();
+  }
+  async function resolve(id: number) {
+    if (!confirm("Arıza giderildi olarak işaretle? Müşteriye WhatsApp gönderilecek.")) return;
+    await api(`/fault-reports/${id}/resolve`, { method: "POST", body: {} });
     load();
   }
 
@@ -84,7 +96,7 @@ export default function FaultsPage() {
               <th className="px-4 py-3 font-medium">Açıklama</th>
               <th className="px-4 py-3 font-medium">Öncelik</th>
               <th className="px-4 py-3 font-medium">Durum</th>
-              <th className="px-4 py-3 font-medium text-right">Durum Değiştir</th>
+              <th className="px-4 py-3 font-medium text-right">Yaşam Döngüsü →</th>
             </tr>
           </thead>
           <tbody>
@@ -100,11 +112,30 @@ export default function FaultsPage() {
                   <td className="px-4 py-3 text-ink-soft max-w-xs truncate">{f.description}</td>
                   <td className="px-4 py-3"><Badge status={f.priority} /></td>
                   <td className="px-4 py-3"><Badge status={f.status} /></td>
-                  <td className="px-4 py-3 text-right">
-                    <select value={f.status} onChange={(e) => changeStatus(f.id, e.target.value)}
-                      className="rounded-lg border border-line px-2 py-1 text-xs">
-                      {STATUSES.map((s) => <option key={s.v} value={s.v}>{s.l}</option>)}
-                    </select>
+                  <td className="px-4 py-3">
+                    <div className="flex justify-end gap-2">
+                      {f.status === "new" && (
+                        <button onClick={() => dispatch(f.id)} className="rounded-lg bg-info/10 px-2.5 py-1 text-xs font-medium text-info hover:bg-info/20">
+                          🚗 Yola Çıkar
+                        </button>
+                      )}
+                      {f.status === "investigating" && (
+                        <button onClick={() => setDiagnose({ id: f.id, estimate: "" })} className="rounded-lg bg-warning/10 px-2.5 py-1 text-xs font-medium text-warning hover:bg-warning/20">
+                          🔍 Tespit Et
+                        </button>
+                      )}
+                      {f.status === "repairing" && (
+                        <button onClick={() => resolve(f.id)} className="rounded-lg bg-success/10 px-2.5 py-1 text-xs font-medium text-success hover:bg-success/20">
+                          ✓ Çözüldü
+                        </button>
+                      )}
+                      {(f.status === "resolved" || f.status === "closed") && (
+                        <span className="text-xs text-muted">Tamamlandı</span>
+                      )}
+                      {f.estimated_repair && f.status === "repairing" && (
+                        <span className="text-xs text-muted">~{f.estimated_repair}</span>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))
@@ -136,6 +167,21 @@ export default function FaultsPage() {
           </Field>
           <Field label="Açıklama *">
             <textarea className="input min-h-20" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+          </Field>
+        </Modal>
+      )}
+
+      {diagnose && (
+        <Modal title="Arıza Tespiti" onClose={() => setDiagnose(null)} footer={
+          <>
+            <button onClick={() => setDiagnose(null)} className="rounded-lg border border-line px-4 py-2 text-sm">İptal</button>
+            <button onClick={doDiagnose} disabled={!diagnose.estimate} className="btn-primary">Kaydet & WhatsApp Gönder</button>
+          </>
+        }>
+          <p className="text-sm text-muted">Tahmini onarım süresini girin. Kaydedince müşteriye WhatsApp ile bildirilir.</p>
+          <Field label="Tahmini Onarım Süresi *">
+            <input className="input" placeholder="örn. 2 saat, 1 gün" value={diagnose.estimate}
+              onChange={(e) => setDiagnose({ ...diagnose, estimate: e.target.value })} />
           </Field>
         </Modal>
       )}
