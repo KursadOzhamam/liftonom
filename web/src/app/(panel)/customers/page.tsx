@@ -109,7 +109,9 @@ export default function CustomersPage() {
             ) : (
               rows.map((c) => (
                 <tr key={c.id} className="border-b border-line last:border-0 hover:bg-surface">
-                  <td className="px-4 py-3 font-medium text-ink">{c.name}</td>
+                  <td className="px-4 py-3 font-medium">
+                    <a href={`/customers/${c.id}`} className="text-primary hover:underline">{c.name}</a>
+                  </td>
                   <td className="px-4 py-3">
                     <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${
                       c.type === "corporate" ? "bg-primary-light text-primary" : "bg-surface text-ink-soft"
