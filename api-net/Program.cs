@@ -31,6 +31,13 @@ builder.Services.AddScoped<LedgerService>();
 builder.Services.AddScoped<ScheduledJobs>();
 builder.Services.AddScoped<PdfService>();
 builder.Services.AddScoped<ISmsSender, LogSmsSender>();
+builder.Services.AddScoped<FaultNotificationService>();
+builder.Services.AddHttpClient();
+// WhatsApp: token varsa Meta Cloud API, yoksa log sürücüsü
+if (!string.IsNullOrEmpty(builder.Configuration["WhatsApp:Token"]))
+    builder.Services.AddScoped<IWhatsAppSender, MetaWhatsAppSender>();
+else
+    builder.Services.AddScoped<IWhatsAppSender, LogWhatsAppSender>();
 builder.Services.AddHostedService<DailyJobsHostedService>();
 
 // JWT

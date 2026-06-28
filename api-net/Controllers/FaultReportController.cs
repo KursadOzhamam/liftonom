@@ -10,7 +10,7 @@ namespace LiftOtonom.Api.Controllers;
 [ApiController]
 [Authorize]
 [Route("api/v1/fault-reports")]
-public class FaultReportController(AppDbContext db) : ControllerBase
+public class FaultReportController(AppDbContext db, FaultNotificationService notify) : ControllerBase
 {
     private static readonly string[] Statuses = ["new", "investigating", "repairing", "resolved", "closed"];
 
@@ -18,6 +18,8 @@ public class FaultReportController(AppDbContext db) : ControllerBase
     public record StatusDto(string Status, string? ResolutionNote);
     public record AssignDto(long AssignedUserId);
     public record CommentDto(string Comment);
+    public record DiagnoseDto(string EstimatedRepair);
+    public record ResolveDto(string? ResolutionNote);
 
     [HttpGet]
     public async Task<IActionResult> Index([FromQuery] string? search, [FromQuery] string? status,
@@ -71,7 +73,49 @@ public class FaultReportController(AppDbContext db) : ControllerBase
         };
         db.FaultReports.Add(f);
         await db.SaveChangesAsync();
+        await notify.NotifyAsync(f, FaultNotificationService.Stage.Created); // otonom WhatsApp
         return StatusCode(201, f);
+    }
+
+    /// <summary>Teknisyen yola çıktı → müşteriye WhatsApp.</summary>
+    [HttpPost("{id:long}/dispatch")]
+    public async Task<IActionResult> Dispatch(long id)
+    {
+        var f = await db.FaultReports.FirstOrDefaultAsync(x => x.Id == id) ?? throw new ApiException(404, "Arıza bulunamadı.");
+        f.Status = "investigating";
+        f.DispatchedAt = DateTime.UtcNow;
+        f.UpdatedAt = DateTime.UtcNow;
+        await db.SaveChangesAsync();
+        await notify.NotifyAsync(f, FaultNotificationService.Stage.Dispatched);
+        return Ok(f);
+    }
+
+    /// <summary>Arıza tespit edildi + tahmini onarım süresi → müşteriye WhatsApp.</summary>
+    [HttpPost("{id:long}/diagnose")]
+    public async Task<IActionResult> Diagnose(long id, DiagnoseDto dto)
+    {
+        var f = await db.FaultReports.FirstOrDefaultAsync(x => x.Id == id) ?? throw new ApiException(404, "Arıza bulunamadı.");
+        f.Status = "repairing";
+        f.DiagnosedAt = DateTime.UtcNow;
+        f.EstimatedRepair = dto.EstimatedRepair;
+        f.UpdatedAt = DateTime.UtcNow;
+        await db.SaveChangesAsync();
+        await notify.NotifyAsync(f, FaultNotificationService.Stage.Diagnosed);
+        return Ok(f);
+    }
+
+    /// <summary>Arıza giderildi → müşteriye WhatsApp.</summary>
+    [HttpPost("{id:long}/resolve")]
+    public async Task<IActionResult> Resolve(long id, ResolveDto dto)
+    {
+        var f = await db.FaultReports.FirstOrDefaultAsync(x => x.Id == id) ?? throw new ApiException(404, "Arıza bulunamadı.");
+        f.Status = "resolved";
+        f.ResolvedAt = DateTime.UtcNow;
+        if (dto.ResolutionNote != null) f.ResolutionNote = dto.ResolutionNote;
+        f.UpdatedAt = DateTime.UtcNow;
+        await db.SaveChangesAsync();
+        await notify.NotifyAsync(f, FaultNotificationService.Stage.Resolved);
+        return Ok(f);
     }
 
     [HttpGet("{id:long}")]
@@ -84,7 +128,7 @@ public class FaultReportController(AppDbContext db) : ControllerBase
             .Select(c => new { c.Id, c.Comment, c.CreatedAt, User = c.User == null ? null : new { c.User.Name, c.User.Surname } })
             .ToListAsync();
         return Ok(new { f.Id, f.Priority, f.Status, f.Description, f.ResolutionNote, f.CreatedAt, f.ResolvedAt,
-            f.Elevator, f.AssignedUser, Comments = comments });
+            f.EstimatedRepair, f.DispatchedAt, f.DiagnosedAt, f.Elevator, f.AssignedUser, Comments = comments });
     }
 
     [HttpPut("{id:long}")]

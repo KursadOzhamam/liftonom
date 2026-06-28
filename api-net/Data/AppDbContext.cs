@@ -53,6 +53,7 @@ public class AppDbContext : DbContext
     public DbSet<DtrReport> DtrReports => Set<DtrReport>();
     public DbSet<ElevatorOrder> ElevatorOrders => Set<ElevatorOrder>();
     public DbSet<SmsLog> SmsLogs => Set<SmsLog>();
+    public DbSet<WhatsAppLog> WhatsAppLogs => Set<WhatsAppLog>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -79,6 +80,7 @@ public class AppDbContext : DbContext
         b.Entity<ElevatorOrder>().HasQueryFilter(e => e.DeletedAt == null && e.TenantId == CurrentTenantId);
         b.Entity<SmsLog>().HasQueryFilter(e => e.TenantId == CurrentTenantId);
         b.Entity<SmsPreference>().HasQueryFilter(e => e.TenantId == CurrentTenantId);
+        b.Entity<WhatsAppLog>(e => { e.ToTable("whatsapp_logs"); e.HasQueryFilter(x => x.TenantId == CurrentTenantId); });
 
         b.Entity<WorkOrder>().HasQueryFilter(e => e.DeletedAt == null && e.TenantId == CurrentTenantId);
 

@@ -9,7 +9,7 @@ namespace LiftOtonom.Api.Controllers;
 /// <summary>QR ile GİRİŞSİZ arıza bildirimi (auth YOK).</summary>
 [ApiController]
 [Route("api/v1/public")]
-public class PublicFaultController(AppDbContext db, ITenantContext tenantCtx) : ControllerBase
+public class PublicFaultController(AppDbContext db, ITenantContext tenantCtx, FaultNotificationService notify) : ControllerBase
 {
     public record FaultDto(string? ReporterName, string? ReporterPhone, string Description);
 
@@ -43,6 +43,7 @@ public class PublicFaultController(AppDbContext db, ITenantContext tenantCtx) : 
         };
         db.FaultReports.Add(fault);
         await db.SaveChangesAsync();
+        await notify.NotifyAsync(fault, FaultNotificationService.Stage.Created); // otonom WhatsApp
         return StatusCode(201, new { message = "Arıza talebiniz alındı. Ekibimiz en kısa sürede ilgilenecek.", report_id = fault.Id });
     }
 }

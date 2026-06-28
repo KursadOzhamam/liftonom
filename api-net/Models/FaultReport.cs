@@ -12,6 +12,9 @@ public class FaultReport
     public string? ResolutionNote { get; set; }
     public long? AssignedUserId { get; set; }
     public DateTime? ResolvedAt { get; set; }
+    public string? EstimatedRepair { get; set; }
+    public DateTime? DispatchedAt { get; set; }
+    public DateTime? DiagnosedAt { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
     public DateTime? DeletedAt { get; set; }
