@@ -117,4 +117,115 @@ public class PdfService
 
         return document.GeneratePdf();
     }
+
+    private record CheckItem(string Item, string Status, string? Note);
+
+    private static List<CheckItem> ParseChecklist(string? json)
+    {
+        var list = new List<CheckItem>();
+        if (string.IsNullOrWhiteSpace(json)) return list;
+        try
+        {
+            using var doc = JsonDocument.Parse(json);
+            foreach (var el in doc.RootElement.EnumerateArray())
+                list.Add(new CheckItem(
+                    el.TryGetProperty("item", out var i) ? i.GetString() ?? "" : "",
+                    el.TryGetProperty("status", out var s) ? s.GetString() ?? "" : "",
+                    el.TryGetProperty("note", out var n) ? n.GetString() : null));
+        }
+        catch { /* boş */ }
+        return list;
+    }
+
+    /// <summary>Bakım/servis raporu PDF'i (imza alanlı).</summary>
+    public byte[] GenerateMaintenanceReport(MaintenanceRecord m, Tenant tenant, string elevatorName,
+        string? buildingName, string? checklistJson)
+    {
+        var checklist = ParseChecklist(checklistJson);
+        var typeNames = new Dictionary<string, string>
+        { ["periodic"] = "Periyodik", ["fault"] = "Arıza", ["revision"] = "Revizyon", ["annual"] = "Yıllık" };
+
+        var document = Document.Create(container =>
+        {
+            container.Page(page =>
+            {
+                page.Size(PageSizes.A4);
+                page.Margin(40);
+                page.DefaultTextStyle(x => x.FontSize(10).FontColor("#1E293B"));
+
+                page.Header().Row(row =>
+                {
+                    row.RelativeItem().Column(c =>
+                    {
+                        c.Item().Text(tenant.Name).Bold().FontSize(16).FontColor("#2563EB");
+                        if (!string.IsNullOrEmpty(tenant.Phone)) c.Item().Text(tenant.Phone).FontSize(9).FontColor("#64748B");
+                    });
+                    row.ConstantItem(200).Column(c =>
+                    {
+                        c.Item().AlignRight().Text("BAKIM SERVİS FORMU").Bold().FontSize(16);
+                        c.Item().AlignRight().Text($"#{m.Id}").FontSize(11).FontColor("#64748B");
+                        c.Item().AlignRight().Text((m.CompletedAt ?? m.PlannedDate ?? DateTime.UtcNow).ToString("dd.MM.yyyy")).FontSize(9).FontColor("#64748B");
+                    });
+                });
+
+                page.Content().PaddingVertical(20).Column(col =>
+                {
+                    col.Item().PaddingBottom(4).Row(r =>
+                    {
+                        r.RelativeItem().Text(t => { t.Span("Asansör: ").SemiBold(); t.Span(elevatorName); });
+                        r.RelativeItem().Text(t => { t.Span("Bina: ").SemiBold(); t.Span(buildingName ?? "-"); });
+                    });
+                    col.Item().PaddingBottom(12).Row(r =>
+                    {
+                        r.RelativeItem().Text(t => { t.Span("Bakım Tipi: ").SemiBold(); t.Span(typeNames.GetValueOrDefault(m.Type ?? "", m.Type ?? "-")); });
+                        r.RelativeItem().Text(t => { t.Span("Durum: ").SemiBold(); t.Span(m.Status == "completed" ? "Tamamlandı" : m.Status); });
+                    });
+
+                    if (checklist.Count > 0)
+                    {
+                        col.Item().PaddingBottom(6).Text("Kontrol Listesi").Bold().FontSize(12);
+                        col.Item().Table(table =>
+                        {
+                            table.ColumnsDefinition(cd => { cd.RelativeColumn(4); cd.RelativeColumn(2); cd.RelativeColumn(3); });
+                            table.Header(h =>
+                            {
+                                void HC(string s) => h.Cell().Background("#F1F5F9").Padding(6).Text(s).SemiBold().FontSize(9);
+                                HC("Madde"); HC("Durum"); HC("Not");
+                            });
+                            foreach (var it in checklist)
+                            {
+                                table.Cell().BorderBottom(0.5f).BorderColor("#E2E8F0").Padding(6).Text(it.Item);
+                                table.Cell().BorderBottom(0.5f).BorderColor("#E2E8F0").Padding(6).Text(it.Status);
+                                table.Cell().BorderBottom(0.5f).BorderColor("#E2E8F0").Padding(6).Text(it.Note ?? "-");
+                            }
+                        });
+                    }
+
+                    if (!string.IsNullOrEmpty(m.TechnicianNote))
+                    {
+                        col.Item().PaddingTop(12).Text("Teknisyen Notu").Bold().FontSize(12);
+                        col.Item().PaddingTop(4).Text(m.TechnicianNote!);
+                    }
+
+                    // İmza alanları
+                    col.Item().PaddingTop(40).Row(r =>
+                    {
+                        r.RelativeItem().Column(c =>
+                        {
+                            c.Item().BorderTop(1).BorderColor("#1E293B").PaddingTop(4).AlignCenter().Text("Teknisyen İmza").FontSize(9);
+                        });
+                        r.ConstantItem(40);
+                        r.RelativeItem().Column(c =>
+                        {
+                            c.Item().BorderTop(1).BorderColor("#1E293B").PaddingTop(4).AlignCenter().Text("Müşteri / Yönetici İmza").FontSize(9);
+                        });
+                    });
+                });
+
+                page.Footer().AlignCenter().Text("Liftonom ile oluşturulmuştur").FontSize(8).FontColor("#94A3B8");
+            });
+        });
+
+        return document.GeneratePdf();
+    }
 }

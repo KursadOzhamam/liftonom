@@ -11,7 +11,7 @@ namespace Liftonom.Api.Controllers;
 [ApiController]
 [Authorize]
 [Route("api/v1/maintenance")]
-public class MaintenanceController(AppDbContext db) : ControllerBase
+public class MaintenanceController(AppDbContext db, PdfService pdf) : ControllerBase
 {
     public record CreateDto(long ElevatorId, string Type, DateTime PlannedDate,
         List<long>? AssignedUsers, bool? IsRecurring, string? RecurringPeriod, string? TechnicianNote);
@@ -94,6 +94,17 @@ public class MaintenanceController(AppDbContext db) : ControllerBase
         m.DeletedAt = DateTime.UtcNow;
         await db.SaveChangesAsync();
         return Ok(new { message = "Bakım kaydı silindi." });
+    }
+
+    [HttpGet("{id:long}/pdf")]
+    public async Task<IActionResult> Pdf(long id)
+    {
+        var m = await db.MaintenanceRecords.Include(x => x.Elevator)!.ThenInclude(e => e!.Building)
+            .FirstOrDefaultAsync(x => x.Id == id) ?? throw new ApiException(404, "Bakım kaydı bulunamadı.");
+        var tenant = await db.Tenants.FindAsync(db.CurrentTenantId!.Value);
+        var bytes = pdf.GenerateMaintenanceReport(m, tenant!, m.Elevator?.Name ?? "-",
+            m.Elevator?.Building?.Name, m.Checklist);
+        return File(bytes, "application/pdf", $"bakim-{m.Id}.pdf");
     }
 
     [HttpPost("{id:long}/complete")]

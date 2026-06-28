@@ -1,12 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { api, ApiError } from "@/lib/api";
+import { api, ApiError, downloadFile } from "@/lib/api";
 import { dateTR } from "@/lib/format";
 import { useOptions } from "@/lib/hooks";
 import Badge from "@/components/Badge";
 import Modal, { Field } from "@/components/Modal";
-import { Plus, CheckCircle } from "lucide-react";
+import { Plus, CheckCircle, FileDown } from "lucide-react";
 
 type Row = {
   id: number; type: string; status: string;
@@ -102,12 +102,18 @@ export default function MaintenancePage() {
                   <td className="px-4 py-3 text-ink-soft">{dateTR(m.planned_date)}</td>
                   <td className="px-4 py-3 text-ink-soft">{dateTR(m.completed_at)}</td>
                   <td className="px-4 py-3"><Badge status={m.status} /></td>
-                  <td className="px-4 py-3 text-right">
-                    {m.status !== "completed" && m.status !== "cancelled" && (
-                      <button onClick={() => complete(m.id)} className="inline-flex items-center gap-1 text-xs text-success hover:underline" title="Tamamla">
-                        <CheckCircle size={14} /> Tamamla
+                  <td className="px-4 py-3">
+                    <div className="flex items-center justify-end gap-3">
+                      {m.status !== "completed" && m.status !== "cancelled" && (
+                        <button onClick={() => complete(m.id)} className="inline-flex items-center gap-1 text-xs text-success hover:underline" title="Tamamla">
+                          <CheckCircle size={14} /> Tamamla
+                        </button>
+                      )}
+                      <button onClick={() => downloadFile(`/maintenance/${m.id}/pdf`, `bakim-${m.id}.pdf`)}
+                        className="inline-flex items-center gap-1 text-xs text-primary hover:underline" title="Servis formu PDF">
+                        <FileDown size={14} /> PDF
                       </button>
-                    )}
+                    </div>
                   </td>
                 </tr>
               ))
