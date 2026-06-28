@@ -1,9 +1,9 @@
-using LiftOtonom.Api.Data;
+using Liftonom.Api.Data;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
-namespace LiftOtonom.Api.Controllers;
+namespace Liftonom.Api.Controllers;
 
 [ApiController]
 [Authorize]

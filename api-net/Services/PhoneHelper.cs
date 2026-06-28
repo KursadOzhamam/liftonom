@@ -1,6 +1,6 @@
 using System.Text.RegularExpressions;
 
-namespace LiftOtonom.Api.Services;
+namespace Liftonom.Api.Services;
 
 /// <summary>Türk telefon numarasını E.164'e (+90XXXXXXXXXX) çevirir.</summary>
 public static partial class PhoneHelper

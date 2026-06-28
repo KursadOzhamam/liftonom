@@ -1,10 +1,10 @@
 using System.Text.Json;
-using LiftOtonom.Api.Models;
+using Liftonom.Api.Models;
 using QuestPDF.Fluent;
 using QuestPDF.Helpers;
 using QuestPDF.Infrastructure;
 
-namespace LiftOtonom.Api.Services;
+namespace Liftonom.Api.Services;
 
 public class PdfService
 {
@@ -111,7 +111,7 @@ public class PdfService
                     });
                 });
 
-                page.Footer().AlignCenter().Text("LiftOtonom ile oluşturulmuştur").FontSize(8).FontColor("#94A3B8");
+                page.Footer().AlignCenter().Text("Liftonom ile oluşturulmuştur").FontSize(8).FontColor("#94A3B8");
             });
         });
 

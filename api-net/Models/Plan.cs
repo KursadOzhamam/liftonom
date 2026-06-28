@@ -1,4 +1,4 @@
-namespace LiftOtonom.Api.Models;
+namespace Liftonom.Api.Models;
 
 public class Plan
 {

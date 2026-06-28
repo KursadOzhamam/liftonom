@@ -1,4 +1,4 @@
-namespace LiftOtonom.Api.Services;
+namespace Liftonom.Api.Services;
 
 /// <summary>Her gün 08:00 UTC civarı zamanlanmış görevleri çalıştırır (Laravel scheduler karşılığı).</summary>
 public class DailyJobsHostedService(IServiceScopeFactory scopeFactory, ILogger<DailyJobsHostedService> logger) : BackgroundService

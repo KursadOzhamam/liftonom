@@ -1,8 +1,8 @@
-using LiftOtonom.Api.Data;
-using LiftOtonom.Api.Models;
+using Liftonom.Api.Data;
+using Liftonom.Api.Models;
 using Microsoft.EntityFrameworkCore;
 
-namespace LiftOtonom.Api.Services;
+namespace Liftonom.Api.Services;
 
 /// <summary>Para hareketleri tek DB transaction'ında atomik yazılır (Laravel LedgerService karşılığı).</summary>
 public class LedgerService(AppDbContext db)

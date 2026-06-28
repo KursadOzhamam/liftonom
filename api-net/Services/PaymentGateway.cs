@@ -1,4 +1,4 @@
-namespace LiftOtonom.Api.Services;
+namespace Liftonom.Api.Services;
 
 public record PaymentResult(bool Success, string? PaymentId, string? Raw);
 

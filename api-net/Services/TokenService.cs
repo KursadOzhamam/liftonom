@@ -1,10 +1,10 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
-using LiftOtonom.Api.Models;
+using Liftonom.Api.Models;
 using Microsoft.IdentityModel.Tokens;
 
-namespace LiftOtonom.Api.Services;
+namespace Liftonom.Api.Services;
 
 public class TokenService(IConfiguration config)
 {
@@ -22,8 +22,8 @@ public class TokenService(IConfiguration config)
         };
 
         var token = new JwtSecurityToken(
-            issuer: "LiftOtonom",
-            audience: "LiftOtonom",
+            issuer: "Liftonom",
+            audience: "Liftonom",
             claims: claims,
             expires: DateTime.UtcNow.AddDays(30),
             signingCredentials: creds);
@@ -41,11 +41,11 @@ public class TokenService(IConfiguration config)
             new Claim("scope", "admin"),
             new Claim(ClaimTypes.Name, admin.Email),
         };
-        var token = new JwtSecurityToken("LiftOtonom", "LiftOtonom", claims,
+        var token = new JwtSecurityToken("Liftonom", "Liftonom", claims,
             expires: DateTime.UtcNow.AddDays(7), signingCredentials: creds);
         return new JwtSecurityTokenHandler().WriteToken(token);
     }
 
     public static string JwtKey(IConfiguration config) =>
-        config["Jwt:Key"] ?? "liftotonom-dev-secret-key-change-in-production-please-1234567890";
+        config["Jwt:Key"] ?? "liftonom-dev-secret-key-change-in-production-please-1234567890";
 }

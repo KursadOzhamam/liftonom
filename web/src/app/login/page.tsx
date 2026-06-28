@@ -67,7 +67,7 @@ export default function LoginPage() {
             L
           </div>
           <div>
-            <div className="text-xl font-bold text-ink leading-none">LiftOtonom</div>
+            <div className="text-xl font-bold text-ink leading-none">Liftonom</div>
             <div className="text-xs text-muted mt-1">Asansör Servis Yönetimi</div>
           </div>
         </div>
@@ -143,7 +143,7 @@ export default function LoginPage() {
           )}
         </div>
         <p className="mt-6 text-center text-xs text-muted">
-          © 2026 LiftOtonom · Demo: 0543 123 45 67 / 123456
+          © 2026 Liftonom · Demo: 0543 123 45 67 / 123456
         </p>
       </div>
     </div>

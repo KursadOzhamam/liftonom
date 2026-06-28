@@ -1,8 +1,8 @@
-using LiftOtonom.Api.Data;
-using LiftOtonom.Api.Models;
+using Liftonom.Api.Data;
+using Liftonom.Api.Models;
 using Microsoft.EntityFrameworkCore;
 
-namespace LiftOtonom.Api.Services;
+namespace Liftonom.Api.Services;
 
 public class OtpService(AppDbContext db, ISmsSender sms, IConfiguration config)
 {
@@ -31,7 +31,7 @@ public class OtpService(AppDbContext db, ISmsSender sms, IConfiguration config)
         });
         await db.SaveChangesAsync();
 
-        await sms.SendAsync(phone, $"LiftOtonom doğrulama kodunuz: {code}", "otp");
+        await sms.SendAsync(phone, $"Liftonom doğrulama kodunuz: {code}", "otp");
         return code;
     }
 

@@ -1,7 +1,7 @@
 using System.Text.Json;
-using LiftOtonom.Api.Services;
+using Liftonom.Api.Services;
 
-namespace LiftOtonom.Api.Middleware;
+namespace Liftonom.Api.Middleware;
 
 public class ExceptionMiddleware(RequestDelegate next, ILogger<ExceptionMiddleware> logger)
 {

@@ -1,6 +1,6 @@
-using LiftOtonom.Api.Services;
+using Liftonom.Api.Services;
 
-namespace LiftOtonom.Api.Middleware;
+namespace Liftonom.Api.Middleware;
 
 /// <summary>Kimliği doğrulanmış istekte JWT 'tid' claim'inden tenant'ı bağlama yazar.</summary>
 public class TenantMiddleware(RequestDelegate next)

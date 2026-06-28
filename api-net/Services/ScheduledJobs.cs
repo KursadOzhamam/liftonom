@@ -1,8 +1,8 @@
-using LiftOtonom.Api.Data;
-using LiftOtonom.Api.Models;
+using Liftonom.Api.Data;
+using Liftonom.Api.Models;
 using Microsoft.EntityFrameworkCore;
 
-namespace LiftOtonom.Api.Services;
+namespace Liftonom.Api.Services;
 
 /// <summary>Laravel scheduled command'lerinin karşılığı. Scope içinde çağrılır.</summary>
 public class ScheduledJobs(AppDbContext db, ISmsSender sms, ITenantContext tenant)
@@ -63,7 +63,7 @@ public class ScheduledJobs(AppDbContext db, ISmsSender sms, ITenantContext tenan
             {
                 var phone = e.Building?.ManagerPhone;
                 if (string.IsNullOrEmpty(phone) || tenantRow.SmsBalance <= 0) continue;
-                await sms.SendAsync(phone, $"TSE muayene tarihi yaklaşıyor: {e.Name} ({e.TseEndDate:dd.MM.yyyy}). LiftOtonom", "tse_expiry");
+                await sms.SendAsync(phone, $"TSE muayene tarihi yaklaşıyor: {e.Name} ({e.TseEndDate:dd.MM.yyyy}). Liftonom", "tse_expiry");
                 tenantRow.SmsBalance--;
                 sent++;
             }
@@ -92,7 +92,7 @@ public class ScheduledJobs(AppDbContext db, ISmsSender sms, ITenantContext tenan
             {
                 var phone = m.Elevator?.Building?.ManagerPhone;
                 if (string.IsNullOrEmpty(phone) || tenantRow.SmsBalance <= 0) continue;
-                await sms.SendAsync(phone, $"Bakım hatırlatması: {m.Elevator!.Name} için {m.PlannedDate:dd.MM.yyyy} tarihinde bakım planlandı. LiftOtonom", "maintenance_reminder");
+                await sms.SendAsync(phone, $"Bakım hatırlatması: {m.Elevator!.Name} için {m.PlannedDate:dd.MM.yyyy} tarihinde bakım planlandı. Liftonom", "maintenance_reminder");
                 tenantRow.SmsBalance--;
                 sent++;
             }

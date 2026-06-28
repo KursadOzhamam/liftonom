@@ -1,10 +1,10 @@
-using LiftOtonom.Api.Data;
-using LiftOtonom.Api.Services;
+using Liftonom.Api.Data;
+using Liftonom.Api.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
-namespace LiftOtonom.Api.Controllers;
+namespace Liftonom.Api.Controllers;
 
 [ApiController]
 [Route("api/v1/admin")]

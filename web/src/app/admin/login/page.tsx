@@ -31,7 +31,7 @@ export default function AdminLoginPage() {
       <div className="w-full max-w-sm">
         <div className="mb-6 text-center">
           <div className="mx-auto grid h-12 w-12 place-items-center rounded-xl bg-primary text-xl font-bold text-white">L</div>
-          <h1 className="mt-3 text-xl font-bold text-white">LiftOtonom · Süper Admin</h1>
+          <h1 className="mt-3 text-xl font-bold text-white">Liftonom · Süper Admin</h1>
           <p className="text-sm text-gray-400">Platform yönetim paneli</p>
         </div>
         <form onSubmit={submit} className="rounded-xl bg-white p-6 shadow-lg space-y-4">
@@ -48,7 +48,7 @@ export default function AdminLoginPage() {
             {loading ? "Giriş yapılıyor…" : "Giriş Yap"}
           </button>
         </form>
-        <p className="mt-4 text-center text-xs text-gray-500">Demo: admin@liftotonom.com / admin123</p>
+        <p className="mt-4 text-center text-xs text-gray-500">Demo: admin@liftonom.com / admin123</p>
       </div>
     </div>
   );

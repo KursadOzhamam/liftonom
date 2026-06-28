@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 
-namespace LiftOtonom.Api.Services;
+namespace Liftonom.Api.Services;
 
 public record PageMeta(int CurrentPage, int LastPage, int Total, int PerPage);
 public record PagedResponse<T>(List<T> Data, PageMeta Meta);

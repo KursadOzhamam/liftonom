@@ -1,8 +1,8 @@
-using LiftOtonom.Api.Models;
-using LiftOtonom.Api.Services;
+using Liftonom.Api.Models;
+using Liftonom.Api.Services;
 using Microsoft.EntityFrameworkCore;
 
-namespace LiftOtonom.Api.Data;
+namespace Liftonom.Api.Data;
 
 public class AppDbContext : DbContext
 {

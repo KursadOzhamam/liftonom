@@ -1,11 +1,11 @@
-using LiftOtonom.Api.Data;
-using LiftOtonom.Api.Models;
-using LiftOtonom.Api.Services;
+using Liftonom.Api.Data;
+using Liftonom.Api.Models;
+using Liftonom.Api.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
-namespace LiftOtonom.Api.Controllers;
+namespace Liftonom.Api.Controllers;
 
 [ApiController]
 [Authorize]
@@ -56,7 +56,7 @@ public class SubscriptionController(AppDbContext db, IPaymentGateway gateway) : 
         PaymentResult? pay = null;
         if (plan.MonthlyPrice > 0)
         {
-            pay = await gateway.ChargeAsync(plan.MonthlyPrice, "TRY", $"LiftOtonom {plan.Name} aboneliği");
+            pay = await gateway.ChargeAsync(plan.MonthlyPrice, "TRY", $"Liftonom {plan.Name} aboneliği");
             if (!pay.Success) throw new ApiException(402, "Ödeme alınamadı.");
         }
 

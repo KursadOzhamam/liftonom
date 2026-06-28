@@ -1,8 +1,8 @@
 using System.Text.Json;
-using LiftOtonom.Api.Data;
-using LiftOtonom.Api.Models;
+using Liftonom.Api.Data;
+using Liftonom.Api.Models;
 
-namespace LiftOtonom.Api.Services;
+namespace Liftonom.Api.Services;
 
 public interface IWhatsAppSender
 {

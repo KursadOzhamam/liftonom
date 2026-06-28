@@ -1,10 +1,10 @@
-using LiftOtonom.Api.Data;
-using LiftOtonom.Api.Models;
-using LiftOtonom.Api.Services;
+using Liftonom.Api.Data;
+using Liftonom.Api.Models;
+using Liftonom.Api.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
-namespace LiftOtonom.Api.Controllers;
+namespace Liftonom.Api.Controllers;
 
 /// <summary>QR ile GİRİŞSİZ arıza bildirimi (auth YOK).</summary>
 [ApiController]

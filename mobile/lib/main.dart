@@ -9,16 +9,16 @@ const kPrimary = Color(0xFF2563EB);
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Api.loadToken();
-  runApp(const LiftOtonomApp());
+  runApp(const LiftonomApp());
 }
 
-class LiftOtonomApp extends StatelessWidget {
-  const LiftOtonomApp({super.key});
+class LiftonomApp extends StatelessWidget {
+  const LiftonomApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'LiftOtonom Saha',
+      title: 'Liftonom Saha',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: kPrimary),

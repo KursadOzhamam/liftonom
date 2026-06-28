@@ -1,8 +1,8 @@
-using LiftOtonom.Api.Data;
-using LiftOtonom.Api.Models;
+using Liftonom.Api.Data;
+using Liftonom.Api.Models;
 using Microsoft.EntityFrameworkCore;
 
-namespace LiftOtonom.Api.Services;
+namespace Liftonom.Api.Services;
 
 /// <summary>Arıza yaşam döngüsünde müşteriye/yöneticiye otonom WhatsApp bilgilendirme.</summary>
 public class FaultNotificationService(AppDbContext db, IWhatsAppSender whatsapp)
@@ -26,7 +26,7 @@ public class FaultNotificationService(AppDbContext db, IWhatsAppSender whatsapp)
         if (string.IsNullOrWhiteSpace(phone)) return; // alıcı yoksa sessizce geç
 
         var tenant = await db.Tenants.IgnoreQueryFilters().FirstOrDefaultAsync(t => t.Id == fault.TenantId);
-        var firm = tenant?.Name ?? "LiftOtonom";
+        var firm = tenant?.Name ?? "Liftonom";
         var asansor = ctx?.ElevatorName ?? "asansör";
 
         var message = stage switch

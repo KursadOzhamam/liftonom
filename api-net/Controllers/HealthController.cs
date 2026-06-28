@@ -1,8 +1,8 @@
-using LiftOtonom.Api.Data;
+using Liftonom.Api.Data;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
-namespace LiftOtonom.Api.Controllers;
+namespace Liftonom.Api.Controllers;
 
 [ApiController]
 [Route("api/v1")]
@@ -26,7 +26,7 @@ public class HealthController(AppDbContext db, IHostEnvironment env) : Controlle
         return Ok(new
         {
             status = "ok",
-            app = "LiftOtonom",
+            app = "Liftonom",
             env = env.EnvironmentName.ToLower(),
             time = DateTimeOffset.UtcNow.ToString("o"),
             timezone = "Europe/Istanbul",

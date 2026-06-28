@@ -1,11 +1,11 @@
-using LiftOtonom.Api.Data;
-using LiftOtonom.Api.Models;
-using LiftOtonom.Api.Services;
+using Liftonom.Api.Data;
+using Liftonom.Api.Models;
+using Liftonom.Api.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
-namespace LiftOtonom.Api.Controllers;
+namespace Liftonom.Api.Controllers;
 
 [ApiController]
 [Authorize(Roles = "manager")]
@@ -55,7 +55,7 @@ public class UserController(AppDbContext db, ISmsSender sms) : ControllerBase
         };
         db.Users.Add(u);
         await db.SaveChangesAsync();
-        await sms.SendAsync(phone, $"LiftOtonom hesabınız oluşturuldu. Şifreniz: {plain}", "staff_invite");
+        await sms.SendAsync(phone, $"Liftonom hesabınız oluşturuldu. Şifreniz: {plain}", "staff_invite");
         return StatusCode(201, new { u.Id, u.Name, u.Surname, u.Phone, u.Email, u.Role, u.IsActive });
     }
 

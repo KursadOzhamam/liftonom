@@ -8,7 +8,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "LiftOtonom — Asansör Servis Yönetimi",
+  title: "Liftonom — Asansör Servis Yönetimi",
   description: "Asansör bakım ve servis yönetim platformu",
 };
 

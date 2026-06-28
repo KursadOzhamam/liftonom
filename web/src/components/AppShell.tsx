@@ -43,7 +43,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       <aside className="hidden w-60 shrink-0 flex-col border-r border-line bg-white md:flex">
         <div className="flex h-16 items-center gap-2 border-b border-line px-5">
           <div className="grid h-8 w-8 place-items-center rounded-lg bg-primary text-sm font-bold text-white">L</div>
-          <span className="font-bold text-ink">LiftOtonom</span>
+          <span className="font-bold text-ink">Liftonom</span>
         </div>
         <nav className="flex-1 overflow-y-auto px-3 py-4">
           {NAV.map((group) => (
@@ -77,7 +77,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       {/* Main */}
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="sticky top-0 z-10 flex h-16 items-center justify-between border-b border-line bg-white px-6">
-          <div className="text-sm text-muted md:hidden font-bold text-ink">LiftOtonom</div>
+          <div className="text-sm text-muted md:hidden font-bold text-ink">Liftonom</div>
           <div className="ml-auto flex items-center gap-4">
             {me && (
               <div className="flex items-center gap-2">

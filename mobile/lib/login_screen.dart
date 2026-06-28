@@ -68,7 +68,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   child: const Center(child: Text('L', style: TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.bold))),
                 ),
                 const SizedBox(height: 12),
-                const Text('LiftOtonom Saha', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                const Text('Liftonom Saha', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
                 const Text('Teknisyen Uygulaması', style: TextStyle(color: Colors.grey)),
                 const SizedBox(height: 24),
                 Card(

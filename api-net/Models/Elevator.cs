@@ -1,7 +1,7 @@
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Text.Json.Serialization;
 
-namespace LiftOtonom.Api.Models;
+namespace Liftonom.Api.Models;
 
 public class Elevator
 {

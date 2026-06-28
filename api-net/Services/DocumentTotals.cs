@@ -1,4 +1,4 @@
-namespace LiftOtonom.Api.Services;
+namespace Liftonom.Api.Services;
 
 public record LineItem(string? Description, decimal? Quantity, decimal? UnitPrice);
 

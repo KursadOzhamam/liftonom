@@ -1,8 +1,8 @@
 using System.Text;
 using System.Text.Json;
-using LiftOtonom.Api.Data;
-using LiftOtonom.Api.Middleware;
-using LiftOtonom.Api.Services;
+using Liftonom.Api.Data;
+using Liftonom.Api.Middleware;
+using Liftonom.Api.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -56,8 +56,8 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidateAudience = true,
             ValidateLifetime = true,
             ValidateIssuerSigningKey = true,
-            ValidIssuer = "LiftOtonom",
-            ValidAudience = "LiftOtonom",
+            ValidIssuer = "Liftonom",
+            ValidAudience = "Liftonom",
             IssuerSigningKey = new SymmetricSecurityKey(
                 Encoding.UTF8.GetBytes(TokenService.JwtKey(builder.Configuration))),
         };
@@ -74,13 +74,13 @@ var app = builder.Build();
 // Varsayılan süper admin (idempotent)
 using (var scope = app.Services.CreateScope())
 {
-    var db = scope.ServiceProvider.GetRequiredService<LiftOtonom.Api.Data.AppDbContext>();
+    var db = scope.ServiceProvider.GetRequiredService<Liftonom.Api.Data.AppDbContext>();
     if (!await db.PlatformAdmins.AnyAsync())
     {
-        db.PlatformAdmins.Add(new LiftOtonom.Api.Models.PlatformAdmin
+        db.PlatformAdmins.Add(new Liftonom.Api.Models.PlatformAdmin
         {
             Name = "Süper Admin",
-            Email = "admin@liftotonom.com",
+            Email = "admin@liftonom.com",
             Password = BCrypt.Net.BCrypt.HashPassword("admin123"),
             IsActive = true,
             CreatedAt = DateTime.UtcNow,
