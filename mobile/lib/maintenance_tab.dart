@@ -1,12 +1,12 @@
 // lib/maintenance_tab.dart
 import 'package:flutter/material.dart';
 import 'api.dart';
+import 'theme.dart';
 
 const _typeNames = {'periodic': 'Periyodik', 'fault': 'Arıza', 'revision': 'Revizyon', 'annual': 'Yıllık'};
 const _statusLabels = {'pending': 'Bekliyor', 'in_progress': 'Devam', 'completed': 'Tamamlandı', 'cancelled': 'İptal'};
 const _statusColors = {
-  'pending': Color(0xFF2563EB), 'in_progress': Color(0xFFEA580C),
-  'completed': Color(0xFF16A34A), 'cancelled': Color(0xFFDC2626),
+  'pending': LT.blue, 'in_progress': LT.orange, 'completed': LT.green, 'cancelled': LT.red,
 };
 
 class MaintenanceTab extends StatefulWidget {
@@ -38,9 +38,12 @@ class _MaintenanceTabState extends State<MaintenanceTab> {
   Future<void> _complete(int id) async {
     await Api.request('/maintenance/$id/complete', method: 'POST', body: {});
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Bakım tamamlandı'), backgroundColor: Color(0xFF16A34A)),
-    );
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: const Text('Bakım tamamlandı'),
+      backgroundColor: LT.green,
+      behavior: SnackBarBehavior.floating,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+    ));
     _load();
   }
 
@@ -50,14 +53,15 @@ class _MaintenanceTabState extends State<MaintenanceTab> {
   Widget build(BuildContext context) {
     return RefreshIndicator(
       onRefresh: _load,
+      color: LT.ink,
       child: _loading
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(child: CircularProgressIndicator(color: LT.ink))
           : _items.isEmpty
-              ? ListView(children: const [SizedBox(height: 200), Center(child: Text('Bakım kaydı yok.'))])
+              ? ListView(children: const [SizedBox(height: 220), Center(child: Text('Bakım kaydı yok.', style: TextStyle(color: LT.muted)))])
               : ListView.separated(
-                  padding: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
                   itemCount: _items.length,
-                  separatorBuilder: (_, i) => const SizedBox(height: 10),
+                  separatorBuilder: (_, i) => const SizedBox(height: 12),
                   itemBuilder: (_, i) => _card(_items[i]),
                 ),
     );
@@ -65,36 +69,38 @@ class _MaintenanceTabState extends State<MaintenanceTab> {
 
   Widget _card(dynamic m) {
     final status = m['status'] as String;
-    final c = _statusColors[status] ?? Colors.grey;
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(side: const BorderSide(color: Color(0xFFE5E7EB)), borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(children: [
-              Expanded(child: Text(m['elevator']?['name'] ?? '—', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15))),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(color: c.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(20)),
-                child: Text(_statusLabels[status] ?? status, style: TextStyle(color: c, fontSize: 12, fontWeight: FontWeight.w600)),
-              ),
-            ]),
-            const SizedBox(height: 4),
-            Text('${_typeNames[m['type']] ?? m['type']} · Planlanan: ${_date(m['planned_date'])}',
-                style: const TextStyle(color: Color(0xFF64748B), fontSize: 13)),
-            if (status != 'completed' && status != 'cancelled') ...[
-              const SizedBox(height: 12),
-              SizedBox(width: double.infinity, child: FilledButton.icon(
-                onPressed: () => _complete(m['id'] as int),
-                icon: const Icon(Icons.check, size: 18), label: const Text('Bakımı Tamamla'),
-                style: FilledButton.styleFrom(backgroundColor: const Color(0xFF16A34A)),
-              )),
-            ],
+    final type = (m['type'] ?? '') as String;
+    final open = status != 'completed' && status != 'cancelled';
+    return LtCard(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(children: [
+            LtChip(_typeNames[type] ?? type, LT.yellow),
+            const Spacer(),
+            LtChip(_statusLabels[status] ?? status, _statusColors[status] ?? LT.gray),
+          ]),
+          const SizedBox(height: 12),
+          Text(m['elevator']?['name'] ?? '—', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16, color: LT.ink)),
+          const SizedBox(height: 4),
+          Row(children: [
+            const Icon(Icons.event_rounded, size: 15, color: LT.muted),
+            const SizedBox(width: 5),
+            Text('Planlanan: ${_date(m['planned_date'])}', style: const TextStyle(color: LT.inkSoft, fontSize: 13)),
+          ]),
+          if (open) ...[
+            const SizedBox(height: 14),
+            FilledButton(
+              onPressed: () => _complete(m['id'] as int),
+              child: Row(mainAxisAlignment: MainAxisAlignment.center, children: const [
+                Icon(Icons.check_rounded, size: 18, color: Colors.white),
+                SizedBox(width: 8),
+                Text('Bakımı Tamamla'),
+              ]),
+            ),
           ],
-        ),
+        ],
       ),
     );
   }

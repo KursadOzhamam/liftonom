@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'api.dart';
+import 'theme.dart';
 
 class QrScanScreen extends StatefulWidget {
   const QrScanScreen({super.key});
@@ -13,7 +14,6 @@ class _QrScanScreenState extends State<QrScanScreen> {
   bool _handled = false;
 
   String _extractToken(String raw) {
-    // URL ise son segmenti al, değilse ham değeri kullan
     final cleaned = raw.trim();
     if (cleaned.contains('/')) return cleaned.split('/').where((s) => s.isNotEmpty).last;
     return cleaned;
@@ -27,13 +27,12 @@ class _QrScanScreenState extends State<QrScanScreen> {
 
     final token = _extractToken(value);
     try {
-      // Asansör/bina bilgisini doğrula (girişsiz uç)
       final info = await Api.request('/public/qr/$token', auth: false);
       if (!mounted) return;
       await _showElevatorSheet(token, info);
     } on ApiException catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message), backgroundColor: Colors.red));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message), backgroundColor: LT.red));
     } finally {
       _handled = false;
     }
@@ -46,15 +45,35 @@ class _QrScanScreenState extends State<QrScanScreen> {
     await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      backgroundColor: LT.bg,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
       builder: (ctx) => Padding(
-        padding: EdgeInsets.only(left: 20, right: 20, top: 20, bottom: MediaQuery.of(ctx).viewInsets.bottom + 20),
+        padding: EdgeInsets.only(left: 20, right: 20, top: 12, bottom: MediaQuery.of(ctx).viewInsets.bottom + 24),
         child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(elevator, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-          if (building.isNotEmpty) Text(building, style: const TextStyle(color: Colors.grey)),
-          const SizedBox(height: 16),
-          TextField(controller: desc, maxLines: 3, decoration: const InputDecoration(labelText: 'Arıza açıklaması')),
-          const SizedBox(height: 12),
-          SizedBox(width: double.infinity, child: FilledButton(
+          Center(
+            child: Container(width: 40, height: 4, margin: const EdgeInsets.only(bottom: 18),
+                decoration: BoxDecoration(color: LT.line, borderRadius: BorderRadius.circular(2))),
+          ),
+          Row(children: [
+            Container(
+              width: 44, height: 44,
+              decoration: BoxDecoration(color: LT.ink.withValues(alpha: 0.06), borderRadius: BorderRadius.circular(13)),
+              child: const Icon(Icons.elevator_rounded, color: LT.ink),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text(elevator, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: LT.ink)),
+                if (building.isNotEmpty) Text(building, style: const TextStyle(color: LT.muted, fontSize: 13)),
+              ]),
+            ),
+          ]),
+          const SizedBox(height: 18),
+          TextField(controller: desc, maxLines: 3, decoration: const InputDecoration(hintText: 'Arıza açıklaması')),
+          const SizedBox(height: 14),
+          FilledButton(
             onPressed: () async {
               if (desc.text.trim().isEmpty) return;
               await Api.request('/public/fault-reports/$token', method: 'POST', auth: false,
@@ -62,12 +81,15 @@ class _QrScanScreenState extends State<QrScanScreen> {
               if (!ctx.mounted) return;
               Navigator.pop(ctx);
               if (!mounted) return;
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Arıza kaydı oluşturuldu'), backgroundColor: Color(0xFF16A34A)),
-              );
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                content: const Text('Arıza kaydı oluşturuldu'),
+                backgroundColor: LT.green,
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ));
             },
             child: const Text('Arıza Bildir'),
-          )),
+          ),
         ]),
       ),
     );
@@ -75,17 +97,37 @@ class _QrScanScreenState extends State<QrScanScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Stack(children: [
-      MobileScanner(onDetect: _onDetect),
-      Align(
-        alignment: Alignment.bottomCenter,
-        child: Container(
-          margin: const EdgeInsets.all(24),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-          decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(20)),
-          child: const Text('Asansör QR kodunu okutun', style: TextStyle(color: Colors.white)),
-        ),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(LT.radius),
+        child: Stack(fit: StackFit.expand, children: [
+          MobileScanner(onDetect: _onDetect),
+          // Tarama çerçevesi rehberi
+          Center(
+            child: Container(
+              width: 230, height: 230,
+              decoration: BoxDecoration(
+                border: Border.all(color: Colors.white.withValues(alpha: 0.9), width: 3),
+                borderRadius: BorderRadius.circular(24),
+              ),
+            ),
+          ),
+          Align(
+            alignment: Alignment.bottomCenter,
+            child: Container(
+              margin: const EdgeInsets.all(20),
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+              decoration: BoxDecoration(color: LT.ink.withValues(alpha: 0.85), borderRadius: BorderRadius.circular(30)),
+              child: Row(mainAxisSize: MainAxisSize.min, children: const [
+                Icon(Icons.qr_code_scanner_rounded, color: Colors.white, size: 18),
+                SizedBox(width: 8),
+                Text('Asansör QR kodunu okutun', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+              ]),
+            ),
+          ),
+        ]),
       ),
-    ]);
+    );
   }
 }

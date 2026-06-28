@@ -3,8 +3,9 @@ import 'package:flutter/material.dart';
 import 'api.dart';
 import 'login_screen.dart';
 import 'main_scaffold.dart';
+import 'theme.dart';
 
-const kPrimary = Color(0xFF2563EB);
+const kPrimary = LT.ink;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -20,15 +21,7 @@ class LiftonomApp extends StatelessWidget {
     return MaterialApp(
       title: 'Liftonom Saha',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: kPrimary),
-        scaffoldBackgroundColor: const Color(0xFFF9FAFB),
-        useMaterial3: true,
-        inputDecorationTheme: const InputDecorationTheme(
-          border: OutlineInputBorder(),
-          isDense: true,
-        ),
-      ),
+      theme: LT.theme(),
       home: Api.hasToken ? const MainScaffold() : const LoginScreen(),
     );
   }
