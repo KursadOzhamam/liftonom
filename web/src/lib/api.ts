@@ -56,6 +56,18 @@ export async function api<T = unknown>(path: string, opts: Options = {}): Promis
   const text = await res.text();
   const data = text ? JSON.parse(text) : null;
 
+  // Sayfalama normalize: Laravel düz paginate() üst seviyede meta döndürür;
+  // Resource::collection ise {data, meta}. İkisini de meta'ya çeviriyoruz.
+  if (
+    res.ok && data && typeof data === "object" &&
+    Array.isArray((data as Record<string, unknown>).data) &&
+    (data as Record<string, unknown>).meta === undefined &&
+    (data as Record<string, unknown>).current_page !== undefined
+  ) {
+    const d = data as Record<string, unknown>;
+    d.meta = { current_page: d.current_page, last_page: d.last_page, total: d.total, per_page: d.per_page };
+  }
+
   if (!res.ok) {
     // 401 → oturum bitti
     if (res.status === 401 && typeof window !== "undefined") {
