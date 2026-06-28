@@ -52,6 +52,7 @@ public class AppDbContext : DbContext
     public DbSet<AtfForm> AtfForms => Set<AtfForm>();
     public DbSet<DtrReport> DtrReports => Set<DtrReport>();
     public DbSet<ElevatorOrder> ElevatorOrders => Set<ElevatorOrder>();
+    public DbSet<SmsLog> SmsLogs => Set<SmsLog>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -76,6 +77,8 @@ public class AppDbContext : DbContext
         b.Entity<AtfForm>().HasQueryFilter(e => e.DeletedAt == null && e.TenantId == CurrentTenantId);
         b.Entity<DtrReport>().HasQueryFilter(e => e.DeletedAt == null && e.TenantId == CurrentTenantId);
         b.Entity<ElevatorOrder>().HasQueryFilter(e => e.DeletedAt == null && e.TenantId == CurrentTenantId);
+        b.Entity<SmsLog>().HasQueryFilter(e => e.TenantId == CurrentTenantId);
+        b.Entity<SmsPreference>().HasQueryFilter(e => e.TenantId == CurrentTenantId);
 
         b.Entity<WorkOrder>().HasQueryFilter(e => e.DeletedAt == null && e.TenantId == CurrentTenantId);
 
