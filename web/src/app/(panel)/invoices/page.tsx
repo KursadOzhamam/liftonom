@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { api } from "@/lib/api";
+import { api, downloadFile } from "@/lib/api";
 import { TRY, dateTR } from "@/lib/format";
 import Badge from "@/components/Badge";
+import { FileDown } from "lucide-react";
 
 type Row = {
   id: number; invoice_number: string | null; status: string;
@@ -38,13 +39,14 @@ export default function InvoicesPage() {
               <th className="px-4 py-3 font-medium text-right">Tutar</th>
               <th className="px-4 py-3 font-medium">Vade</th>
               <th className="px-4 py-3 font-medium">Durum</th>
+              <th className="px-4 py-3 font-medium text-right">PDF</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={5} className="px-4 py-10 text-center text-muted">Yükleniyor…</td></tr>
+              <tr><td colSpan={6} className="px-4 py-10 text-center text-muted">Yükleniyor…</td></tr>
             ) : rows.length === 0 ? (
-              <tr><td colSpan={5} className="px-4 py-10 text-center text-muted">Kayıt bulunamadı.</td></tr>
+              <tr><td colSpan={6} className="px-4 py-10 text-center text-muted">Kayıt bulunamadı.</td></tr>
             ) : (
               rows.map((i) => (
                 <tr key={i.id} className="border-b border-line last:border-0 hover:bg-surface">
@@ -53,6 +55,12 @@ export default function InvoicesPage() {
                   <td className="px-4 py-3 text-right text-ink-soft">{i.total ? TRY(i.total) : "—"}</td>
                   <td className="px-4 py-3 text-ink-soft">{dateTR(i.due_date)}</td>
                   <td className="px-4 py-3"><Badge status={i.status} /></td>
+                  <td className="px-4 py-3 text-right">
+                    <button onClick={() => downloadFile(`/invoices/${i.id}/pdf`, `${i.invoice_number ?? i.id}.pdf`)}
+                      className="inline-flex items-center gap-1 text-xs text-primary hover:underline" title="PDF indir">
+                      <FileDown size={14} /> PDF
+                    </button>
+                  </td>
                 </tr>
               ))
             )}

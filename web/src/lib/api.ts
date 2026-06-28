@@ -95,3 +95,20 @@ export async function api<T = unknown>(path: string, opts: Options = {}): Promis
 
   return data as T;
 }
+
+/** Auth'lu dosya (PDF) indirir ve tarayıcıda kaydeder. */
+export async function downloadFile(path: string, filename: string) {
+  const res = await fetch(`${BASE}${path}`, {
+    headers: { Authorization: `Bearer ${getToken() ?? ""}` },
+  });
+  if (!res.ok) throw new ApiError("Dosya indirilemedi.", res.status, null);
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
