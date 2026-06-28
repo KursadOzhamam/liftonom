@@ -25,6 +25,8 @@ class Elevator extends Model
         'maintenance_period', 'qr_token', 'notes', 'is_sample',
     ];
 
+    protected $appends = ['tse_label'];
+
     protected function casts(): array
     {
         return [
@@ -35,6 +37,11 @@ class Elevator extends Model
             'next_maintenance_at' => 'datetime',
             'is_sample'           => 'boolean',
         ];
+    }
+
+    public function getTseLabelAttribute(): string
+    {
+        return $this->tseLabel();
     }
 
     protected static function booted(): void
