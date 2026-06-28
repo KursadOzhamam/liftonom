@@ -16,6 +16,10 @@ vendor/
 /mobile/build/
 /mobile/.dart_tool/
 
+# .NET
+/api-net/bin/
+/api-net/obj/
+
 # Laravel
 /api/storage/*.key
 /api/storage/framework/cache/*
