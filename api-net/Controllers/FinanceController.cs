@@ -38,16 +38,18 @@ public class FinanceController(AppDbContext db) : ControllerBase
         var since = DateTime.UtcNow.AddMonths(-11);
         since = new DateTime(since.Year, since.Month, 1, 0, 0, 0, DateTimeKind.Utc);
 
-        var rows = await db.CashboxTransactions
+        var raw = await db.CashboxTransactions
             .Where(t => t.SourceType != "transfer" && t.CreatedAt >= since)
             .GroupBy(t => new { t.CreatedAt.Year, t.CreatedAt.Month })
             .Select(grp => new
             {
-                Month = $"{grp.Key.Year:D4}-{grp.Key.Month:D2}",
+                grp.Key.Year, grp.Key.Month,
                 Income = grp.Where(t => t.Type == "in").Sum(t => (decimal?)t.Amount) ?? 0,
                 Expense = grp.Where(t => t.Type == "out").Sum(t => (decimal?)t.Amount) ?? 0,
             })
-            .OrderBy(x => x.Month).ToListAsync();
+            .ToListAsync();
+        var rows = raw.OrderBy(x => x.Year).ThenBy(x => x.Month)
+            .Select(x => new { Month = $"{x.Year:D4}-{x.Month:D2}", x.Income, x.Expense });
 
         return Ok(rows);
     }

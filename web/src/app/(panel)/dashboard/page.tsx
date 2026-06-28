@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { api, ApiError } from "@/lib/api";
+import RevenueChart from "@/components/RevenueChart";
 
 type Kpis = {
   customers: number;
@@ -58,6 +59,10 @@ export default function DashboardPage() {
                 <div className="mt-2 text-2xl font-bold" style={{ color: c.color }}>{c.value}</div>
               </div>
             ))}
+      </div>
+
+      <div className="mt-6">
+        <RevenueChart />
       </div>
     </div>
   );
