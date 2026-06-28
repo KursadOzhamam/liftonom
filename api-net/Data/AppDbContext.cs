@@ -39,6 +39,7 @@ public class AppDbContext : DbContext
     public DbSet<Cashbox> Cashboxes => Set<Cashbox>();
     public DbSet<CashboxTransaction> CashboxTransactions => Set<CashboxTransaction>();
     public DbSet<CurrentAccount> CurrentAccounts => Set<CurrentAccount>();
+    public DbSet<AccountTransaction> AccountTransactions => Set<AccountTransaction>();
     public DbSet<Invoice> Invoices => Set<Invoice>();
 
     protected override void OnModelCreating(ModelBuilder b)
@@ -61,6 +62,7 @@ public class AppDbContext : DbContext
 
         // Ledger / soft-delete'siz — sadece tenant
         b.Entity<CashboxTransaction>().HasQueryFilter(e => e.TenantId == CurrentTenantId);
+        b.Entity<AccountTransaction>().HasQueryFilter(e => e.TenantId == CurrentTenantId);
         b.Entity<Region>().HasQueryFilter(e => e.TenantId == CurrentTenantId);
 
         // jsonb kolonlar (string olarak ham JSON tutulur)

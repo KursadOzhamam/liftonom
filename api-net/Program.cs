@@ -25,6 +25,7 @@ builder.Services.AddDbContext<AppDbContext>(opt =>
 builder.Services.AddScoped<ITenantContext, TenantContext>();
 builder.Services.AddScoped<OtpService>();
 builder.Services.AddScoped<TokenService>();
+builder.Services.AddScoped<LedgerService>();
 builder.Services.AddScoped<ISmsSender, LogSmsSender>();
 
 // JWT
