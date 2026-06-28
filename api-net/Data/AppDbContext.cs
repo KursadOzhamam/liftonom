@@ -17,6 +17,7 @@ public class AppDbContext : DbContext
     /// <summary>EF query filter'ları çalışma anında bunu okur (per-request tenant).</summary>
     public long? CurrentTenantId => _tenant.TenantId;
 
+    // Auth
     public DbSet<Tenant> Tenants => Set<Tenant>();
     public DbSet<User> Users => Set<User>();
     public DbSet<OtpCode> OtpCodes => Set<OtpCode>();
@@ -24,13 +25,38 @@ public class AppDbContext : DbContext
     public DbSet<Subscription> Subscriptions => Set<Subscription>();
     public DbSet<SmsPreference> SmsPreferences => Set<SmsPreference>();
 
+    // Çekirdek
+    public DbSet<Customer> Customers => Set<Customer>();
+    public DbSet<Building> Buildings => Set<Building>();
+    public DbSet<Elevator> Elevators => Set<Elevator>();
+    public DbSet<MaintenanceRecord> MaintenanceRecords => Set<MaintenanceRecord>();
+    public DbSet<FaultReport> FaultReports => Set<FaultReport>();
+
+    // Finans
+    public DbSet<Cashbox> Cashboxes => Set<Cashbox>();
+    public DbSet<CashboxTransaction> CashboxTransactions => Set<CashboxTransaction>();
+    public DbSet<CurrentAccount> CurrentAccounts => Set<CurrentAccount>();
+    public DbSet<Invoice> Invoices => Set<Invoice>();
+
     protected override void OnModelCreating(ModelBuilder b)
     {
-        // Soft delete (Laravel deleted_at)
+        // Auth: User & Tenant yalnızca soft-delete (tenant filtresi YOK — login firmalar arası arar)
         b.Entity<Tenant>().HasQueryFilter(t => t.DeletedAt == null);
         b.Entity<User>().HasQueryFilter(u => u.DeletedAt == null);
 
-        // OtpCode: timestamps yok (created_at hariç)
+        // Tenant-izole + soft-delete
+        b.Entity<Customer>().HasQueryFilter(e => e.DeletedAt == null && e.TenantId == CurrentTenantId);
+        b.Entity<Building>().HasQueryFilter(e => e.DeletedAt == null && e.TenantId == CurrentTenantId);
+        b.Entity<Elevator>().HasQueryFilter(e => e.DeletedAt == null && e.TenantId == CurrentTenantId);
+        b.Entity<MaintenanceRecord>().HasQueryFilter(e => e.DeletedAt == null && e.TenantId == CurrentTenantId);
+        b.Entity<FaultReport>().HasQueryFilter(e => e.DeletedAt == null && e.TenantId == CurrentTenantId);
+        b.Entity<Cashbox>().HasQueryFilter(e => e.DeletedAt == null && e.TenantId == CurrentTenantId);
+        b.Entity<CurrentAccount>().HasQueryFilter(e => e.DeletedAt == null && e.TenantId == CurrentTenantId);
+        b.Entity<Invoice>().HasQueryFilter(e => e.DeletedAt == null && e.TenantId == CurrentTenantId);
+
+        // Ledger (soft-delete yok) — sadece tenant
+        b.Entity<CashboxTransaction>().HasQueryFilter(e => e.TenantId == CurrentTenantId);
+
         b.Entity<OtpCode>().Property(o => o.CreatedAt).HasDefaultValueSql("now()");
 
         base.OnModelCreating(b);

@@ -31,6 +31,7 @@ builder.Services.AddScoped<ISmsSender, LogSmsSender>();
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(o =>
     {
+        o.MapInboundClaims = false; // 'tid','uid' claim adlarını koru (URI'ye eşleme)
         o.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuer = true,
