@@ -41,6 +41,8 @@ public class AppDbContext : DbContext
     public DbSet<CurrentAccount> CurrentAccounts => Set<CurrentAccount>();
     public DbSet<AccountTransaction> AccountTransactions => Set<AccountTransaction>();
     public DbSet<Invoice> Invoices => Set<Invoice>();
+    public DbSet<Quote> Quotes => Set<Quote>();
+    public DbSet<Contract> Contracts => Set<Contract>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -57,6 +59,8 @@ public class AppDbContext : DbContext
         b.Entity<Cashbox>().HasQueryFilter(e => e.DeletedAt == null && e.TenantId == CurrentTenantId);
         b.Entity<CurrentAccount>().HasQueryFilter(e => e.DeletedAt == null && e.TenantId == CurrentTenantId);
         b.Entity<Invoice>().HasQueryFilter(e => e.DeletedAt == null && e.TenantId == CurrentTenantId);
+        b.Entity<Quote>().HasQueryFilter(e => e.DeletedAt == null && e.TenantId == CurrentTenantId);
+        b.Entity<Contract>().HasQueryFilter(e => e.DeletedAt == null && e.TenantId == CurrentTenantId);
 
         b.Entity<WorkOrder>().HasQueryFilter(e => e.DeletedAt == null && e.TenantId == CurrentTenantId);
 
@@ -73,6 +77,9 @@ public class AppDbContext : DbContext
             e.Property(m => m.MaterialsUsed).HasColumnType("jsonb");
             e.Property(m => m.Photos).HasColumnType("jsonb");
         });
+        b.Entity<Quote>().Property(q => q.Items).HasColumnType("jsonb");
+        b.Entity<Invoice>().Property(i => i.Items).HasColumnType("jsonb");
+        b.Entity<Contract>().Property(c => c.Elevators).HasColumnType("jsonb");
 
         b.Entity<OtpCode>().Property(o => o.CreatedAt).HasDefaultValueSql("now()");
 

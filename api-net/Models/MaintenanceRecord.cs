@@ -10,12 +10,12 @@ public class MaintenanceRecord
     public DateTime? PlannedDate { get; set; }
     public DateTime? StartedAt { get; set; }
     public DateTime? CompletedAt { get; set; }
-    public string? AssignedUsers { get; set; }   // jsonb: [user_id]
-    public string? Checklist { get; set; }        // jsonb
-    public string? MaterialsUsed { get; set; }    // jsonb
+    public string? AssignedUsers { get; set; } = "[]";   // jsonb: [user_id]
+    public string? Checklist { get; set; } = "[]";        // jsonb
+    public string? MaterialsUsed { get; set; } = "[]";    // jsonb
     public string? TechnicianNote { get; set; }
     public string? CustomerSignatureUrl { get; set; }
-    public string? Photos { get; set; }           // jsonb
+    public string? Photos { get; set; } = "[]";           // jsonb
     public bool IsRecurring { get; set; }
     public string? RecurringPeriod { get; set; }
     public long? ParentId { get; set; }
