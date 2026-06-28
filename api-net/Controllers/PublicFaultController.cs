@@ -37,13 +37,13 @@ public class PublicFaultController(AppDbContext db, ITenantContext tenantCtx, Fa
         var now = DateTime.UtcNow;
         var fault = new FaultReport
         {
-            TenantId = e.TenantId, ElevatorId = e.Id, ReportedByType = "qr", Priority = "normal", Status = "new",
+            TenantId = e.TenantId, ElevatorId = e.Id, ReportedByType = "qr", Priority = "normal", Status = "reported",
             Description = $"{dto.ReporterName} {dto.ReporterPhone} — {dto.Description}".Trim(),
             CreatedAt = now, UpdatedAt = now,
         };
         db.FaultReports.Add(fault);
         await db.SaveChangesAsync();
-        await notify.NotifyAsync(fault, FaultNotificationService.Stage.Created); // otonom WhatsApp
+        await notify.NotifyAsync(fault, FaultNotificationService.Stage.Reported); // otonom WhatsApp
         return StatusCode(201, new { message = "Arıza talebiniz alındı. Ekibimiz en kısa sürede ilgilenecek.", report_id = fault.Id });
     }
 }

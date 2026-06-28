@@ -7,7 +7,7 @@ public class FaultReport
     public long? ElevatorId { get; set; }
     public string ReportedByType { get; set; } = "user";
     public string Priority { get; set; } = "normal";
-    public string Status { get; set; } = "new";
+    public string Status { get; set; } = "reported";
     public string? Description { get; set; }
     public string? ResolutionNote { get; set; }
     public long? AssignedUserId { get; set; }
@@ -15,6 +15,23 @@ public class FaultReport
     public string? EstimatedRepair { get; set; }
     public DateTime? DispatchedAt { get; set; }
     public DateTime? DiagnosedAt { get; set; }
+
+    // 6-aşamalı yaşam döngüsü zaman damgaları
+    public DateTime? AcknowledgedAt { get; set; }
+    public DateTime? InspectedAt { get; set; }
+    public DateTime? RepairStartedAt { get; set; }
+    public DateTime? CompletedAt { get; set; }
+
+    // Kontrol (inspection) formu
+    public string? FaultDiagnosis { get; set; }
+    public bool NeedsPart { get; set; }
+    public string? PartDetails { get; set; }
+
+    // Servis elemanı canlı konumu (web tarafı Google Map izleme için)
+    public double? TechnicianLat { get; set; }
+    public double? TechnicianLng { get; set; }
+    public DateTime? LocationUpdatedAt { get; set; }
+
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
     public DateTime? DeletedAt { get; set; }

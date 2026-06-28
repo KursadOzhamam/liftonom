@@ -7,7 +7,7 @@ namespace Liftonom.Api.Services;
 /// <summary>Arıza yaşam döngüsünde müşteriye/yöneticiye otonom WhatsApp bilgilendirme.</summary>
 public class FaultNotificationService(AppDbContext db, IWhatsAppSender whatsapp)
 {
-    public enum Stage { Created, Dispatched, Diagnosed, Resolved }
+    public enum Stage { Reported, Acknowledged, Dispatched, Inspected, Repairing, Completed }
 
     public async Task NotifyAsync(FaultReport fault, Stage stage)
     {
@@ -31,10 +31,12 @@ public class FaultNotificationService(AppDbContext db, IWhatsAppSender whatsapp)
 
         var message = stage switch
         {
-            Stage.Created => $"Sayın müşterimiz, {asansor} için arıza kaydınız alındı (No: #{fault.Id}). En kısa sürede ilgileneceğiz. — {firm}",
+            Stage.Reported => $"Sayın müşterimiz, {asansor} için arıza kaydınız alındı (No: #{fault.Id}). En kısa sürede ilgileneceğiz. — {firm}",
+            Stage.Acknowledged => $"{asansor} arıza kaydınız işleme alındı. Servis planlanıyor. — {firm}",
             Stage.Dispatched => $"Teknisyenimiz {asansor} arızası için yola çıktı. — {firm}",
-            Stage.Diagnosed => $"{asansor} arızası tespit edildi. Tahmini onarım süresi: {fault.EstimatedRepair ?? "belirleniyor"}. — {firm}",
-            Stage.Resolved => $"{asansor} arızanız giderildi. İlginiz için teşekkür ederiz. — {firm}",
+            Stage.Inspected => $"{asansor} arızası kontrol edildi. {(fault.NeedsPart ? "Parça değişimi gerekiyor. " : "")}Arıza: {fault.FaultDiagnosis ?? "inceleniyor"}. — {firm}",
+            Stage.Repairing => $"{asansor} arızası gideriliyor. Tahmini süre: {fault.EstimatedRepair ?? "belirleniyor"}. — {firm}",
+            Stage.Completed => $"{asansor} arızanız giderildi, işlem tamamlandı. İlginiz için teşekkür ederiz. — {firm}",
             _ => "",
         };
 
