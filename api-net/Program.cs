@@ -26,7 +26,9 @@ builder.Services.AddScoped<ITenantContext, TenantContext>();
 builder.Services.AddScoped<OtpService>();
 builder.Services.AddScoped<TokenService>();
 builder.Services.AddScoped<LedgerService>();
+builder.Services.AddScoped<ScheduledJobs>();
 builder.Services.AddScoped<ISmsSender, LogSmsSender>();
+builder.Services.AddHostedService<DailyJobsHostedService>();
 
 // JWT
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
