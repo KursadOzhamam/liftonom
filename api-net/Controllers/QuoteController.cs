@@ -11,7 +11,7 @@ namespace LiftOtonom.Api.Controllers;
 [ApiController]
 [Authorize]
 [Route("api/v1/quotes")]
-public class QuoteController(AppDbContext db) : ControllerBase
+public class QuoteController(AppDbContext db, PdfService pdf) : ControllerBase
 {
     public record QuoteDto(long? CustomerId, DateOnly? ValidUntil, List<LineItem>? Items, decimal? TaxRate, decimal? Discount, string? Notes);
 
@@ -83,6 +83,18 @@ public class QuoteController(AppDbContext db) : ControllerBase
         q.Status = status; q.UpdatedAt = DateTime.UtcNow;
         await db.SaveChangesAsync();
         return Ok(q);
+    }
+
+    [HttpGet("{id:long}/pdf")]
+    public async Task<IActionResult> Pdf(long id)
+    {
+        var q = await db.Quotes.Include(x => x.Customer).FirstOrDefaultAsync(x => x.Id == id)
+            ?? throw new ApiException(404, "Teklif bulunamadı.");
+        var tenant = await db.Tenants.FindAsync(db.CurrentTenantId!.Value);
+        var bytes = pdf.Generate("TEKLİF", q.QuoteNumber ?? $"#{q.Id}", tenant!, q.Customer?.Name ?? "-",
+            q.Items, q.Subtotal ?? 0, q.TaxRate, q.TaxAmount ?? 0, q.Discount, q.Total ?? 0,
+            DateOnly.FromDateTime(q.CreatedAt));
+        return File(bytes, "application/pdf", $"{q.QuoteNumber}.pdf");
     }
 
     [HttpDelete("{id:long}")]

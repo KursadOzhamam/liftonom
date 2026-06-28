@@ -7,6 +7,8 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 
+QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // JSON: tüm anahtarlar snake_case (Laravel/frontend ile uyumlu)
@@ -27,6 +29,7 @@ builder.Services.AddScoped<OtpService>();
 builder.Services.AddScoped<TokenService>();
 builder.Services.AddScoped<LedgerService>();
 builder.Services.AddScoped<ScheduledJobs>();
+builder.Services.AddScoped<PdfService>();
 builder.Services.AddScoped<ISmsSender, LogSmsSender>();
 builder.Services.AddHostedService<DailyJobsHostedService>();
 

@@ -11,7 +11,7 @@ namespace LiftOtonom.Api.Controllers;
 [ApiController]
 [Authorize]
 [Route("api/v1/invoices")]
-public class InvoiceController(AppDbContext db, LedgerService ledger) : ControllerBase
+public class InvoiceController(AppDbContext db, LedgerService ledger, PdfService pdf) : ControllerBase
 {
     public record InvoiceDto(long CustomerId, string? Type, DateOnly? IssueDate, DateOnly? DueDate,
         List<LineItem>? Items, decimal? TaxRate, decimal? Discount, string? Notes);
@@ -97,6 +97,17 @@ public class InvoiceController(AppDbContext db, LedgerService ledger) : Controll
         inv.UpdatedAt = DateTime.UtcNow;
         await db.SaveChangesAsync();
         return Ok(inv);
+    }
+
+    [HttpGet("{id:long}/pdf")]
+    public async Task<IActionResult> Pdf(long id)
+    {
+        var inv = await db.Invoices.Include(i => i.Customer).FirstOrDefaultAsync(i => i.Id == id)
+            ?? throw new ApiException(404, "Fatura bulunamadı.");
+        var tenant = await db.Tenants.FindAsync(db.CurrentTenantId!.Value);
+        var bytes = pdf.Generate("FATURA", inv.InvoiceNumber ?? $"#{inv.Id}", tenant!, inv.Customer?.Name ?? "-",
+            inv.Items, inv.Subtotal ?? 0, inv.TaxRate, inv.TaxAmount ?? 0, inv.Discount, inv.Total ?? 0, inv.IssueDate);
+        return File(bytes, "application/pdf", $"{inv.InvoiceNumber}.pdf");
     }
 
     [HttpDelete("{id:long}")]
