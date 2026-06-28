@@ -11,7 +11,10 @@ use App\Http\Controllers\Api\ElevatorController;
 use App\Http\Controllers\Api\FaultReportController;
 use App\Http\Controllers\Api\ContractController;
 use App\Http\Controllers\Api\FinanceController;
+use App\Http\Controllers\Api\AtfController;
 use App\Http\Controllers\Api\AttendanceController;
+use App\Http\Controllers\Api\DtrController;
+use App\Http\Controllers\Api\ElevatorOrderController;
 use App\Http\Controllers\Api\InvoiceController;
 use App\Http\Controllers\Api\PayrollController;
 use App\Http\Controllers\Api\ProductController;
@@ -148,5 +151,10 @@ Route::prefix('v1')->group(function () {
         Route::delete('attendance/{attendance}', [AttendanceController::class, 'destroy']);
         Route::get('payroll', [PayrollController::class, 'index']);
         Route::post('payroll', [PayrollController::class, 'store'])->middleware('role:manager,accounting');
+
+        // --- PHASE 10: ATF & DTR & Sipariş ---
+        Route::apiResource('atf', AtfController::class)->parameter('atf', 'atf');
+        Route::apiResource('dtr', DtrController::class)->parameter('dtr', 'dtr');
+        Route::apiResource('elevator-orders', ElevatorOrderController::class)->parameter('elevator-orders', 'elevatorOrder');
     });
 });
