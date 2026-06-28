@@ -105,7 +105,9 @@ export default function ElevatorsPage() {
                 const tse = TSE[e.tse_label];
                 return (
                   <tr key={e.id} className="border-b border-line last:border-0 hover:bg-surface">
-                    <td className="px-4 py-3 font-medium text-ink">{e.name ?? `#${e.id}`}</td>
+                    <td className="px-4 py-3 font-medium">
+                      <a href={`/elevators/${e.id}`} className="text-primary hover:underline">{e.name ?? `#${e.id}`}</a>
+                    </td>
                     <td className="px-4 py-3 text-ink-soft">{e.building?.name ?? "—"}</td>
                     <td className="px-4 py-3 text-ink-soft">{e.brand ?? "—"}</td>
                     <td className="px-4 py-3 text-ink-soft">{STATUS[e.status] ?? e.status}</td>

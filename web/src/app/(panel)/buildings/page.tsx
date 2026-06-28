@@ -100,7 +100,9 @@ export default function BuildingsPage() {
             ) : (
               rows.map((b) => (
                 <tr key={b.id} className="border-b border-line last:border-0 hover:bg-surface">
-                  <td className="px-4 py-3 font-medium text-ink">{b.name}</td>
+                  <td className="px-4 py-3 font-medium">
+                    <a href={`/buildings/${b.id}`} className="text-primary hover:underline">{b.name}</a>
+                  </td>
                   <td className="px-4 py-3 text-ink-soft">{b.customer?.name ?? "—"}</td>
                   <td className="px-4 py-3 text-ink-soft">{b.city ?? "—"}</td>
                   <td className="px-4 py-3 text-center text-ink-soft">{b.floor_count ?? "—"}</td>
