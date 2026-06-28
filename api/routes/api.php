@@ -5,8 +5,11 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\BuildingController;
 use App\Http\Controllers\Api\CustomerController;
 use App\Http\Controllers\Api\ElevatorController;
+use App\Http\Controllers\Api\FaultReportController;
+use App\Http\Controllers\Api\MaintenanceController;
 use App\Http\Controllers\Api\PublicFaultController;
 use App\Http\Controllers\Api\RegionController;
+use App\Http\Controllers\Api\WorkOrderController;
 use App\Http\Controllers\Api\RegisterController;
 use App\Models\Tenant;
 use Illuminate\Http\Request;
@@ -70,5 +73,21 @@ Route::prefix('v1')->group(function () {
         Route::get('elevators/tse-report', [ElevatorController::class, 'tseReport']);
         Route::get('elevators/{elevator}/qr', [ElevatorController::class, 'qr']);
         Route::apiResource('elevators', ElevatorController::class);
+
+        // --- PHASE 4: Bakım ---
+        Route::get('maintenance/calendar', [MaintenanceController::class, 'calendar']);
+        Route::post('maintenance/{maintenance}/complete', [MaintenanceController::class, 'complete']);
+        Route::apiResource('maintenance', MaintenanceController::class)->parameter('maintenance', 'maintenance');
+
+        // --- PHASE 5: Arıza & İş Emri ---
+        Route::get('fault-reports/kanban', [FaultReportController::class, 'kanban']);
+        Route::post('fault-reports/{faultReport}/comments', [FaultReportController::class, 'addComment']);
+        Route::put('fault-reports/{faultReport}/status', [FaultReportController::class, 'changeStatus']);
+        Route::post('fault-reports/{faultReport}/assign', [FaultReportController::class, 'assign']);
+        Route::post('fault-reports/{faultReport}/convert-to-work-order', [FaultReportController::class, 'convertToWorkOrder']);
+        Route::apiResource('fault-reports', FaultReportController::class)->parameter('fault-reports', 'faultReport');
+
+        Route::post('work-orders/{workOrder}/complete', [WorkOrderController::class, 'complete']);
+        Route::apiResource('work-orders', WorkOrderController::class)->parameter('work-orders', 'workOrder');
     });
 });
