@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\CashboxController;
 use App\Http\Controllers\Api\CollectionController;
 use App\Http\Controllers\Api\CurrentAccountController;
 use App\Http\Controllers\Api\CustomerController;
+use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\ElevatorController;
 use App\Http\Controllers\Api\FaultReportController;
 use App\Http\Controllers\Api\ContractController;
@@ -20,6 +21,8 @@ use App\Http\Controllers\Api\PayrollController;
 use App\Http\Controllers\Api\ProductController;
 use App\Http\Controllers\Api\ProjectController;
 use App\Http\Controllers\Api\QuoteController;
+use App\Http\Controllers\Api\ReportController;
+use App\Http\Controllers\Api\SmsController;
 use App\Http\Controllers\Api\SupplierController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\MaintenanceController;
@@ -156,5 +159,32 @@ Route::prefix('v1')->group(function () {
         Route::apiResource('atf', AtfController::class)->parameter('atf', 'atf');
         Route::apiResource('dtr', DtrController::class)->parameter('dtr', 'dtr');
         Route::apiResource('elevator-orders', ElevatorOrderController::class)->parameter('elevator-orders', 'elevatorOrder');
+
+        // --- PHASE 2: Dashboard ---
+        Route::prefix('dashboard')->group(function () {
+            Route::get('kpis', [DashboardController::class, 'kpis']);
+            Route::get('revenue-chart', [DashboardController::class, 'revenueChart']);
+            Route::get('upcoming-maintenance', [DashboardController::class, 'upcomingMaintenance']);
+            Route::get('open-faults', [DashboardController::class, 'openFaults']);
+            Route::get('tse-warnings', [DashboardController::class, 'tseWarnings']);
+            Route::get('cashbox-summary', [DashboardController::class, 'cashboxSummary']);
+        });
+
+        // --- PHASE 11: Raporlar ---
+        Route::prefix('reports')->group(function () {
+            Route::get('daily-summary', [ReportController::class, 'dailySummary']);
+            Route::get('collection-summary', [ReportController::class, 'collectionSummary']);
+            Route::get('staff-performance', [ReportController::class, 'staffPerformance']);
+            Route::get('inventory-movements', [ReportController::class, 'inventoryMovements']);
+        });
+
+        // --- PHASE 12: SMS ---
+        Route::prefix('sms')->group(function () {
+            Route::get('balance', [SmsController::class, 'balance']);
+            Route::get('history', [SmsController::class, 'history']);
+            Route::post('send', [SmsController::class, 'send']);
+            Route::get('preferences', [SmsController::class, 'getPreferences']);
+            Route::put('preferences', [SmsController::class, 'updatePreferences']);
+        });
     });
 });
