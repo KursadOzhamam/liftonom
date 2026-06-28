@@ -3,15 +3,17 @@
 import { useCallback, useEffect, useState } from "react";
 import { api, ApiError } from "@/lib/api";
 import { Plus, Search, Pencil, Trash2 } from "lucide-react";
+import LocationPicker from "@/components/LocationPicker";
 
 type Building = {
   id: number; name: string; city: string | null; floor_count: number | null;
+  latitude?: number | string | null; longitude?: number | string | null;
   elevators_count?: number; customer?: { id: number; name: string } | null;
 };
 type Paginated = { data: Building[]; meta: { current_page: number; last_page: number; total: number } };
 type Customer = { id: number; name: string };
 
-const empty = { name: "", customer_id: "", city: "", floor_count: "" };
+const empty = { name: "", customer_id: "", city: "", floor_count: "", latitude: null as number | null, longitude: null as number | null };
 
 export default function BuildingsPage() {
   const [rows, setRows] = useState<Building[]>([]);
@@ -45,6 +47,8 @@ export default function BuildingsPage() {
         customer_id: modal.form.customer_id ? Number(modal.form.customer_id) : null,
         city: modal.form.city || null,
         floor_count: modal.form.floor_count ? Number(modal.form.floor_count) : null,
+        latitude: modal.form.latitude,
+        longitude: modal.form.longitude,
       };
       if (modal.mode === "create") await api("/buildings", { method: "POST", body });
       else await api(`/buildings/${modal.id}`, { method: "PUT", body });
@@ -112,6 +116,8 @@ export default function BuildingsPage() {
                       <button onClick={() => setModal({ mode: "edit", id: b.id, form: {
                         name: b.name, customer_id: String(b.customer?.id ?? ""), city: b.city ?? "",
                         floor_count: String(b.floor_count ?? ""),
+                        latitude: b.latitude != null ? Number(b.latitude) : null,
+                        longitude: b.longitude != null ? Number(b.longitude) : null,
                       } })} className="text-muted hover:text-primary" title="Düzenle"><Pencil size={16} /></button>
                       <button onClick={() => remove(b.id)} className="text-muted hover:text-danger" title="Sil"><Trash2 size={16} /></button>
                     </div>
@@ -133,7 +139,7 @@ export default function BuildingsPage() {
 
       {modal && (
         <div className="fixed inset-0 z-20 grid place-items-center bg-black/40 p-4" onClick={() => setModal(null)}>
-          <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-lg" onClick={(e) => e.stopPropagation()}>
+          <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl bg-white p-6 shadow-lg" onClick={(e) => e.stopPropagation()}>
             <h2 className="text-lg font-semibold text-ink">{modal.mode === "create" ? "Yeni Bina" : "Bina Düzenle"}</h2>
             <div className="mt-4 space-y-3">
               <label className="block">
@@ -160,6 +166,15 @@ export default function BuildingsPage() {
                   <input type="number" className="input" value={modal.form.floor_count}
                     onChange={(e) => setModal({ ...modal, form: { ...modal.form, floor_count: e.target.value } })} />
                 </label>
+              </div>
+              <div className="block">
+                <span className="mb-1 block text-xs font-medium text-muted">Konum (arıza yeri — adresten bul veya haritadan seç)</span>
+                <LocationPicker
+                  lat={modal.form.latitude}
+                  lng={modal.form.longitude}
+                  defaultQuery={[modal.form.name, modal.form.city].filter(Boolean).join(" ")}
+                  onChange={(la, ln) => setModal((m) => m ? { ...m, form: { ...m.form, latitude: la, longitude: ln } } : m)}
+                />
               </div>
             </div>
             <div className="mt-5 flex justify-end gap-2">
