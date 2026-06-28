@@ -9,7 +9,10 @@ use App\Http\Controllers\Api\CurrentAccountController;
 use App\Http\Controllers\Api\CustomerController;
 use App\Http\Controllers\Api\ElevatorController;
 use App\Http\Controllers\Api\FaultReportController;
+use App\Http\Controllers\Api\ContractController;
 use App\Http\Controllers\Api\FinanceController;
+use App\Http\Controllers\Api\InvoiceController;
+use App\Http\Controllers\Api\QuoteController;
 use App\Http\Controllers\Api\MaintenanceController;
 use App\Http\Controllers\Api\PublicFaultController;
 use App\Http\Controllers\Api\RegionController;
@@ -108,5 +111,19 @@ Route::prefix('v1')->group(function () {
 
         Route::get('finance/summary', [FinanceController::class, 'summary']);
         Route::get('finance/monthly', [FinanceController::class, 'monthly']);
+
+        // --- PHASE 7: Teklif & Sözleşme & Fatura ---
+        Route::post('quotes/{quote}/send', [QuoteController::class, 'send']);
+        Route::post('quotes/{quote}/approve', [QuoteController::class, 'approve']);
+        Route::post('quotes/{quote}/reject', [QuoteController::class, 'reject']);
+        Route::apiResource('quotes', QuoteController::class);
+
+        Route::post('contracts/{contract}/renew', [ContractController::class, 'renew']);
+        Route::apiResource('contracts', ContractController::class);
+
+        Route::post('invoices/from-quote/{quote}', [InvoiceController::class, 'fromQuote']);
+        Route::post('invoices/{invoice}/send', [InvoiceController::class, 'send']);
+        Route::post('invoices/{invoice}/pay', [InvoiceController::class, 'pay']);
+        Route::apiResource('invoices', InvoiceController::class);
     });
 });
