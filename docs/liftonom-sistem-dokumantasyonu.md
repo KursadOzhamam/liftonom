@@ -1,4 +1,4 @@
-# LİFTOTONOM — TAM SİSTEM DOKÜMANTASYONU
+# LİFTONOM — TAM SİSTEM DOKÜMANTASYONU
 > Asansör Servis Yönetimi SaaS Platformu  
 > Web: Next.js 14 + TypeScript + Tailwind CSS  
 > Mobil: Flutter (iOS & Android — Tek Codebase)  
@@ -135,7 +135,7 @@ font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 - Genişlik: 240px (sabit, collapsible değil — masaüstü)
 - Mobil web: hamburger menü ile drawer olarak açılır
 - Arka plan: #FFFFFF, sağ kenar: 1px solid #E5E7EB
-- Logo alanı: 64px yükseklik, "LiftOtonom" yazısı + mavi asansör ikonu
+- Logo alanı: 64px yükseklik, "Liftonom" yazısı + mavi asansör ikonu
 - Firma adı: font-semibold, plan badge (Deneme/Başlangıç/Pro/Kurumsal)
 - Nav item height: 40px, padding: 0 12px, border-radius: 8px
 - Aktif item: bg-primary-light, text-primary, sol border 3px solid primary
@@ -926,7 +926,7 @@ bilgi / planlandı            → blue   → mavi badge
 
 ## 5. API ENDPOINT ŞEMASI
 
-**Base URL:** `https://api.liftotonom.com/api/v1`  
+**Base URL:** `https://api.liftonom.com/api/v1`  
 **Auth:** Bearer Token (Laravel Sanctum)  
 **Format:** JSON  
 **Sayfalama:** `?page=1&per_page=25`
@@ -1658,10 +1658,10 @@ DB::statement("SET app.tenant_id = " . auth()->user()->tenant_id);
 ### 8.2 URL Yapısı
 
 ```
-Web:    https://liftotonom.com/{tenant_slug}/dashboard
-API:    https://api.liftotonom.com/api/v1/customers
+Web:    https://liftonom.com/{tenant_slug}/dashboard
+API:    https://api.liftonom.com/api/v1/customers
         (tenant_id Bearer Token'dan alınır)
-Admin:  https://admin.liftotonom.com
+Admin:  https://admin.liftonom.com
 ```
 
 ### 8.3 Laravel Tenant Middleware
@@ -1781,15 +1781,15 @@ S3 (dosya depolama)
 ### 12.1 Laravel .env.example
 
 ```env
-APP_NAME=LiftOtonom
+APP_NAME=Liftonom
 APP_ENV=production
 APP_KEY=
-APP_URL=https://api.liftotonom.com
+APP_URL=https://api.liftonom.com
 
 DB_CONNECTION=pgsql
 DB_HOST=
 DB_PORT=5432
-DB_DATABASE=liftotonom
+DB_DATABASE=liftonom
 DB_USERNAME=
 DB_PASSWORD=
 
@@ -1804,11 +1804,11 @@ MAIL_HOST=
 MAIL_PORT=587
 MAIL_USERNAME=
 MAIL_PASSWORD=
-MAIL_FROM_ADDRESS=noreply@liftotonom.com
+MAIL_FROM_ADDRESS=noreply@liftonom.com
 
 NETGSM_USER=
 NETGSM_PASSWORD=
-NETGSM_MSGHEADER=LIFTOTONOM
+NETGSM_MSGHEADER=LIFTONOM
 
 GOOGLE_MAPS_API_KEY=
 IYZICO_API_KEY=
@@ -1828,17 +1828,17 @@ FIREBASE_CREDENTIALS=
 ### 12.2 Next.js .env.example
 
 ```env
-NEXT_PUBLIC_API_URL=https://api.liftotonom.com/api/v1
+NEXT_PUBLIC_API_URL=https://api.liftonom.com/api/v1
 NEXT_PUBLIC_GOOGLE_MAPS_KEY=
 NEXT_PUBLIC_SENTRY_DSN=
 NEXTAUTH_SECRET=
-NEXTAUTH_URL=https://liftotonom.com
+NEXTAUTH_URL=https://liftonom.com
 ```
 
 ### 12.3 Flutter — dart-define
 
 ```
-API_URL=https://api.liftotonom.com/api/v1
+API_URL=https://api.liftonom.com/api/v1
 GOOGLE_MAPS_KEY=
 FIREBASE_PROJECT_ID=
 ENV=production
@@ -2087,7 +2087,7 @@ lib/
 
 ## 16. SUPER ADMIN PANELİ
 
-**Domain:** `admin.liftotonom.com`  
+**Domain:** `admin.liftonom.com`  
 **Stack:** Next.js (ayrı proje) veya aynı projede /admin route'ları  
 **Erişim:** Sadece super_admin rolü
 
@@ -2460,11 +2460,11 @@ dev_dependencies:
 
 ### 24.1 Deep Link Şeması
 ```
-liftotonom://dashboard
-liftotonom://maintenance/:id
-liftotonom://fault-reports/:id
-liftotonom://customers/:id
-liftotonom://notifications
+liftonom://dashboard
+liftonom://maintenance/:id
+liftonom://fault-reports/:id
+liftonom://customers/:id
+liftonom://notifications
 ```
 
 ### 24.2 Push Notification Payload
@@ -2495,7 +2495,7 @@ Tüm MD dosyasını Claude Max'e verdikten sonra şu prompt ile başlayın:
 ---
 
 ```
-Bu MD dosyası LiftOtonom platformunun tam sistem dokümantasyonudur.
+Bu MD dosyası Liftonom platformunun tam sistem dokümantasyonudur.
 Asansör servis yönetimi SaaS sistemidir.
 
 Teknoloji Stack:
@@ -2865,12 +2865,12 @@ genel sayfa tanımlanmalı:
 
 ```
 ╔══════════════════════════════════════════════════════════════════╗
-║              LİFTOTONOM — SİSTEM DOKÜMANTASYONU                 ║
+║              LİFTONOM — SİSTEM DOKÜMANTASYONU                 ║
 ║                      DÖKÜMAN SONU                               ║
 ╠══════════════════════════════════════════════════════════════════╣
 ║  Hazırlama Tarihi  : Haziran 2026                               ║
 ║  Kaynak            : asansorex.com (reverse-engineer)           ║
-║  Proje Adı         : LiftOtonom                                 ║
+║  Proje Adı         : Liftonom                                 ║
 ╠══════════════════════════════════════════════════════════════════╣
 ║  TOPLAM KAPSAM:                                                 ║
 ║  • 52 sayfa / route belgelenmiştir                              ║
