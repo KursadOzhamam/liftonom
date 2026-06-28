@@ -43,6 +43,10 @@ public class AppDbContext : DbContext
     public DbSet<Invoice> Invoices => Set<Invoice>();
     public DbSet<Quote> Quotes => Set<Quote>();
     public DbSet<Contract> Contracts => Set<Contract>();
+    public DbSet<Product> Products => Set<Product>();
+    public DbSet<StockMovement> StockMovements => Set<StockMovement>();
+    public DbSet<Supplier> Suppliers => Set<Supplier>();
+    public DbSet<Project> Projects => Set<Project>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -61,12 +65,16 @@ public class AppDbContext : DbContext
         b.Entity<Invoice>().HasQueryFilter(e => e.DeletedAt == null && e.TenantId == CurrentTenantId);
         b.Entity<Quote>().HasQueryFilter(e => e.DeletedAt == null && e.TenantId == CurrentTenantId);
         b.Entity<Contract>().HasQueryFilter(e => e.DeletedAt == null && e.TenantId == CurrentTenantId);
+        b.Entity<Product>().HasQueryFilter(e => e.DeletedAt == null && e.TenantId == CurrentTenantId);
+        b.Entity<Supplier>().HasQueryFilter(e => e.DeletedAt == null && e.TenantId == CurrentTenantId);
+        b.Entity<Project>().HasQueryFilter(e => e.DeletedAt == null && e.TenantId == CurrentTenantId);
 
         b.Entity<WorkOrder>().HasQueryFilter(e => e.DeletedAt == null && e.TenantId == CurrentTenantId);
 
         // Ledger / soft-delete'siz — sadece tenant
         b.Entity<CashboxTransaction>().HasQueryFilter(e => e.TenantId == CurrentTenantId);
         b.Entity<AccountTransaction>().HasQueryFilter(e => e.TenantId == CurrentTenantId);
+        b.Entity<StockMovement>().HasQueryFilter(e => e.TenantId == CurrentTenantId);
         b.Entity<Region>().HasQueryFilter(e => e.TenantId == CurrentTenantId);
 
         // jsonb kolonlar (string olarak ham JSON tutulur)
@@ -80,6 +88,11 @@ public class AppDbContext : DbContext
         b.Entity<Quote>().Property(q => q.Items).HasColumnType("jsonb");
         b.Entity<Invoice>().Property(i => i.Items).HasColumnType("jsonb");
         b.Entity<Contract>().Property(c => c.Elevators).HasColumnType("jsonb");
+        b.Entity<Project>(e =>
+        {
+            e.Property(p => p.AssignedUsers).HasColumnType("jsonb");
+            e.Property(p => p.Tasks).HasColumnType("jsonb");
+        });
 
         b.Entity<OtpCode>().Property(o => o.CreatedAt).HasDefaultValueSql("now()");
 
