@@ -47,6 +47,8 @@ public class AppDbContext : DbContext
     public DbSet<StockMovement> StockMovements => Set<StockMovement>();
     public DbSet<Supplier> Suppliers => Set<Supplier>();
     public DbSet<Project> Projects => Set<Project>();
+    public DbSet<Attendance> Attendances => Set<Attendance>();
+    public DbSet<Payroll> Payrolls => Set<Payroll>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -76,6 +78,10 @@ public class AppDbContext : DbContext
         b.Entity<AccountTransaction>().HasQueryFilter(e => e.TenantId == CurrentTenantId);
         b.Entity<StockMovement>().HasQueryFilter(e => e.TenantId == CurrentTenantId);
         b.Entity<Region>().HasQueryFilter(e => e.TenantId == CurrentTenantId);
+
+        // Tekil tablo adları + tenant filtresi
+        b.Entity<Attendance>(e => { e.ToTable("attendance"); e.HasQueryFilter(x => x.TenantId == CurrentTenantId); });
+        b.Entity<Payroll>(e => { e.ToTable("payroll"); e.HasQueryFilter(x => x.TenantId == CurrentTenantId); });
 
         // jsonb kolonlar (string olarak ham JSON tutulur)
         b.Entity<MaintenanceRecord>(e =>
