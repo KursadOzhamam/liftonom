@@ -31,6 +31,8 @@ public class AppDbContext : DbContext
     public DbSet<Elevator> Elevators => Set<Elevator>();
     public DbSet<MaintenanceRecord> MaintenanceRecords => Set<MaintenanceRecord>();
     public DbSet<FaultReport> FaultReports => Set<FaultReport>();
+    public DbSet<Region> Regions => Set<Region>();
+    public DbSet<WorkOrder> WorkOrders => Set<WorkOrder>();
 
     // Finans
     public DbSet<Cashbox> Cashboxes => Set<Cashbox>();
@@ -54,8 +56,11 @@ public class AppDbContext : DbContext
         b.Entity<CurrentAccount>().HasQueryFilter(e => e.DeletedAt == null && e.TenantId == CurrentTenantId);
         b.Entity<Invoice>().HasQueryFilter(e => e.DeletedAt == null && e.TenantId == CurrentTenantId);
 
-        // Ledger (soft-delete yok) — sadece tenant
+        b.Entity<WorkOrder>().HasQueryFilter(e => e.DeletedAt == null && e.TenantId == CurrentTenantId);
+
+        // Ledger / soft-delete'siz — sadece tenant
         b.Entity<CashboxTransaction>().HasQueryFilter(e => e.TenantId == CurrentTenantId);
+        b.Entity<Region>().HasQueryFilter(e => e.TenantId == CurrentTenantId);
 
         b.Entity<OtpCode>().Property(o => o.CreatedAt).HasDefaultValueSql("now()");
 
