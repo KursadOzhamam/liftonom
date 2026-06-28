@@ -6,7 +6,8 @@ import { dateTR } from "@/lib/format";
 import { useOptions } from "@/lib/hooks";
 import Badge from "@/components/Badge";
 import Modal, { Field } from "@/components/Modal";
-import { Plus } from "lucide-react";
+import LiveMap from "@/components/LiveMap";
+import { Plus, MapPin } from "lucide-react";
 
 type Row = {
   id: number; priority: string; status: string; description: string; created_at: string;
@@ -16,8 +17,9 @@ type Row = {
 type Paginated = { data: Row[]; meta: { total: number } };
 
 const STATUSES = [
-  { v: "new", l: "Yeni" }, { v: "investigating", l: "İnceleniyor" }, { v: "repairing", l: "Onarımda" },
-  { v: "resolved", l: "Çözüldü" }, { v: "closed", l: "Kapatıldı" },
+  { v: "reported", l: "Arıza Bildirildi" }, { v: "acknowledged", l: "İşleme Alındı" },
+  { v: "dispatched", l: "Servis Yola Çıktı" }, { v: "inspected", l: "Kontrol Edildi" },
+  { v: "repairing", l: "Arıza Gideriliyor" }, { v: "completed", l: "İş Tamamlandı" },
 ];
 const emptyForm = { elevator_id: "", priority: "normal", description: "" };
 
@@ -29,7 +31,8 @@ export default function FaultsPage() {
   const [modal, setModal] = useState(false);
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
-  const [diagnose, setDiagnose] = useState<null | { id: number; estimate: string }>(null);
+  const [inspect, setInspect] = useState<null | { id: number; diagnosis: string; needsPart: boolean; partDetails: string }>(null);
+  const [mapFault, setMapFault] = useState<number | null>(null);
 
   const elevators = useOptions("/elevators");
 
@@ -55,19 +58,17 @@ export default function FaultsPage() {
     } finally { setSaving(false); }
   }
 
-  async function dispatch(id: number) {
-    await api(`/fault-reports/${id}/dispatch`, { method: "POST", body: {} });
+  async function step(id: number, endpoint: string) {
+    await api(`/fault-reports/${id}/${endpoint}`, { method: "POST", body: {} });
     load();
   }
-  async function doDiagnose() {
-    if (!diagnose) return;
-    await api(`/fault-reports/${diagnose.id}/diagnose`, { method: "POST", body: { estimated_repair: diagnose.estimate } });
-    setDiagnose(null); load();
-  }
-  async function resolve(id: number) {
-    if (!confirm("Arıza giderildi olarak işaretle? Müşteriye WhatsApp gönderilecek.")) return;
-    await api(`/fault-reports/${id}/resolve`, { method: "POST", body: {} });
-    load();
+  async function doInspect() {
+    if (!inspect) return;
+    await api(`/fault-reports/${inspect.id}/inspect`, { method: "POST", body: {
+      diagnosis: inspect.diagnosis, needsPart: inspect.needsPart,
+      partDetails: inspect.needsPart ? inspect.partDetails : null,
+    } });
+    setInspect(null); load();
   }
 
   return (
@@ -114,22 +115,37 @@ export default function FaultsPage() {
                   <td className="px-4 py-3"><Badge status={f.status} /></td>
                   <td className="px-4 py-3">
                     <div className="flex justify-end gap-2">
-                      {f.status === "new" && (
-                        <button onClick={() => dispatch(f.id)} className="rounded-lg bg-info/10 px-2.5 py-1 text-xs font-medium text-info hover:bg-info/20">
+                      {(f.status === "dispatched" || f.status === "inspected" || f.status === "repairing") && (
+                        <button onClick={() => setMapFault(f.id)} className="flex items-center gap-1 rounded-lg bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary hover:bg-primary/20">
+                          <MapPin size={13} /> Konum
+                        </button>
+                      )}
+                      {f.status === "reported" && (
+                        <button onClick={() => step(f.id, "acknowledge")} className="rounded-lg bg-warning/10 px-2.5 py-1 text-xs font-medium text-warning hover:bg-warning/20">
+                          İşleme Al
+                        </button>
+                      )}
+                      {f.status === "acknowledged" && (
+                        <button onClick={() => step(f.id, "dispatch")} className="rounded-lg bg-info/10 px-2.5 py-1 text-xs font-medium text-info hover:bg-info/20">
                           🚗 Yola Çıkar
                         </button>
                       )}
-                      {f.status === "investigating" && (
-                        <button onClick={() => setDiagnose({ id: f.id, estimate: "" })} className="rounded-lg bg-warning/10 px-2.5 py-1 text-xs font-medium text-warning hover:bg-warning/20">
-                          🔍 Tespit Et
+                      {f.status === "dispatched" && (
+                        <button onClick={() => setInspect({ id: f.id, diagnosis: "", needsPart: false, partDetails: "" })} className="rounded-lg bg-warning/10 px-2.5 py-1 text-xs font-medium text-warning hover:bg-warning/20">
+                          🔍 Kontrol Et
+                        </button>
+                      )}
+                      {f.status === "inspected" && (
+                        <button onClick={() => step(f.id, "start-repair")} className="rounded-lg bg-info/10 px-2.5 py-1 text-xs font-medium text-info hover:bg-info/20">
+                          🔧 Onarıma Başla
                         </button>
                       )}
                       {f.status === "repairing" && (
-                        <button onClick={() => resolve(f.id)} className="rounded-lg bg-success/10 px-2.5 py-1 text-xs font-medium text-success hover:bg-success/20">
-                          ✓ Çözüldü
+                        <button onClick={() => step(f.id, "complete")} className="rounded-lg bg-success/10 px-2.5 py-1 text-xs font-medium text-success hover:bg-success/20">
+                          ✓ İş Tamamlandı
                         </button>
                       )}
-                      {(f.status === "resolved" || f.status === "closed") && (
+                      {f.status === "completed" && (
                         <span className="text-xs text-muted">Tamamlandı</span>
                       )}
                       {f.estimated_repair && f.status === "repairing" && (
@@ -171,20 +187,35 @@ export default function FaultsPage() {
         </Modal>
       )}
 
-      {diagnose && (
-        <Modal title="Arıza Tespiti" onClose={() => setDiagnose(null)} footer={
+      {inspect && (
+        <Modal title="Kontrol Bilgileri" onClose={() => setInspect(null)} footer={
           <>
-            <button onClick={() => setDiagnose(null)} className="rounded-lg border border-line px-4 py-2 text-sm">İptal</button>
-            <button onClick={doDiagnose} disabled={!diagnose.estimate} className="btn-primary">Kaydet & WhatsApp Gönder</button>
+            <button onClick={() => setInspect(null)} className="rounded-lg border border-line px-4 py-2 text-sm">İptal</button>
+            <button onClick={doInspect} disabled={!inspect.diagnosis} className="btn-primary">Kaydet & WhatsApp Gönder</button>
           </>
         }>
-          <p className="text-sm text-muted">Tahmini onarım süresini girin. Kaydedince müşteriye WhatsApp ile bildirilir.</p>
-          <Field label="Tahmini Onarım Süresi *">
-            <input className="input" placeholder="örn. 2 saat, 1 gün" value={diagnose.estimate}
-              onChange={(e) => setDiagnose({ ...diagnose, estimate: e.target.value })} />
+          <p className="text-sm text-muted">Kontrol sonucunu girin. Kaydedince müşteriye WhatsApp ile bildirilir.</p>
+          <Field label="Arıza nedir? *">
+            <input className="input" placeholder="örn. Kapı motoru arızalı" value={inspect.diagnosis}
+              onChange={(e) => setInspect({ ...inspect, diagnosis: e.target.value })} />
           </Field>
+          <Field label="Parça değişimi gerekli mi?">
+            <label className="flex items-center gap-2 text-sm">
+              <input type="checkbox" checked={inspect.needsPart}
+                onChange={(e) => setInspect({ ...inspect, needsPart: e.target.checked })} />
+              <span>Evet, parça değişimi gerekiyor</span>
+            </label>
+          </Field>
+          {inspect.needsPart && (
+            <Field label="Hangi parça?">
+              <input className="input" placeholder="örn. Kapı motoru (1 adet)" value={inspect.partDetails}
+                onChange={(e) => setInspect({ ...inspect, partDetails: e.target.value })} />
+            </Field>
+          )}
         </Modal>
       )}
+
+      {mapFault !== null && <LiveMap faultId={mapFault} onClose={() => setMapFault(null)} />}
     </div>
   );
 }

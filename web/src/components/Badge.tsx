@@ -6,10 +6,15 @@ const MAP: Record<string, { bg: string; text: string; label: string }> = {
   in_progress: { bg: "#FED7AA", text: "#EA580C", label: "Devam Ediyor" },
   completed: { bg: "#DCFCE7", text: "#16A34A", label: "Tamamlandı" },
   cancelled: { bg: "#FEE2E2", text: "#DC2626", label: "İptal" },
-  // Arıza
+  // Arıza — 6 aşamalı yaşam döngüsü
+  reported: { bg: "#FEE2E2", text: "#DC2626", label: "Arıza Bildirildi" },
+  acknowledged: { bg: "#FED7AA", text: "#EA580C", label: "İşleme Alındı" },
+  dispatched: { bg: "#DBEAFE", text: "#2563EB", label: "Servis Yola Çıktı" },
+  inspected: { bg: "#EDE9FE", text: "#7C3AED", label: "Kontrol Edildi" },
+  repairing: { bg: "#FEF3C7", text: "#D97706", label: "Arıza Gideriliyor" },
+  // eski durumlar (geriye uyum)
   new: { bg: "#FEE2E2", text: "#DC2626", label: "Yeni" },
   investigating: { bg: "#FED7AA", text: "#EA580C", label: "İnceleniyor" },
-  repairing: { bg: "#DBEAFE", text: "#2563EB", label: "Onarımda" },
   resolved: { bg: "#DCFCE7", text: "#16A34A", label: "Çözüldü" },
   closed: { bg: "#F3F4F6", text: "#6B7280", label: "Kapatıldı" },
   // Öncelik
