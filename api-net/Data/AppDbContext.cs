@@ -24,6 +24,7 @@ public class AppDbContext : DbContext
     public DbSet<Plan> Plans => Set<Plan>();
     public DbSet<PlatformAdmin> PlatformAdmins => Set<PlatformAdmin>();
     public DbSet<Subscription> Subscriptions => Set<Subscription>();
+    public DbSet<SubscriptionPayment> SubscriptionPayments => Set<SubscriptionPayment>();
     public DbSet<SmsPreference> SmsPreferences => Set<SmsPreference>();
 
     // Çekirdek
@@ -82,6 +83,8 @@ public class AppDbContext : DbContext
         b.Entity<SmsLog>().HasQueryFilter(e => e.TenantId == CurrentTenantId);
         b.Entity<SmsPreference>().HasQueryFilter(e => e.TenantId == CurrentTenantId);
         b.Entity<WhatsAppLog>(e => { e.ToTable("whatsapp_logs"); e.HasQueryFilter(x => x.TenantId == CurrentTenantId); });
+        b.Entity<SubscriptionPayment>(e => { e.Property(p => p.RawResponse).HasColumnType("jsonb"); e.HasQueryFilter(x => x.TenantId == CurrentTenantId); });
+        b.Entity<Subscription>().HasQueryFilter(e => e.TenantId == CurrentTenantId);
 
         b.Entity<WorkOrder>().HasQueryFilter(e => e.DeletedAt == null && e.TenantId == CurrentTenantId);
 

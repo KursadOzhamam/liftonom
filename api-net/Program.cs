@@ -33,6 +33,11 @@ builder.Services.AddScoped<PdfService>();
 builder.Services.AddScoped<ISmsSender, LogSmsSender>();
 builder.Services.AddScoped<FaultNotificationService>();
 builder.Services.AddHttpClient();
+// Ödeme: iyzico anahtarı varsa iyzico, yoksa mock
+if (!string.IsNullOrEmpty(builder.Configuration["Iyzico:ApiKey"]))
+    builder.Services.AddScoped<IPaymentGateway, IyzicoPaymentGateway>();
+else
+    builder.Services.AddScoped<IPaymentGateway, MockPaymentGateway>();
 // WhatsApp: token varsa Meta Cloud API, yoksa log sürücüsü
 if (!string.IsNullOrEmpty(builder.Configuration["WhatsApp:Token"]))
     builder.Services.AddScoped<IWhatsAppSender, MetaWhatsAppSender>();
