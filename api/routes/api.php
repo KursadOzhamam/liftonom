@@ -178,6 +178,10 @@ Route::prefix('v1')->group(function () {
             Route::get('inventory-movements', [ReportController::class, 'inventoryMovements']);
         });
 
+        // --- Ayarlar (firma bilgileri) ---
+        Route::get('settings', [\App\Http\Controllers\Api\SettingsController::class, 'show']);
+        Route::put('settings', [\App\Http\Controllers\Api\SettingsController::class, 'update'])->middleware('role:manager');
+
         // --- PHASE 12: SMS ---
         Route::prefix('sms')->group(function () {
             Route::get('balance', [SmsController::class, 'balance']);
