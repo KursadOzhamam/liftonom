@@ -4,6 +4,7 @@
 const BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:8000/api/v1";
 
 const TOKEN_KEY = "lo_token";
+const ADMIN_TOKEN_KEY = "lo_admin_token";
 
 export function getToken(): string | null {
   if (typeof window === "undefined") return null;
@@ -16,6 +17,17 @@ export function setToken(token: string) {
 
 export function clearToken() {
   localStorage.removeItem(TOKEN_KEY);
+}
+
+export function getAdminToken(): string | null {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem(ADMIN_TOKEN_KEY);
+}
+export function setAdminToken(token: string) {
+  localStorage.setItem(ADMIN_TOKEN_KEY, token);
+}
+export function clearAdminToken() {
+  localStorage.removeItem(ADMIN_TOKEN_KEY);
 }
 
 export class ApiError extends Error {
@@ -32,10 +44,11 @@ type Options = {
   method?: string;
   body?: unknown;
   auth?: boolean;
+  admin?: boolean;
 };
 
 export async function api<T = unknown>(path: string, opts: Options = {}): Promise<T> {
-  const { method = "GET", body, auth = true } = opts;
+  const { method = "GET", body, auth = true, admin = false } = opts;
 
   const headers: Record<string, string> = {
     Accept: "application/json",
@@ -43,7 +56,7 @@ export async function api<T = unknown>(path: string, opts: Options = {}): Promis
   if (body !== undefined) headers["Content-Type"] = "application/json";
 
   if (auth) {
-    const token = getToken();
+    const token = admin ? getAdminToken() : getToken();
     if (token) headers["Authorization"] = `Bearer ${token}`;
   }
 

@@ -22,6 +22,7 @@ public class AppDbContext : DbContext
     public DbSet<User> Users => Set<User>();
     public DbSet<OtpCode> OtpCodes => Set<OtpCode>();
     public DbSet<Plan> Plans => Set<Plan>();
+    public DbSet<PlatformAdmin> PlatformAdmins => Set<PlatformAdmin>();
     public DbSet<Subscription> Subscriptions => Set<Subscription>();
     public DbSet<SmsPreference> SmsPreferences => Set<SmsPreference>();
 

@@ -57,13 +57,33 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                 Encoding.UTF8.GetBytes(TokenService.JwtKey(builder.Configuration))),
         };
     });
-builder.Services.AddAuthorization();
+builder.Services.AddAuthorizationBuilder()
+    .AddPolicy("Admin", p => p.RequireClaim("scope", "admin"));
 
 // CORS — geliştirmede tüm origin'lere izin (Next.js farklı port)
 builder.Services.AddCors(o => o.AddDefaultPolicy(p =>
     p.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod()));
 
 var app = builder.Build();
+
+// Varsayılan süper admin (idempotent)
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<LiftOtonom.Api.Data.AppDbContext>();
+    if (!await db.PlatformAdmins.AnyAsync())
+    {
+        db.PlatformAdmins.Add(new LiftOtonom.Api.Models.PlatformAdmin
+        {
+            Name = "Süper Admin",
+            Email = "admin@liftotonom.com",
+            Password = BCrypt.Net.BCrypt.HashPassword("admin123"),
+            IsActive = true,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow,
+        });
+        await db.SaveChangesAsync();
+    }
+}
 
 app.UseMiddleware<ExceptionMiddleware>();
 app.UseCors();
