@@ -14,6 +14,8 @@ public class Building
     public string? ManagerName { get; set; }
     public string? ManagerPhone { get; set; }
     public string? Notes { get; set; }
+    public decimal? Latitude { get; set; }
+    public decimal? Longitude { get; set; }
     public bool IsSample { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }

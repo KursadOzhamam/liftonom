@@ -187,9 +187,18 @@ public class FaultReportController(AppDbContext db, FaultNotificationService not
             .OrderBy(c => c.Id)
             .Select(c => new { c.Id, c.Comment, c.CreatedAt, User = c.User == null ? null : new { c.User.Name, c.User.Surname } })
             .ToListAsync();
+
+        // Hedef (arıza yeri): asansör → bina konumu
+        var dest = f.ElevatorId == null ? null : await db.Elevators
+            .Where(e => e.Id == f.ElevatorId)
+            .Select(e => new { e.Building!.Latitude, e.Building.Longitude, e.Building.Address, e.Building.Name, e.Building.City })
+            .FirstOrDefaultAsync();
+
         return Ok(new { f.Id, f.Priority, f.Status, f.Description, f.ResolutionNote, f.CreatedAt, f.ResolvedAt,
             f.EstimatedRepair, f.DispatchedAt, f.DiagnosedAt, f.AcknowledgedAt, f.InspectedAt, f.RepairStartedAt, f.CompletedAt,
             f.FaultDiagnosis, f.NeedsPart, f.PartDetails, f.TechnicianLat, f.TechnicianLng, f.LocationUpdatedAt,
+            DestinationLat = dest?.Latitude, DestinationLng = dest?.Longitude,
+            DestinationAddress = dest?.Address, DestinationName = dest?.Name, DestinationCity = dest?.City,
             f.Elevator, f.AssignedUser, Comments = comments });
     }
 

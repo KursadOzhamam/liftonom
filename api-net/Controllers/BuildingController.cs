@@ -13,7 +13,8 @@ namespace Liftonom.Api.Controllers;
 public class BuildingController(AppDbContext db) : ControllerBase
 {
     public record BuildingDto(string Name, long? CustomerId, long? RegionId, string? Address,
-        string? District, string? City, int? FloorCount, string? ManagerName, string? ManagerPhone, string? Notes);
+        string? District, string? City, int? FloorCount, string? ManagerName, string? ManagerPhone, string? Notes,
+        decimal? Latitude, decimal? Longitude);
 
     [HttpGet]
     public async Task<IActionResult> Index([FromQuery] string? search,
@@ -39,6 +40,7 @@ public class BuildingController(AppDbContext db) : ControllerBase
         var projected = q.Select(b => new
         {
             b.Id, b.Name, b.City, b.District, b.FloorCount, b.ManagerName, b.ManagerPhone, b.Address,
+            b.Latitude, b.Longitude,
             Customer = b.CustomerId == null ? null : new { Id = b.Customer!.Id, b.Customer.Name },
             ElevatorsCount = db.Elevators.Count(e => e.BuildingId == b.Id),
         });
@@ -65,7 +67,7 @@ public class BuildingController(AppDbContext db) : ControllerBase
             Name = dto.Name, CustomerId = dto.CustomerId, RegionId = dto.RegionId,
             Address = dto.Address, District = dto.District, City = dto.City,
             FloorCount = dto.FloorCount, ManagerName = dto.ManagerName, ManagerPhone = dto.ManagerPhone,
-            Notes = dto.Notes, CreatedAt = now, UpdatedAt = now,
+            Notes = dto.Notes, Latitude = dto.Latitude, Longitude = dto.Longitude, CreatedAt = now, UpdatedAt = now,
         };
         db.Buildings.Add(b);
         await db.SaveChangesAsync();
@@ -81,6 +83,7 @@ public class BuildingController(AppDbContext db) : ControllerBase
         b.CustomerId = dto.CustomerId; b.RegionId = dto.RegionId; b.Address = dto.Address;
         b.District = dto.District; b.City = dto.City; b.FloorCount = dto.FloorCount;
         b.ManagerName = dto.ManagerName; b.ManagerPhone = dto.ManagerPhone; b.Notes = dto.Notes;
+        b.Latitude = dto.Latitude; b.Longitude = dto.Longitude;
         b.UpdatedAt = DateTime.UtcNow;
         await db.SaveChangesAsync();
         return Ok(b);
