@@ -2,7 +2,7 @@
 import 'package:flutter/material.dart';
 import 'api.dart';
 import 'login_screen.dart';
-import 'home_screen.dart';
+import 'main_scaffold.dart';
 
 const kPrimary = Color(0xFF2563EB);
 
@@ -29,7 +29,7 @@ class LiftonomApp extends StatelessWidget {
           isDense: true,
         ),
       ),
-      home: Api.hasToken ? const HomeScreen() : const LoginScreen(),
+      home: Api.hasToken ? const MainScaffold() : const LoginScreen(),
     );
   }
 }

@@ -1,13 +1,6 @@
-// lib/home_screen.dart
+// lib/faults_tab.dart
 import 'package:flutter/material.dart';
 import 'api.dart';
-import 'login_screen.dart';
-
-class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
-  @override
-  State<HomeScreen> createState() => _HomeScreenState();
-}
 
 const _statusLabels = {
   'new': 'Yeni', 'investigating': 'İnceleniyor', 'repairing': 'Onarımda',
@@ -18,7 +11,13 @@ const _statusColors = {
   'resolved': Color(0xFF16A34A), 'closed': Color(0xFF6B7280),
 };
 
-class _HomeScreenState extends State<HomeScreen> {
+class FaultsTab extends StatefulWidget {
+  const FaultsTab({super.key});
+  @override
+  State<FaultsTab> createState() => _FaultsTabState();
+}
+
+class _FaultsTabState extends State<FaultsTab> {
   List<dynamic> _faults = [];
   bool _loading = true;
   String? _error;
@@ -77,35 +76,22 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  Future<void> _logout() async {
-    await Api.clearToken();
-    if (!mounted) return;
-    Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const LoginScreen()));
-  }
-
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        title: const Text('Arıza Bildirimleri', style: TextStyle(fontWeight: FontWeight.bold)),
-        actions: [IconButton(onPressed: _logout, icon: const Icon(Icons.logout, color: Colors.red))],
-      ),
-      body: RefreshIndicator(
-        onRefresh: _load,
-        child: _loading
-            ? const Center(child: CircularProgressIndicator())
-            : _error != null
-                ? Center(child: Text(_error!))
-                : _faults.isEmpty
-                    ? const Center(child: Text('Arıza kaydı yok.'))
-                    : ListView.separated(
-                        padding: const EdgeInsets.all(12),
-                        itemCount: _faults.length,
-                        separatorBuilder: (_, __) => const SizedBox(height: 10),
-                        itemBuilder: (_, i) => _faultCard(_faults[i]),
-                      ),
-      ),
+    return RefreshIndicator(
+      onRefresh: _load,
+      child: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : _error != null
+              ? Center(child: Text(_error!))
+              : _faults.isEmpty
+                  ? ListView(children: const [SizedBox(height: 200), Center(child: Text('Arıza kaydı yok.'))])
+                  : ListView.separated(
+                      padding: const EdgeInsets.all(12),
+                      itemCount: _faults.length,
+                      separatorBuilder: (_, i) => const SizedBox(height: 10),
+                      itemBuilder: (_, i) => _faultCard(_faults[i]),
+                    ),
     );
   }
 

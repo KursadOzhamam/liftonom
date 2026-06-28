@@ -1,7 +1,7 @@
 // lib/login_screen.dart
 import 'package:flutter/material.dart';
 import 'api.dart';
-import 'home_screen.dart';
+import 'main_scaffold.dart';
 import 'main.dart' show kPrimary;
 
 class LoginScreen extends StatefulWidget {
@@ -43,7 +43,7 @@ class _LoginScreenState extends State<LoginScreen> {
           body: {'phone': _phoneNormalized, 'code': _code.text});
       await Api.setToken(res['token']);
       if (!mounted) return;
-      Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const HomeScreen()));
+      Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const MainScaffold()));
     } on ApiException catch (e) {
       setState(() => _error = e.message);
     } finally {
