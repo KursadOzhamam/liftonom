@@ -3,8 +3,10 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// .NET API adresi. Emülatör için: Android = 10.0.2.2, iOS/masaüstü = localhost.
-const String kBaseUrl = 'http://localhost:5080/api/v1';
+/// .NET API adresi.
+/// Gerçek cihaz: Mac'in LAN IP'si (telefon ile aynı Wi-Fi). Bu adres simülatörden de çalışır.
+/// Simülatör-only kullanımda 'http://localhost:5080/api/v1' de olur.
+const String kBaseUrl = 'http://192.168.1.205:5080/api/v1';
 
 class ApiException implements Exception {
   final int status;

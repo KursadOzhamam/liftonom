@@ -8,6 +8,18 @@
 	<string>Asansör QR kodlarını taramak için kamera erişimi gereklidir.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Servise yola çıktığınızda müşterinin sizi haritada takip edebilmesi için konumunuz paylaşılır.</string>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>comgooglemaps</string>
+		<string>googlemaps</string>
+	</array>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>Aynı ağdaki Liftonom sunucusuna bağlanmak için yerel ağ erişimi gereklidir.</string>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+	</dict>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>

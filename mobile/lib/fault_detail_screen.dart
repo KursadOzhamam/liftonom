@@ -2,6 +2,7 @@
 // Arıza detay + 6 aşamalı yaşam döngüsü adım çubuğu + aşama aksiyonları.
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'api.dart';
 import 'theme.dart';
 import 'fault_status.dart';
@@ -73,11 +74,83 @@ class _FaultDetailScreenState extends State<FaultDetailScreen> {
       await Api.request('/fault-reports/${widget.faultId}/${action.endpoint}', method: 'POST', body: body);
       await _load();
       _snack('Durum güncellendi · müşteriye WhatsApp gönderildi', LT.green);
+      if (action.endpoint == 'dispatch' && mounted) await _openNavigation();
     } on ApiException catch (e) {
       _snack(e.message, LT.red);
     } finally {
       if (mounted) setState(() => _busy = false);
     }
+  }
+
+  /// Yola çıkışta hedefe navigasyon: Google / Apple Haritalar seçimi.
+  Future<void> _openNavigation() async {
+    final lat = _f?['destination_lat'];
+    final lng = _f?['destination_lng'];
+    if (lat == null || lng == null) {
+      _snack('Hedef konumu tanımlı değil (bina konumu girilmemiş).', LT.orange);
+      return;
+    }
+    final choice = await showModalBottomSheet<String>(
+      context: context,
+      backgroundColor: LT.bg,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+        child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Center(child: Container(width: 40, height: 4, margin: const EdgeInsets.only(bottom: 16),
+              decoration: BoxDecoration(color: LT.line, borderRadius: BorderRadius.circular(2)))),
+          const Text('Navigasyonu Aç', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: LT.ink)),
+          const SizedBox(height: 4),
+          Text(_f?['destination_address']?.toString() ?? _f?['destination_name']?.toString() ?? 'Arıza konumu',
+              style: const TextStyle(color: LT.muted, fontSize: 13)),
+          const SizedBox(height: 18),
+          _navTile('Google Haritalar', Icons.navigation_rounded, () => Navigator.pop(ctx, 'google')),
+          const SizedBox(height: 10),
+          _navTile('Apple Haritalar', Icons.map_outlined, () => Navigator.pop(ctx, 'apple')),
+          const SizedBox(height: 8),
+          Center(child: TextButton(onPressed: () => Navigator.pop(ctx),
+              child: const Text('Şimdi değil', style: TextStyle(color: LT.muted)))),
+        ]),
+      ),
+    );
+    if (choice == null) return;
+
+    // Önce yerel harita uygulaması şeması, kuruluysa onu aç; değilse web'e düş.
+    final (app, web) = choice == 'google'
+        ? (
+            Uri.parse('comgooglemaps://?daddr=$lat,$lng&directionsmode=driving'),
+            Uri.parse('https://www.google.com/maps/dir/?api=1&destination=$lat,$lng&travelmode=driving'),
+          )
+        : (
+            Uri.parse('maps://?daddr=$lat,$lng&dirflg=d'),
+            Uri.parse('https://maps.apple.com/?daddr=$lat,$lng&dirflg=d'),
+          );
+    final uri = await canLaunchUrl(app) ? app : web;
+    if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+      _snack('Harita uygulaması açılamadı.', LT.red);
+    }
+  }
+
+  Widget _navTile(String label, IconData icon, VoidCallback onTap) {
+    return Material(
+      color: LT.surface,
+      borderRadius: BorderRadius.circular(LT.radiusSm),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(LT.radiusSm),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          decoration: BoxDecoration(borderRadius: BorderRadius.circular(LT.radiusSm), border: Border.all(color: LT.line)),
+          child: Row(children: [
+            Icon(icon, color: LT.ink, size: 22),
+            const SizedBox(width: 12),
+            Text(label, style: const TextStyle(fontWeight: FontWeight.w700, color: LT.ink, fontSize: 15)),
+            const Spacer(),
+            const Icon(Icons.arrow_forward_rounded, color: LT.muted, size: 18),
+          ]),
+        ),
+      ),
+    );
   }
 
   Future<Map<String, dynamic>?> _inspectForm() {
