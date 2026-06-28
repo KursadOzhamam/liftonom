@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { api, ApiError } from "@/lib/api";
 import RevenueChart from "@/components/RevenueChart";
+import DashboardWidgets from "@/components/DashboardWidgets";
 
 type Kpis = {
   customers: number;
@@ -64,6 +65,8 @@ export default function DashboardPage() {
       <div className="mt-6">
         <RevenueChart />
       </div>
+
+      <DashboardWidgets />
     </div>
   );
 }
