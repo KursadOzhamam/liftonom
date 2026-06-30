@@ -21,6 +21,11 @@ node_modules/
 # Gizli anahtarlar (FCM service account — ASLA commit edilmez)
 /api-net/secrets/
 
+# Firebase istemci config (gizli değil ama GitHub secret-scan flag'liyor)
+# Gerekince yeniden indir: firebase apps:sdkconfig ANDROID/IOS <appId> --out=...
+/mobile/android/app/google-services.json
+/mobile/ios/Runner/GoogleService-Info.plist
+
 # IDE / OS
 .idea/
 .vscode/
