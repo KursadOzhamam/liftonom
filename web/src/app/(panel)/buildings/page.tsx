@@ -84,7 +84,7 @@ export default function BuildingsPage() {
         </div>
       </div>
 
-      <div className="mt-4 overflow-hidden rounded-xl border border-line bg-white">
+      <div className="mt-4 overflow-hidden rounded-xl border border-line bg-card">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-line text-left text-xs uppercase tracking-wide text-muted">
@@ -139,7 +139,7 @@ export default function BuildingsPage() {
 
       {modal && (
         <div className="fixed inset-0 z-20 grid place-items-center bg-black/40 p-4" onClick={() => setModal(null)}>
-          <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl bg-white p-6 shadow-lg" onClick={(e) => e.stopPropagation()}>
+          <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl bg-card p-6 shadow-lg" onClick={(e) => e.stopPropagation()}>
             <h2 className="text-lg font-semibold text-ink">{modal.mode === "create" ? "Yeni Bina" : "Bina Düzenle"}</h2>
             <div className="mt-4 space-y-3">
               <label className="block">

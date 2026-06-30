@@ -1,6 +1,9 @@
 @import "tailwindcss";
 
-/* === LiftOtonom Tasarım Sistemi (doküman Bölüm 1) === */
+/* Sınıf tabanlı koyu mod: <html class="dark"> */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* === Liftonom Tasarım Sistemi (açık mod — varsayılan) === */
 @theme {
   --color-primary: #2563EB;
   --color-primary-dark: #1D4ED8;
@@ -16,6 +19,7 @@
   --color-muted: #6B7280;
   --color-line: #E5E7EB;
   --color-surface: #F9FAFB;
+  --color-card: #FFFFFF;
 
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, sans-serif;
 
@@ -27,11 +31,40 @@
   --foreground: #111827;
 }
 
+/* === Koyu mod — semantik token'lar yeniden eşlenir (slate paleti) === */
+.dark {
+  --color-primary: #3B82F6;
+  --color-primary-dark: #2563EB;
+  --color-primary-light: #1E3357;
+
+  --color-success: #22C55E;
+  --color-warning: #F59E0B;
+  --color-danger: #F87171;
+  --color-info: #22D3EE;
+
+  --color-ink: #E8EDF4;
+  --color-ink-soft: #C2CBD8;
+  --color-muted: #8A95A6;
+  --color-line: #25304A;
+  --color-surface: #0B1120;
+  --color-card: #131C2E;
+
+  --background: #0B1120;
+  --foreground: #E8EDF4;
+
+  color-scheme: dark;
+}
+
 html, body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
+}
+
+/* Tema geçişi yumuşak olsun (büyük tablolarda jank yaratmayacak kadar hafif) */
+body, aside, header, .input, [class*="bg-card"], [class*="bg-surface"] {
+  transition: background-color 0.2s ease, border-color 0.2s ease;
 }
 
 /* === Ortak bileşen sınıfları === */
@@ -42,9 +75,10 @@ html, body {
   padding: 0.55rem 0.75rem;
   font-size: 0.875rem;
   outline: none;
-  background: #fff;
+  background: var(--color-card);
   color: var(--color-ink);
 }
+.input::placeholder { color: var(--color-muted); }
 .input:focus {
   border-color: var(--color-primary);
   box-shadow: 0 0 0 3px var(--color-primary-light);

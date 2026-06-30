@@ -30,10 +30,10 @@ export default function CashboxesPage() {
       <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {!data
           ? Array.from({ length: 3 }).map((_, i) => (
-              <div key={i} className="h-28 animate-pulse rounded-xl border border-line bg-white" />
+              <div key={i} className="h-28 animate-pulse rounded-xl border border-line bg-card" />
             ))
           : data.data.map((c) => (
-              <div key={c.id} className="rounded-xl border border-line bg-white p-5 shadow-sm">
+              <div key={c.id} className="rounded-xl border border-line bg-card p-5 shadow-sm">
                 <div className="flex items-center gap-2 text-muted">
                   {c.type === "bank" ? <Landmark size={18} /> : <Wallet size={18} />}
                   <span className="text-sm font-medium">{c.name}</span>

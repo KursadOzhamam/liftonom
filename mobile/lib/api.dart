@@ -4,9 +4,14 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// .NET API adresi.
-/// Gerçek cihaz: Mac'in LAN IP'si (telefon ile aynı Wi-Fi). Bu adres simülatörden de çalışır.
-/// Simülatör-only kullanımda 'http://localhost:5080/api/v1' de olur.
-const String kBaseUrl = 'http://192.168.1.205:5080/api/v1';
+/// Production (App Store / Play Store) için derlerken HTTPS adresini geçin:
+///   flutter build ipa --dart-define=API_BASE_URL=https://api.liftonom.com/api/v1
+///   flutter build appbundle --dart-define=API_BASE_URL=https://api.liftonom.com/api/v1
+/// Geliştirmede varsayılan, Mac'in LAN IP'sidir (telefon ile aynı Wi-Fi).
+const String kBaseUrl = String.fromEnvironment(
+  'API_BASE_URL',
+  defaultValue: 'http://192.168.1.205:5080/api/v1',
+);
 
 class ApiException implements Exception {
   final int status;

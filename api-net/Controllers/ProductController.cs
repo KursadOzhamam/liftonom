@@ -33,6 +33,15 @@ public class ProductController(AppDbContext db) : ControllerBase
     public async Task<IActionResult> LowStock() =>
         Ok(await db.Products.Where(p => p.StockQuantity < p.MinStock).OrderBy(p => p.Name).ToListAsync());
 
+    /// <summary>Ürün kategorileri — her kategorideki ürün sayısı ve toplam stok.</summary>
+    [HttpGet("categories")]
+    public async Task<IActionResult> Categories() =>
+        Ok(await db.Products
+            .GroupBy(p => p.Category ?? "Kategorisiz")
+            .Select(g => new { category = g.Key, product_count = g.Count(), total_stock = g.Sum(p => p.StockQuantity) })
+            .OrderByDescending(x => x.product_count)
+            .ToListAsync());
+
     [HttpGet("movements")]
     public async Task<IActionResult> Movements([FromQuery(Name = "product_id")] long? productId,
         [FromQuery(Name = "per_page")] int perPage = 25, [FromQuery] int page = 1)

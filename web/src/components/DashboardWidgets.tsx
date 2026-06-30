@@ -59,7 +59,7 @@ export default function DashboardWidgets() {
 
 function Widget({ title, icon, empty, children }: { title: string; icon: React.ReactNode; empty: boolean; children: React.ReactNode }) {
   return (
-    <div className="rounded-xl border border-line bg-white p-5 shadow-sm">
+    <div className="rounded-xl border border-line bg-card p-5 shadow-sm">
       <div className="flex items-center gap-2">
         {icon}
         <h2 className="text-sm font-semibold text-ink">{title}</h2>

@@ -32,7 +32,7 @@ export default function TsePage() {
 
       <div className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-5">
         {cards.map((c) => (
-          <div key={c.label} className="rounded-xl border border-line bg-white p-4">
+          <div key={c.label} className="rounded-xl border border-line bg-card p-4">
             <div className="text-xs font-medium uppercase tracking-wide text-muted">{c.label}</div>
             <div className="mt-1 text-2xl font-bold" style={{ color: c.color }}>{c.value}</div>
           </div>
@@ -40,7 +40,7 @@ export default function TsePage() {
       </div>
 
       <h2 className="mt-8 text-lg font-semibold text-ink">30 gün içinde dolacaklar</h2>
-      <div className="mt-3 overflow-hidden rounded-xl border border-line bg-white">
+      <div className="mt-3 overflow-hidden rounded-xl border border-line bg-card">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-line text-left text-xs uppercase tracking-wide text-muted">

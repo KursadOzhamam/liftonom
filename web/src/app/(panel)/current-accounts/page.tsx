@@ -59,7 +59,7 @@ export default function CurrentAccountsPage() {
         <button onClick={() => setModal(true)} className="btn-primary"><Plus size={16} /> Tahsilat Al</button>
       </div>
 
-      <div className="mt-4 overflow-hidden rounded-xl border border-line bg-white">
+      <div className="mt-4 overflow-hidden rounded-xl border border-line bg-card">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-line text-left text-xs uppercase tracking-wide text-muted">

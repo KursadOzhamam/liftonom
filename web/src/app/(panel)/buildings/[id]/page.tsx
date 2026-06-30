@@ -51,7 +51,7 @@ export default function BuildingDetailPage() {
 
       <div className="mt-5">
         {tab === "genel" && (
-          <div className="grid max-w-2xl grid-cols-2 gap-4 rounded-xl border border-line bg-white p-5 text-sm">
+          <div className="grid max-w-2xl grid-cols-2 gap-4 rounded-xl border border-line bg-card p-5 text-sm">
             <Info label="Şehir" value={b.city} />
             <Info label="İlçe" value={b.district} />
             <Info label="Kat Sayısı" value={b.floor_count != null ? String(b.floor_count) : null} />
@@ -62,7 +62,7 @@ export default function BuildingDetailPage() {
         )}
 
         {tab === "asansorler" && (
-          <div className="overflow-hidden rounded-xl border border-line bg-white">
+          <div className="overflow-hidden rounded-xl border border-line bg-card">
             <table className="w-full text-sm">
               <thead><tr className="border-b border-line text-left text-xs uppercase tracking-wide text-muted">
                 <th className="px-4 py-3 font-medium">Asansör</th><th className="px-4 py-3 font-medium">Marka</th>

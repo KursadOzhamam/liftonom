@@ -31,8 +31,9 @@ class HomeScreenState extends State<HomeScreen> {
   Future<void> load() async {
     setState(() => _loading = true);
     try {
-      final res = await Api.request('/fault-reports?per_page=100');
-      final sum = await Api.request('/fault-reports/summary');
+      // Yalnızca bu teknisyene atanmış arızalar (mine=true).
+      final res = await Api.request('/fault-reports?per_page=100&mine=true');
+      final sum = await Api.request('/fault-reports/summary?mine=true');
       setState(() {
         _faults = res['data'] ?? [];
         _summary = Map<String, dynamic>.from(sum as Map);

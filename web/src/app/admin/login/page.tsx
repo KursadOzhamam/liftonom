@@ -27,14 +27,14 @@ export default function AdminLoginPage() {
   }
 
   return (
-    <div className="min-h-screen grid place-items-center bg-ink px-4">
+    <div className="min-h-screen grid place-items-center bg-[#0B1120] px-4">
       <div className="w-full max-w-sm">
         <div className="mb-6 text-center">
           <div className="mx-auto grid h-12 w-12 place-items-center rounded-xl bg-primary text-xl font-bold text-white">L</div>
           <h1 className="mt-3 text-xl font-bold text-white">Liftonom · Süper Admin</h1>
           <p className="text-sm text-gray-400">Platform yönetim paneli</p>
         </div>
-        <form onSubmit={submit} className="rounded-xl bg-white p-6 shadow-lg space-y-4">
+        <form onSubmit={submit} className="rounded-xl bg-card p-6 shadow-lg space-y-4">
           <label className="block">
             <span className="mb-1 block text-xs font-medium text-muted">E-posta</span>
             <input type="email" className="input" value={email} onChange={(e) => setEmail(e.target.value)} required />

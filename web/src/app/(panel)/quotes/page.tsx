@@ -29,7 +29,7 @@ export default function QuotesPage() {
       <h1 className="text-2xl font-bold text-ink">Teklifler</h1>
       <p className="mt-1 text-sm text-muted">{total} teklif</p>
 
-      <div className="mt-4 overflow-hidden rounded-xl border border-line bg-white">
+      <div className="mt-4 overflow-hidden rounded-xl border border-line bg-card">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-line text-left text-xs uppercase tracking-wide text-muted">

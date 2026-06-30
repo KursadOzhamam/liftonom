@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { api, getToken, clearToken } from "@/lib/api";
 import { NAV } from "./nav";
+import ThemeToggle from "./ThemeToggle";
 import { LogOut } from "lucide-react";
 
 type Me = { name: string; surname?: string; role: string };
@@ -40,7 +41,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-screen bg-surface">
       {/* Sidebar */}
-      <aside className="hidden w-60 shrink-0 flex-col border-r border-line bg-white md:flex">
+      <aside className="hidden w-60 shrink-0 flex-col border-r border-line bg-card md:flex">
         <div className="flex h-16 items-center gap-2 border-b border-line px-5">
           <div className="grid h-8 w-8 place-items-center rounded-lg bg-primary text-sm font-bold text-white">L</div>
           <span className="font-bold text-ink">Liftonom</span>
@@ -76,9 +77,10 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
       {/* Main */}
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-10 flex h-16 items-center justify-between border-b border-line bg-white px-6">
+        <header className="sticky top-0 z-10 flex h-16 items-center justify-between border-b border-line bg-card px-6">
           <div className="text-sm text-muted md:hidden font-bold text-ink">Liftonom</div>
           <div className="ml-auto flex items-center gap-4">
+            <ThemeToggle />
             {me && (
               <div className="flex items-center gap-2">
                 <div className="grid h-8 w-8 place-items-center rounded-full bg-primary-light text-xs font-bold text-primary">

@@ -15,6 +15,9 @@ public class User
     public string? AvatarUrl { get; set; }
     public bool IsActive { get; set; } = true;
     public DateTime? LastLoginAt { get; set; }
+    public double? LastLat { get; set; }
+    public double? LastLng { get; set; }
+    public DateTime? LocationUpdatedAt { get; set; }
     public string? RememberToken { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }

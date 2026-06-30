@@ -70,7 +70,7 @@ export default function SmsPage() {
             <div className="mt-1 text-3xl font-bold">{balance ?? "…"}</div>
           </div>
 
-          <div className="rounded-xl border border-line bg-white p-5">
+          <div className="rounded-xl border border-line bg-card p-5">
             <h2 className="text-sm font-semibold text-ink">Manuel SMS Gönder</h2>
             <div className="mt-3 space-y-3">
               <input className="input" placeholder="05XX XXX XX XX" value={phone}
@@ -86,7 +86,7 @@ export default function SmsPage() {
 
         {/* Tercihler + Geçmiş */}
         <div className="space-y-5 lg:col-span-2">
-          <div className="rounded-xl border border-line bg-white p-5">
+          <div className="rounded-xl border border-line bg-card p-5">
             <h2 className="text-sm font-semibold text-ink">Otomatik Bildirim Tercihleri</h2>
             <div className="mt-3 divide-y divide-line">
               {prefs && Object.keys(PREF_LABELS).map((key) => (
@@ -100,7 +100,7 @@ export default function SmsPage() {
             </div>
           </div>
 
-          <div className="overflow-hidden rounded-xl border border-line bg-white">
+          <div className="overflow-hidden rounded-xl border border-line bg-card">
             <div className="border-b border-line px-4 py-3 text-sm font-semibold text-ink">Gönderim Geçmişi</div>
             <table className="w-full text-sm">
               <tbody>

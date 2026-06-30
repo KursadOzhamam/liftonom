@@ -52,10 +52,10 @@ export default function DashboardPage() {
       <div className="mt-6 grid grid-cols-2 gap-4 md:grid-cols-3">
         {!kpis && !error
           ? Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="h-24 animate-pulse rounded-xl border border-line bg-white" />
+              <div key={i} className="h-24 animate-pulse rounded-xl border border-line bg-card" />
             ))
           : cards.map((c) => (
-              <div key={c.label} className="rounded-xl border border-line bg-white p-4 shadow-sm">
+              <div key={c.label} className="rounded-xl border border-line bg-card p-4 shadow-sm">
                 <div className="text-xs font-medium uppercase tracking-wide text-muted">{c.label}</div>
                 <div className="mt-2 text-2xl font-bold" style={{ color: c.color }}>{c.value}</div>
               </div>

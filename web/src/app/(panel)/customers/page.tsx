@@ -89,7 +89,7 @@ export default function CustomersPage() {
       </div>
 
       {/* Tablo */}
-      <div className="mt-4 overflow-hidden rounded-xl border border-line bg-white">
+      <div className="mt-4 overflow-hidden rounded-xl border border-line bg-card">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-line text-left text-xs uppercase tracking-wide text-muted">
@@ -156,7 +156,7 @@ export default function CustomersPage() {
       {/* Modal */}
       {modal && (
         <div className="fixed inset-0 z-20 grid place-items-center bg-black/40 p-4" onClick={() => setModal(null)}>
-          <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-lg" onClick={(e) => e.stopPropagation()}>
+          <div className="w-full max-w-md rounded-xl bg-card p-6 shadow-lg" onClick={(e) => e.stopPropagation()}>
             <h2 className="text-lg font-semibold text-ink">
               {modal.mode === "create" ? "Yeni Müşteri" : "Müşteri Düzenle"}
             </h2>

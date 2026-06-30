@@ -33,7 +33,7 @@ export default function InventoryPage() {
       <h1 className="text-2xl font-bold text-ink">Stok</h1>
       <p className="mt-1 text-sm text-muted">{total} ürün</p>
 
-      <div className="mt-4 overflow-hidden rounded-xl border border-line bg-white">
+      <div className="mt-4 overflow-hidden rounded-xl border border-line bg-card">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-line text-left text-xs uppercase tracking-wide text-muted">

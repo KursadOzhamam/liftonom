@@ -60,7 +60,7 @@ export default function CustomerDetailPage() {
 
       <div className="mt-5">
         {tab === "genel" && (
-          <div className="grid max-w-2xl grid-cols-2 gap-4 rounded-xl border border-line bg-white p-5 text-sm">
+          <div className="grid max-w-2xl grid-cols-2 gap-4 rounded-xl border border-line bg-card p-5 text-sm">
             <Info label="Telefon" value={customer.phone} />
             <Info label="E-posta" value={customer.email} />
             <Info label="Şehir" value={customer.city} />
@@ -71,7 +71,7 @@ export default function CustomerDetailPage() {
         )}
 
         {tab === "binalar" && (
-          <div className="overflow-hidden rounded-xl border border-line bg-white">
+          <div className="overflow-hidden rounded-xl border border-line bg-card">
             <table className="w-full text-sm">
               <thead><tr className="border-b border-line text-left text-xs uppercase tracking-wide text-muted">
                 <th className="px-4 py-3 font-medium">Bina</th><th className="px-4 py-3 font-medium">Şehir</th>
@@ -93,13 +93,13 @@ export default function CustomerDetailPage() {
 
         {tab === "cari" && account && (
           <div>
-            <div className="mb-4 rounded-xl border border-line bg-white p-5">
+            <div className="mb-4 rounded-xl border border-line bg-card p-5">
               <div className="text-xs uppercase tracking-wide text-muted">Bakiye</div>
               <div className="mt-1 text-2xl font-bold" style={{ color: account.balance > 0 ? "var(--color-danger)" : "var(--color-success)" }}>
                 {TRY(account.balance)}
               </div>
             </div>
-            <div className="overflow-hidden rounded-xl border border-line bg-white">
+            <div className="overflow-hidden rounded-xl border border-line bg-card">
               <table className="w-full text-sm">
                 <thead><tr className="border-b border-line text-left text-xs uppercase tracking-wide text-muted">
                   <th className="px-4 py-3 font-medium">Tarih</th><th className="px-4 py-3 font-medium">Açıklama</th>

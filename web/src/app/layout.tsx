@@ -18,7 +18,15 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="tr" className={`${inter.variable} h-full antialiased`}>
+    <html lang="tr" className={`${inter.variable} h-full antialiased`} suppressHydrationWarning>
+      <head>
+        {/* Sayfa boyanmadan önce tema uygulanır — koyu modda beyaz parlamayı (FOUC) önler */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `try{var t=localStorage.getItem('theme');if(t==='dark'||(!t&&window.matchMedia('(prefers-color-scheme:dark)').matches))document.documentElement.classList.add('dark');}catch(e){}`,
+          }}
+        />
+      </head>
       <body className="min-h-full">{children}</body>
     </html>
   );

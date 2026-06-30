@@ -72,7 +72,7 @@ export default function LoginPage() {
           </div>
         </div>
 
-        <div className="rounded-xl border border-line bg-white p-6 shadow-sm">
+        <div className="rounded-xl border border-line bg-card p-6 shadow-sm">
           {step === "login" ? (
             <form onSubmit={submitLogin} className="space-y-4">
               <h1 className="text-lg font-semibold text-ink">Giriş Yap</h1>

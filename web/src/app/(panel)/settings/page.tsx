@@ -46,7 +46,7 @@ export default function SettingsPage() {
       <p className="mt-1 text-sm text-muted">Firma bilgileri ve abonelik.</p>
 
       {/* Abonelik */}
-      <div className="mt-5 flex flex-wrap items-center gap-4 rounded-xl border border-line bg-white p-5">
+      <div className="mt-5 flex flex-wrap items-center gap-4 rounded-xl border border-line bg-card p-5">
         <div>
           <div className="text-xs uppercase tracking-wide text-muted">Plan</div>
           <div className="mt-1 font-semibold text-ink">{PLAN[data.plan] ?? data.plan}</div>
@@ -62,7 +62,7 @@ export default function SettingsPage() {
       </div>
 
       {/* Firma bilgileri */}
-      <div className="mt-5 rounded-xl border border-line bg-white p-5">
+      <div className="mt-5 rounded-xl border border-line bg-card p-5">
         <h2 className="text-sm font-semibold text-ink">Firma Bilgileri</h2>
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
           <Field label="Firma Adı"><input className="input" value={data.name ?? ""} onChange={(e) => set("name", e.target.value)} /></Field>

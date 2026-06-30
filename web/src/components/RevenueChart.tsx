@@ -17,12 +17,12 @@ export default function RevenueChart() {
 
   useEffect(() => { api<Point[]>("/dashboard/revenue-chart").then(setData).catch(() => setData([])); }, []);
 
-  if (!data) return <div className="h-48 animate-pulse rounded-xl border border-line bg-white" />;
+  if (!data) return <div className="h-48 animate-pulse rounded-xl border border-line bg-card" />;
 
   const max = Math.max(1, ...data.map((d) => Number(d.total)));
 
   return (
-    <div className="rounded-xl border border-line bg-white p-5 shadow-sm">
+    <div className="rounded-xl border border-line bg-card p-5 shadow-sm">
       <h2 className="text-sm font-semibold text-ink">Son 6 Ay Hasılat</h2>
       {data.length === 0 ? (
         <p className="mt-6 text-center text-sm text-muted">Henüz veri yok.</p>

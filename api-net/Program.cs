@@ -32,6 +32,7 @@ builder.Services.AddScoped<ScheduledJobs>();
 builder.Services.AddScoped<PdfService>();
 builder.Services.AddScoped<ISmsSender, LogSmsSender>();
 builder.Services.AddScoped<FaultNotificationService>();
+builder.Services.AddScoped<PushService>();
 builder.Services.AddHttpClient();
 // Ödeme: iyzico anahtarı varsa iyzico, yoksa mock
 if (!string.IsNullOrEmpty(builder.Configuration["Iyzico:ApiKey"]))

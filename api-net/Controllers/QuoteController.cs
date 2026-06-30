@@ -13,19 +13,21 @@ namespace Liftonom.Api.Controllers;
 [Route("api/v1/quotes")]
 public class QuoteController(AppDbContext db, PdfService pdf) : ControllerBase
 {
-    public record QuoteDto(long? CustomerId, DateOnly? ValidUntil, List<LineItem>? Items, decimal? TaxRate, decimal? Discount, string? Notes);
+    public record QuoteDto(long? CustomerId, string? Type, DateOnly? ValidUntil, List<LineItem>? Items, decimal? TaxRate, decimal? Discount, string? Notes);
 
     [HttpGet]
-    public async Task<IActionResult> Index([FromQuery] string? status, [FromQuery(Name = "customer_id")] long? customerId,
+    public async Task<IActionResult> Index([FromQuery] string? status, [FromQuery] string? type,
+        [FromQuery(Name = "customer_id")] long? customerId,
         [FromQuery(Name = "per_page")] int perPage = 25, [FromQuery] int page = 1)
     {
         var q = db.Quotes.AsQueryable();
         if (!string.IsNullOrEmpty(status)) q = q.Where(x => x.Status == status);
+        if (!string.IsNullOrEmpty(type)) q = q.Where(x => x.Type == type);
         if (customerId is { } c) q = q.Where(x => x.CustomerId == c);
 
         var projected = q.OrderByDescending(x => x.Id).Select(x => new
         {
-            x.Id, x.QuoteNumber, x.Status, x.Total, x.ValidUntil,
+            x.Id, x.QuoteNumber, x.Type, x.Status, x.Total, x.ValidUntil,
             Customer = x.CustomerId == null ? null : new { x.Customer!.Name },
         });
         return Ok(await projected.ToPagedAsync(page, perPage));
@@ -40,13 +42,14 @@ public class QuoteController(AppDbContext db, PdfService pdf) : ControllerBase
         var q = new Quote
         {
             TenantId = db.CurrentTenantId!.Value, CustomerId = dto.CustomerId, Status = "draft",
+            Type = dto.Type ?? "standard",
             ValidUntil = dto.ValidUntil, Items = JsonSerializer.Serialize(dto.Items ?? []),
             Subtotal = t.Subtotal, TaxRate = t.TaxRate, TaxAmount = t.TaxAmount, Discount = t.Discount, Total = t.Total,
             Notes = dto.Notes, CreatedBy = long.Parse(User.FindFirst("uid")!.Value), CreatedAt = now, UpdatedAt = now,
         };
         db.Quotes.Add(q);
         await db.SaveChangesAsync();
-        q.QuoteNumber = $"TEK-{q.Id:D6}";
+        q.QuoteNumber = $"{(q.Type == "revision" ? "REV" : "TEK")}-{q.Id:D6}";
         await db.SaveChangesAsync();
         return StatusCode(201, q);
     }

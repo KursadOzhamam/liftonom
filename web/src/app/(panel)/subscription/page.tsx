@@ -44,7 +44,7 @@ export default function SubscriptionPage() {
       <p className="mt-1 text-sm text-muted">Planınızı yönetin ve yükseltin.</p>
 
       {current && (
-        <div className="mt-5 flex flex-wrap items-center gap-4 rounded-xl border border-line bg-white p-5">
+        <div className="mt-5 flex flex-wrap items-center gap-4 rounded-xl border border-line bg-card p-5">
           <Crown size={28} className="text-warning" />
           <div>
             <div className="text-xs uppercase tracking-wide text-muted">Mevcut Plan</div>
@@ -68,7 +68,7 @@ export default function SubscriptionPage() {
           const isCurrent = current?.plan === p.code;
           const price = Number(p.monthly_price);
           return (
-            <div key={p.id} className={`rounded-xl border bg-white p-5 ${isCurrent ? "border-primary ring-1 ring-primary" : "border-line"}`}>
+            <div key={p.id} className={`rounded-xl border bg-card p-5 ${isCurrent ? "border-primary ring-1 ring-primary" : "border-line"}`}>
               <div className="text-lg font-bold text-ink">{p.name}</div>
               <div className="mt-1 text-2xl font-bold text-primary">
                 {price > 0 ? TRY(price) : "Özel"}

@@ -28,7 +28,7 @@ public class FaultReportController(AppDbContext db, FaultNotificationService not
     [HttpGet]
     public async Task<IActionResult> Index([FromQuery] string? search, [FromQuery] string? status,
         [FromQuery] string? priority, [FromQuery(Name = "elevator_id")] long? elevatorId,
-        [FromQuery(Name = "assigned_user_id")] long? assignedUserId,
+        [FromQuery(Name = "assigned_user_id")] long? assignedUserId, [FromQuery] bool mine = false,
         [FromQuery(Name = "per_page")] int perPage = 25, [FromQuery] int page = 1)
     {
         var q = db.FaultReports.AsQueryable();
@@ -37,6 +37,7 @@ public class FaultReportController(AppDbContext db, FaultNotificationService not
         if (!string.IsNullOrEmpty(priority)) q = q.Where(f => f.Priority == priority);
         if (elevatorId is { } e) q = q.Where(f => f.ElevatorId == e);
         if (assignedUserId is { } u) q = q.Where(f => f.AssignedUserId == u);
+        if (mine) { var uid = long.Parse(User.FindFirst("uid")!.Value); q = q.Where(f => f.AssignedUserId == uid); }
 
         var projected = q.OrderByDescending(f => f.Id).Select(f => new
         {
@@ -51,10 +52,11 @@ public class FaultReportController(AppDbContext db, FaultNotificationService not
 
     /// <summary>Ana ekran sayaçları: aktif / tamamlanan / bugün / yüksek öncelik.</summary>
     [HttpGet("summary")]
-    public async Task<IActionResult> Summary()
+    public async Task<IActionResult> Summary([FromQuery] bool mine = false)
     {
         var today = DateTime.UtcNow.Date;
-        var all = db.FaultReports;
+        IQueryable<Models.FaultReport> all = db.FaultReports;
+        if (mine) { var uid = long.Parse(User.FindFirst("uid")!.Value); all = all.Where(f => f.AssignedUserId == uid); }
         return Ok(new
         {
             active = await all.CountAsync(f => f.Status != "completed"),
@@ -80,7 +82,7 @@ public class FaultReportController(AppDbContext db, FaultNotificationService not
     }
 
     [HttpPost]
-    public async Task<IActionResult> Store(CreateDto dto)
+    public async Task<IActionResult> Store(CreateDto dto, [FromServices] PushService push)
     {
         var now = DateTime.UtcNow;
         var f = new FaultReport
@@ -92,6 +94,17 @@ public class FaultReportController(AppDbContext db, FaultNotificationService not
         };
         db.FaultReports.Add(f);
         await db.SaveChangesAsync();
+        if (f.AssignedUserId is { } auid)
+        {
+            db.Notifications.Add(new Models.Notification
+            {
+                TenantId = f.TenantId, UserId = auid, Title = "Yeni arıza atandı",
+                Body = f.Description, Type = "fault", Link = $"/faults/{f.Id}", CreatedAt = now,
+            });
+            await db.SaveChangesAsync();
+            await push.SendToUserAsync(auid, "Yeni arıza atandı", f.Description ?? "Size bir arıza atandı.",
+                new() { ["type"] = "fault", ["id"] = f.Id.ToString() });
+        }
         await notify.NotifyAsync(f, FaultNotificationService.Stage.Reported); // otonom WhatsApp
         return StatusCode(201, f);
     }
@@ -216,12 +229,19 @@ public class FaultReportController(AppDbContext db, FaultNotificationService not
     }
 
     [HttpPost("{id:long}/assign")]
-    public async Task<IActionResult> Assign(long id, AssignDto dto)
+    public async Task<IActionResult> Assign(long id, AssignDto dto, [FromServices] PushService push)
     {
         var f = await Find(id);
         f.AssignedUserId = dto.AssignedUserId;
         f.UpdatedAt = DateTime.UtcNow;
+        db.Notifications.Add(new Models.Notification
+        {
+            TenantId = f.TenantId, UserId = dto.AssignedUserId, Title = "Bir arıza size atandı",
+            Body = f.Description, Type = "fault", Link = $"/faults/{f.Id}", CreatedAt = DateTime.UtcNow,
+        });
         await db.SaveChangesAsync();
+        await push.SendToUserAsync(dto.AssignedUserId, "Bir arıza size atandı", f.Description ?? "Size bir arıza atandı.",
+            new() { ["type"] = "fault", ["id"] = f.Id.ToString() });
         return Ok(f);
     }
 

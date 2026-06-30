@@ -2,9 +2,15 @@
     <!-- QR tarama (mobile_scanner) için kamera erişimi -->
     <uses-permission android:name="android.permission.CAMERA"/>
     <uses-feature android:name="android.hardware.camera" android:required="false"/>
-    <!-- Servis yola çıkınca canlı konum paylaşımı -->
+    <!-- Canlı konum paylaşımı (görev sırasında, arka planda dahil) -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION"/>
+    <!-- Arka plan konum takibi için ön plan servisi (Android 14+: type location) -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION"/>
+    <!-- Ön plan servisi bildirimi (Android 13+) -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <application
         android:label="Liftonom"
         android:name="${applicationName}"

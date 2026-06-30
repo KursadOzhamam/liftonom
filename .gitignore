@@ -1,6 +1,5 @@
 # Dependencies
 node_modules/
-vendor/
 .pnp/
 
 # Env
@@ -12,7 +11,6 @@ vendor/
 # Build
 /web/.next/
 /web/out/
-/api/public/build/
 /mobile/build/
 /mobile/.dart_tool/
 
@@ -20,13 +18,8 @@ vendor/
 /api-net/bin/
 /api-net/obj/
 
-# Laravel
-/api/storage/*.key
-/api/storage/framework/cache/*
-/api/storage/framework/sessions/*
-/api/storage/framework/views/*
-/api/storage/logs/*
-/api/bootstrap/cache/*
+# Gizli anahtarlar (FCM service account — ASLA commit edilmez)
+/api-net/secrets/
 
 # IDE / OS
 .idea/
@@ -37,3 +30,6 @@ vendor/
 # Flutter
 /mobile/.flutter-plugins
 /mobile/.flutter-plugins-dependencies
+
+# İndirilen tasarım aracı (ayrı repo)
+/ui-ux-pro-max-skill/

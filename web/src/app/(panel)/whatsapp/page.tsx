@@ -40,7 +40,7 @@ export default function WhatsAppPage() {
         {total} otomatik mesaj · Arıza yaşam döngüsünde müşterilere otonom gönderilir.
       </p>
 
-      <div className="mt-4 overflow-hidden rounded-xl border border-line bg-white">
+      <div className="mt-4 overflow-hidden rounded-xl border border-line bg-card">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-line text-left text-xs uppercase tracking-wide text-muted">

@@ -37,6 +37,14 @@ public class UserController(AppDbContext db, ISmsSender sms) : ControllerBase
         return Ok(await projected.ToPagedAsync(page, perPage));
     }
 
+    /// <summary>Personel konum takibi — son bilinen konumlarıyla aktif personel.</summary>
+    [HttpGet("locations")]
+    public async Task<IActionResult> Locations() =>
+        Ok(await db.Users.Where(u => u.TenantId == TenantId && u.IsActive)
+            .OrderBy(u => u.Name)
+            .Select(u => new { u.Id, u.Name, u.Surname, u.Phone, u.Role, u.LastLat, u.LastLng, u.LocationUpdatedAt })
+            .ToListAsync());
+
     [HttpPost]
     public async Task<IActionResult> Store(CreateDto dto)
     {

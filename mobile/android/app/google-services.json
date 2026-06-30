@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "287307191026",
+    "project_id": "liftonom-saha",
+    "storage_bucket": "liftonom-saha.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:287307191026:android:50a381862e3f4a067a766b",
+        "android_client_info": {
+          "package_name": "com.liftonom.liftonom"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDjPOIsoG7G-uMTM0PN-TT7b9AIF8vABKo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -32,7 +32,7 @@ export default function WorkOrdersPage() {
       <h1 className="text-2xl font-bold text-ink">İş Emirleri</h1>
       <p className="mt-1 text-sm text-muted">{total} iş emri</p>
 
-      <div className="mt-4 overflow-hidden rounded-xl border border-line bg-white">
+      <div className="mt-4 overflow-hidden rounded-xl border border-line bg-card">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-line text-left text-xs uppercase tracking-wide text-muted">

@@ -11,8 +11,8 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final _phone = TextEditingController(text: '0543 123 45 67');
-  final _password = TextEditingController(text: '123456');
+  final _phone = TextEditingController();
+  final _password = TextEditingController();
   final _code = TextEditingController();
   bool _otpStep = false;
   bool _loading = false;
@@ -42,6 +42,15 @@ class _LoginScreenState extends State<LoginScreen> {
       final res = await Api.request('/auth/verify-otp', method: 'POST', auth: false,
           body: {'phone': _phoneNormalized, 'code': _code.text});
       await Api.setToken(res['token']);
+
+      // Bu uygulama yalnızca saha teknisyenleri içindir.
+      final me = await Api.request('/auth/me');
+      if ((me?['role']?.toString()) != 'technician') {
+        await Api.clearToken();
+        setState(() => _error = 'Bu uygulama yalnızca saha teknisyenleri içindir.');
+        return;
+      }
+
       if (!mounted) return;
       Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const MainScaffold()));
     } on ApiException catch (e) {

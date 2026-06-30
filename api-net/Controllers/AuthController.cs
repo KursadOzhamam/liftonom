@@ -102,6 +102,88 @@ public class AuthController(
         return Ok(UserPayload(user));
     }
 
+    public record ProfileDto(string? Name, string? Surname, string? Email);
+    public record PasswordDto(string CurrentPassword, string NewPassword);
+    public record LocationDto(double Lat, double Lng);
+    public record DeviceTokenDto(string Token, string? Platform);
+
+    /// <summary>FCM cihaz token'ı kaydet (push bildirimleri için).</summary>
+    [Authorize]
+    [HttpPost("device-token")]
+    public async Task<IActionResult> RegisterDeviceToken(DeviceTokenDto dto)
+    {
+        if (string.IsNullOrWhiteSpace(dto.Token)) throw new ApiException(422, "Token zorunludur.");
+        var uid = long.Parse(User.FindFirst("uid")!.Value);
+        var now = DateTime.UtcNow;
+        var existing = await db.DeviceTokens.IgnoreQueryFilters().FirstOrDefaultAsync(d => d.Token == dto.Token);
+        if (existing != null)
+        {
+            existing.UserId = uid; existing.TenantId = db.CurrentTenantId!.Value;
+            existing.Platform = dto.Platform; existing.UpdatedAt = now;
+        }
+        else
+        {
+            db.DeviceTokens.Add(new Models.DeviceToken
+            {
+                TenantId = db.CurrentTenantId!.Value, UserId = uid, Token = dto.Token,
+                Platform = dto.Platform, CreatedAt = now, UpdatedAt = now,
+            });
+        }
+        await db.SaveChangesAsync();
+        return Ok(new { message = "Cihaz kaydedildi." });
+    }
+
+    [Authorize]
+    [HttpDelete("device-token")]
+    public async Task<IActionResult> DeleteDeviceToken(DeviceTokenDto dto)
+    {
+        var rows = await db.DeviceTokens.IgnoreQueryFilters().Where(d => d.Token == dto.Token).ToListAsync();
+        db.DeviceTokens.RemoveRange(rows);
+        await db.SaveChangesAsync();
+        return Ok(new { message = "Cihaz kaydı silindi." });
+    }
+
+    /// <summary>Kendi konumunu güncelle (saha personeli / mobil).</summary>
+    [Authorize]
+    [HttpPost("location")]
+    public async Task<IActionResult> UpdateLocation(LocationDto dto)
+    {
+        var uid = long.Parse(User.FindFirst("uid")!.Value);
+        var user = await db.Users.FindAsync(uid) ?? throw new ApiException(404, "Kullanıcı bulunamadı.");
+        user.LastLat = dto.Lat; user.LastLng = dto.Lng; user.LocationUpdatedAt = DateTime.UtcNow;
+        await db.SaveChangesAsync();
+        return Ok(new { message = "Konum güncellendi." });
+    }
+
+    [Authorize]
+    [HttpPut("profile")]
+    public async Task<IActionResult> UpdateProfile(ProfileDto dto)
+    {
+        var uid = long.Parse(User.FindFirst("uid")!.Value);
+        var user = await db.Users.FindAsync(uid) ?? throw new ApiException(404, "Kullanıcı bulunamadı.");
+        if (!string.IsNullOrWhiteSpace(dto.Name)) user.Name = dto.Name;
+        user.Surname = dto.Surname; user.Email = dto.Email;
+        user.UpdatedAt = DateTime.UtcNow;
+        await db.SaveChangesAsync();
+        return Ok(UserPayload(user));
+    }
+
+    [Authorize]
+    [HttpPost("change-password")]
+    public async Task<IActionResult> ChangePassword(PasswordDto dto)
+    {
+        if (string.IsNullOrWhiteSpace(dto.NewPassword) || dto.NewPassword.Length < 6)
+            throw new ApiException(422, "Yeni şifre en az 6 karakter olmalıdır.");
+        var uid = long.Parse(User.FindFirst("uid")!.Value);
+        var user = await db.Users.FindAsync(uid) ?? throw new ApiException(404, "Kullanıcı bulunamadı.");
+        if (!BCrypt.Net.BCrypt.Verify(dto.CurrentPassword, user.Password))
+            throw new ApiException(422, "Mevcut şifre hatalı.");
+        user.Password = BCrypt.Net.BCrypt.HashPassword(dto.NewPassword);
+        user.UpdatedAt = DateTime.UtcNow;
+        await db.SaveChangesAsync();
+        return Ok(new { message = "Şifre güncellendi." });
+    }
+
     [Authorize]
     [HttpPost("logout")]
     public IActionResult Logout() => Ok(new { message = "Çıkış yapıldı." });

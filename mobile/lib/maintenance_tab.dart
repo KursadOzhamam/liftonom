@@ -28,7 +28,8 @@ class _MaintenanceTabState extends State<MaintenanceTab> {
   Future<void> _load() async {
     setState(() => _loading = true);
     try {
-      final res = await Api.request('/maintenance');
+      // Yalnızca bu teknisyene atanmış bakımlar (mine=true).
+      final res = await Api.request('/maintenance?mine=true');
       setState(() => _items = res['data'] ?? []);
     } finally {
       if (mounted) setState(() => _loading = false);

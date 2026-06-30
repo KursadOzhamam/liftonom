@@ -6,6 +6,7 @@ public class Quote
     public long TenantId { get; set; }
     public long? CustomerId { get; set; }
     public string? QuoteNumber { get; set; }
+    public string Type { get; set; } = "standard";    // standard | revision (revizyon teklifi)
     public string Status { get; set; } = "draft";
     public DateOnly? ValidUntil { get; set; }
     public string? Items { get; set; } = "[]";        // jsonb

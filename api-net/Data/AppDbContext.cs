@@ -57,6 +57,15 @@ public class AppDbContext : DbContext
     public DbSet<SmsLog> SmsLogs => Set<SmsLog>();
     public DbSet<WhatsAppLog> WhatsAppLogs => Set<WhatsAppLog>();
 
+    // Ek modüller
+    public DbSet<Check> Checks => Set<Check>();
+    public DbSet<MaintenanceFee> MaintenanceFees => Set<MaintenanceFee>();
+    public DbSet<Vehicle> Vehicles => Set<Vehicle>();
+    public DbSet<Notification> Notifications => Set<Notification>();
+    public DbSet<StockLocation> StockLocations => Set<StockLocation>();
+    public DbSet<DocumentForm> DocumentForms => Set<DocumentForm>();
+    public DbSet<DeviceToken> DeviceTokens => Set<DeviceToken>();
+
     protected override void OnModelCreating(ModelBuilder b)
     {
         // Auth: User & Tenant yalnızca soft-delete (tenant filtresi YOK — login firmalar arası arar)
@@ -97,6 +106,16 @@ public class AppDbContext : DbContext
         // Tekil tablo adları + tenant filtresi
         b.Entity<Attendance>(e => { e.ToTable("attendance"); e.HasQueryFilter(x => x.TenantId == CurrentTenantId); });
         b.Entity<Payroll>(e => { e.ToTable("payroll"); e.HasQueryFilter(x => x.TenantId == CurrentTenantId); });
+
+        // Ek modüller — tenant izolasyonu + soft-delete
+        b.Entity<Check>().HasQueryFilter(e => e.DeletedAt == null && e.TenantId == CurrentTenantId);
+        b.Entity<MaintenanceFee>().HasQueryFilter(e => e.DeletedAt == null && e.TenantId == CurrentTenantId);
+        b.Entity<Vehicle>().HasQueryFilter(e => e.DeletedAt == null && e.TenantId == CurrentTenantId);
+        b.Entity<StockLocation>().HasQueryFilter(e => e.DeletedAt == null && e.TenantId == CurrentTenantId);
+        b.Entity<DocumentForm>(e => { e.Property(d => d.FormData).HasColumnType("jsonb"); e.HasQueryFilter(x => x.DeletedAt == null && x.TenantId == CurrentTenantId); });
+        b.Entity<Notification>().HasQueryFilter(e => e.TenantId == CurrentTenantId);
+        b.Entity<DeviceToken>().HasQueryFilter(e => e.TenantId == CurrentTenantId);
+        b.Entity<DeviceToken>().HasIndex(e => e.Token).IsUnique();
 
         // jsonb kolonlar (string olarak ham JSON tutulur)
         b.Entity<MaintenanceRecord>(e =>

@@ -140,7 +140,7 @@ export default function LiveMap({ faultId, onClose }: { faultId: number; onClose
 
   return (
     <div className="fixed inset-0 z-30 grid place-items-center bg-black/40 p-4" onClick={onClose}>
-      <div className="w-full max-w-2xl overflow-hidden rounded-xl bg-white shadow-lg" onClick={(e) => e.stopPropagation()}>
+      <div className="w-full max-w-2xl overflow-hidden rounded-xl bg-card shadow-lg" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between border-b border-line px-5 py-3">
           <div>
             <h2 className="font-semibold text-ink">Canlı Takip · {fault?.elevator?.name ?? `Arıza #${faultId}`}</h2>

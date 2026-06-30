@@ -7,7 +7,17 @@
 	<key>NSCameraUsageDescription</key>
 	<string>Asansör QR kodlarını taramak için kamera erişimi gereklidir.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>Servise yola çıktığınızda müşterinin sizi haritada takip edebilmesi için konumunuz paylaşılır.</string>
+	<string>Görev sırasında ofisin ve müşterinin sizi haritada takip edebilmesi için konumunuz paylaşılır.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>Saha görevleriniz boyunca, uygulama arka plandayken de konumunuz ofise iletilir; böylece canlı takip kesintisiz olur.</string>
+	<key>NSLocationAlwaysUsageDescription</key>
+	<string>Saha görevleriniz boyunca, uygulama arka plandayken de konumunuz ofise iletilir; böylece canlı takip kesintisiz olur.</string>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>location</string>
+	</array>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	<key>LSApplicationQueriesSchemes</key>
 	<array>
 		<string>comgooglemaps</string>
