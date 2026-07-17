@@ -7,7 +7,7 @@ import ThemeToggle from "@/components/ThemeToggle";
 import {
   ArrowRight, Building2, Wrench, CalendarClock, Boxes, Wallet, Users, FileText,
   ShieldCheck, MapPin, Bell, QrCode, Smartphone, Check, X, Menu, Gauge, Phone, Mail,
-  WifiOff, Receipt, UserPlus, Upload, Rocket, Route, Zap, Sparkles,
+  WifiOff, Receipt, UserPlus, Upload, Rocket, Route, Zap, Sparkles, ChevronDown, Quote,
 } from "lucide-react";
 
 /* ── ikon eşlemesi (admin string → bileşen) ── */
@@ -24,6 +24,7 @@ type Item = { id: number; section: string; title: string; description: string | 
 type Landing = {
   settings: { hero_badge: string | null; hero_title: string | null; hero_title_accent: string | null; hero_subtitle: string | null; show_pricing: boolean };
   features: Item[]; modules: Item[]; steps: Item[]; compare_old: Item[]; compare_new: Item[];
+  testimonials: Item[]; faqs: Item[];
 };
 type Plan = { id: number; code: string; name: string; monthly_price: number; max_users: number | null; max_elevators: number | null };
 
@@ -69,12 +70,25 @@ const DEFAULT: Landing = {
     { id: 43, section: "compare_new", title: "Dijital form bulutta; denetimde 30 saniyede belge", description: null, icon: null },
     { id: 44, section: "compare_new", title: "Bakım kapanırken tek tıkla fatura + online ödeme", description: null, icon: null },
   ],
+  testimonials: [
+    { id: 51, section: "testimonial", title: "Mehmet Demir — Demir Asansör", description: "Bakım takvimini artık hiç kaçırmıyoruz. Teknisyenlerin sahadaki durumunu anlık görmek işimizi kökten değiştirdi.", icon: null },
+    { id: 52, section: "testimonial", title: "Ayşe Kaya — Kaya Lift", description: "Kağıt formlardan kurtulduk; TSE denetiminde tüm belgeler saniyeler içinde elimizde. Tahsilat da hızlandı.", icon: null },
+    { id: 53, section: "testimonial", title: "Kürşad Özhamam — Öz Asansör", description: "Tek panelden bakım, arıza ve faturayı yönetmek harika. Ekip verimliliğimiz belirgin arttı.", icon: null },
+  ],
+  faqs: [
+    { id: 61, section: "faq", title: "Kurulum ve eğitim ücretli mi?", description: "Hayır. Kurulum, veri aktarımı ve ekip eğitimi abonelik fiyatına dahildir.", icon: null },
+    { id: 62, section: "faq", title: "Mevcut Excel verilerimi aktarabilir miyim?", description: "Evet. Şablona dönüştürüp toplu yükleyebilirsiniz; ekibimiz transfer desteği sunar.", icon: null },
+    { id: 63, section: "faq", title: "Teknisyen uygulaması internetsiz çalışır mı?", description: "Evet. Sinyalsiz bölgede bakım tamamlanır, imza alınır; bağlantı gelince otomatik senkronlanır.", icon: null },
+    { id: 64, section: "faq", title: "İstediğim zaman iptal edebilir miyim?", description: "Aylık abonelikte taahhüt yoktur, dilediğiniz zaman iptal edebilirsiniz. Yıllık abonelik daha avantajlıdır.", icon: null },
+    { id: 65, section: "faq", title: "Verilerim güvende mi?", description: "Her firmanın verisi izole tutulur (çok kiracılı mimari), düzenli yedeklenir ve şifreli saklanır.", icon: null },
+  ],
 };
 
 const NAV = [
   { href: "#ozellikler", label: "Özellikler" },
   { href: "#moduller", label: "Modüller" },
   { href: "#fiyatlar", label: "Fiyatlar" },
+  { href: "#sss", label: "SSS" },
   { href: "#iletisim", label: "İletişim" },
 ];
 const TRY0 = (n: number) => "₺" + Math.round(n).toLocaleString("tr-TR");
@@ -93,6 +107,7 @@ export default function Landing() {
   const [d, setD] = useState<Landing>(DEFAULT);
   const [plans, setPlans] = useState<Plan[]>([]);
   const [yearly, setYearly] = useState(true);
+  const [openFaq, setOpenFaq] = useState<number | null>(null);
 
   useEffect(() => {
     api<Landing>("/public/landing", { auth: false }).then((r) => {
@@ -104,6 +119,8 @@ export default function Landing() {
         steps: r.steps?.length ? r.steps : DEFAULT.steps,
         compare_old: r.compare_old?.length ? r.compare_old : DEFAULT.compare_old,
         compare_new: r.compare_new?.length ? r.compare_new : DEFAULT.compare_new,
+        testimonials: r.testimonials?.length ? r.testimonials : DEFAULT.testimonials,
+        faqs: r.faqs?.length ? r.faqs : DEFAULT.faqs,
       });
     }).catch(() => {});
     api<Plan[]>("/public/plans", { auth: false }).then((p) => setPlans(p ?? [])).catch(() => {});
@@ -312,6 +329,51 @@ export default function Landing() {
             })}
           </div>
           <p className="mt-6 text-center text-xs text-muted">Fiyatlara KDV dahildir. Yıllık ödeme daha avantajlıdır.</p>
+        </section>
+      )}
+
+      {/* ── Müşteri Yorumları ── */}
+      {d.testimonials.length > 0 && (
+        <section className="mx-auto max-w-6xl px-4 py-20 sm:px-6">
+          <div className="mx-auto max-w-2xl text-center">
+            <span className="text-xs font-semibold uppercase tracking-wider text-primary">Referanslar</span>
+            <h2 className="mt-2 text-3xl font-bold tracking-tight text-ink">Müşterilerimiz ne diyor?</h2>
+          </div>
+          <div className="mt-12 grid gap-5 md:grid-cols-3">
+            {d.testimonials.map((t) => (
+              <div key={t.id} className="flex flex-col rounded-2xl border border-line bg-card p-6">
+                <Quote size={22} className="text-primary/40" />
+                <p className="mt-3 flex-1 text-sm leading-relaxed text-ink-soft">{t.description}</p>
+                <div className="mt-5 flex items-center gap-3 border-t border-line pt-4">
+                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-primary-light text-sm font-bold text-primary">{t.title?.[0] ?? "?"}</span>
+                  <span className="text-sm font-medium text-ink">{t.title}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* ── SSS ── */}
+      {d.faqs.length > 0 && (
+        <section id="sss" className="border-y border-line bg-card">
+          <div className="mx-auto max-w-3xl px-4 py-20 sm:px-6">
+            <div className="mx-auto max-w-2xl text-center">
+              <span className="text-xs font-semibold uppercase tracking-wider text-primary">SSS</span>
+              <h2 className="mt-2 text-3xl font-bold tracking-tight text-ink">Sıkça Sorulan Sorular</h2>
+            </div>
+            <div className="mt-10 space-y-3">
+              {d.faqs.map((f) => (
+                <div key={f.id} className="rounded-xl border border-line bg-surface">
+                  <button onClick={() => setOpenFaq(openFaq === f.id ? null : f.id)} className="flex w-full items-center justify-between gap-4 px-5 py-4 text-left">
+                    <span className="text-sm font-medium text-ink">{f.title}</span>
+                    <ChevronDown size={18} className={`shrink-0 text-muted transition ${openFaq === f.id ? "rotate-180" : ""}`} />
+                  </button>
+                  {openFaq === f.id && <p className="px-5 pb-4 text-sm leading-relaxed text-ink-soft">{f.description}</p>}
+                </div>
+              ))}
+            </div>
+          </div>
         </section>
       )}
 

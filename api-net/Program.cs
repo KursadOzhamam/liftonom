@@ -213,6 +213,32 @@ using (var scope = app.Services.CreateScope())
         await db.SaveChangesAsync();
     }
 
+    // Müşteri yorumları + SSS — bölüm bazlı idempotent seed (mevcut DB'ye de eklensin diye ayrı).
+    if (!await db.LandingItems.AnyAsync(i => i.Section == "testimonial"))
+    {
+        var tnow = DateTime.UtcNow;
+        var to = 0;
+        void AddT(string who, string quote) => db.LandingItems.Add(new Liftonom.Api.Models.LandingItem
+        { Section = "testimonial", Title = who, Description = quote, SortOrder = to++, IsActive = true, CreatedAt = tnow, UpdatedAt = tnow });
+        AddT("Mehmet Demir — Demir Asansör", "Bakım takvimini artık hiç kaçırmıyoruz. Teknisyenlerin sahadaki durumunu anlık görmek işimizi kökten değiştirdi.");
+        AddT("Ayşe Kaya — Kaya Lift", "Kağıt formlardan kurtulduk; TSE denetiminde tüm belgeler saniyeler içinde elimizde. Tahsilat da hızlandı.");
+        AddT("Kürşad Özhamam — Öz Asansör", "Tek panelden bakım, arıza ve faturayı yönetmek harika. Ekip verimliliğimiz belirgin arttı.");
+        await db.SaveChangesAsync();
+    }
+    if (!await db.LandingItems.AnyAsync(i => i.Section == "faq"))
+    {
+        var fnow = DateTime.UtcNow;
+        var fo = 0;
+        void AddF(string q, string a) => db.LandingItems.Add(new Liftonom.Api.Models.LandingItem
+        { Section = "faq", Title = q, Description = a, SortOrder = fo++, IsActive = true, CreatedAt = fnow, UpdatedAt = fnow });
+        AddF("Kurulum ve eğitim ücretli mi?", "Hayır. Kurulum, veri aktarımı ve ekip eğitimi abonelik fiyatına dahildir.");
+        AddF("Mevcut Excel verilerimi aktarabilir miyim?", "Evet. Şablona dönüştürüp toplu yükleyebilirsiniz; ekibimiz transfer desteği sunar.");
+        AddF("Teknisyen uygulaması internetsiz çalışır mı?", "Evet. Sinyalsiz bölgede bakım tamamlanır, imza alınır; bağlantı gelince otomatik senkronlanır.");
+        AddF("İstediğim zaman iptal edebilir miyim?", "Aylık abonelikte taahhüt yoktur, dilediğiniz zaman iptal edebilirsiniz. Yıllık abonelik daha avantajlıdır.");
+        AddF("Verilerim güvende mi?", "Her firmanın verisi izole tutulur (çok kiracılı mimari), düzenli yedeklenir ve şifreli saklanır.");
+        await db.SaveChangesAsync();
+    }
+
     // Varsayılan planlar (landing fiyatlandırma + admin Planlar modülü için)
     if (!await db.Plans.AnyAsync())
     {
