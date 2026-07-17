@@ -1,0 +1,163 @@
+# CLAUDE.md — Liftonom Proje Günlüğü & Doğruluk Rehberi
+
+> Bu dosya projenin **tek doğruluk kaynağıdır** ve AI oturumlarının (Claude Code)
+> **halüsinasyon görmesini önlemek** için tutulur. Kod tabanında anlamlı bir değişiklik
+> yaptığında **bu dosyayı da aynı commit içinde güncelle**. Buradaki bir bilgi kodla
+> çelişiyorsa **kod esastır** — çelişkiyi düzelt, uydurma.
+>
+> Son güncelleme: 2026-06-30 · Branch: `feature/web-admin-mobile-push`
+
+---
+
+## ⛔ ÖNCE OKU — Sık Yapılan Hatalar (halüsinasyon önleyici)
+
+1. **Backend TEK: .NET 10** (`api-net/`). **Laravel YOK.** Eski `api/` (PHP) klasörü **silindi**;
+   "Laravel", "artisan", "composer", "PHP controller" arama/önerme. Referanslar da temizlendi.
+2. **Şema RAW SQL ile yönetilir** — `api-net/Migrations/*.sql`. **EF Core migration YOKTUR**
+   (`Migrations/` içinde `.cs` dosyası yok). `dotnet ef migrations add` **KULLANMA**; yeni tablo
+   için elle `.sql` yaz + EF model + `DbSet` + query filter ekle. (`dotnet ef` kullanman gerekirse
+   `Microsoft.EntityFrameworkCore.Design` paketi projede YOK.)
+3. **JSON ve DB kolonları `snake_case`** (`JsonNamingPolicy.SnakeCaseLower` + EF
+   `UseSnakeCaseNamingConvention`). API'ye `snake_case` gönder/bekle.
+4. **Multi-tenant**: tenant izolasyonu EF **global query filter** ile otomatik
+   (`e.TenantId == CurrentTenantId`). Filtreyi aşmak için `IgnoreQueryFilters()` (sadece Süper Admin
+   veya token/cihaz gibi tenant-ötesi işlemlerde).
+5. **`git`**: aktif branch `feature/web-admin-mobile-push`, remote `KursadOzhamam/liftonom`. Default
+   branch'e doğrudan push etme.
+6. **Gizli anahtarlar ASLA commit edilmez** — bkz. [Sırlar](#sırlar--güvenlik).
+7. **Mobil uygulama YALNIZCA teknisyenler içindir** (rol kontrolü login'de).
+8. Konum/port sabitleri: **API `5080`**, **Web `3000`**. Mobil API adresi build-time `--dart-define`.
+
+---
+
+## Mimari
+
+| Katman | Teknoloji | Klasör | Port |
+|--------|-----------|--------|------|
+| Backend API | **.NET 10** (ASP.NET Core + EF Core) + **PostgreSQL** + JWT | `api-net/` | 5080 |
+| Web Panel | **Next.js 16 + React 19 + TypeScript + Tailwind v4** | `web/` | 3000 |
+| Mobil (saha teknisyeni) | **Flutter 3.44** (Dart SDK `^3.12.2`), iOS & Android | `mobile/` | — |
+| Dokümantasyon | Sistem spec v1.1 | `docs/` | — |
+
+- **42 controller** (`api-net/Controllers/`), web panelde **40+ modül sayfası** (`web/src/app/(panel)/`).
+- **Auth**: telefon + şifre → SMS OTP → JWT. Claim'ler: `tid` (tenant), `uid` (user), `scope`
+  (`admin` = süper admin), `aid` (platform admin id). `MapInboundClaims=false`.
+- **Middleware sırası** (Program.cs): `UseAuthentication` → `TenantMiddleware` → `UseAuthorization`.
+- **Entegrasyon driver'ları config'e göre seçilir** (Program.cs): anahtar yoksa log/mock, varsa gerçek
+  (SMS `NETGSM_USER`, WhatsApp `WhatsApp:Token` → Meta, ödeme `Iyzico:ApiKey`, push `Fcm:*`).
+
+## Repo yapısı
+
+```
+api-net/       .NET 10 backend (AKTİF, TEK backend)
+  Controllers/  42 controller
+  Services/     Tenant, Otp, Token, Ledger, Pdf, Sms, WhatsApp, PushService (FCM) ...
+  Models/       EF entity'leri (Extras.cs = Check, MaintenanceFee, Vehicle, Notification,
+                StockLocation, DocumentForm, DeviceToken)
+  Data/         AppDbContext (DbSet'ler + OnModelCreating query filter'ları)
+  Migrations/   *.sql (RAW SQL — EF migration DEĞİL)
+  secrets/      FCM service account (GITIGNORE — commit edilmez)
+web/           Next.js paneli
+  src/app/(panel)/   müşteri (tenant) modül sayfaları
+  src/app/admin/     Süper Admin (route group (dash) + AdminShell)
+  src/components/     AppShell, AdminShell, nav.ts, Badge, Modal, ThemeToggle ...
+  src/lib/            api.ts, format.ts, hooks.ts
+mobile/        Flutter saha uygulaması (yalnızca teknisyen)
+  lib/          api, login, home, maintenance_tab, fault_detail, qr_scan,
+                location_service, notification_service, fcm_service, main_scaffold
+docs/          liftonom-sistem-dokumantasyonu.md
+```
+
+## Kodlama konvansiyonları
+
+- **Backend**: controller'lar `record DTO` + `ToPagedAsync(page, perPage)` (yanıt `{data, meta}`),
+  soft-delete (`DeletedAt`), `throw new ApiException(status, msg)`. jsonb alanlar string olarak tutulur
+  + `.HasColumnType("jsonb")`. Yeni tenant-izole tablo → `OnModelCreating`'e query filter EKLE.
+- **Web**: sayfalar `"use client"`, `api()` (`src/lib/api.ts`, Bearer token, sayfalama normalizasyonu),
+  liste+`Modal`/`Field` deseni, semantik renk token'ları (`bg-card`, `text-ink`, `border-line` …).
+  **Açık/Koyu mod**: `globals.css` token'ları + `.dark` override; tema `localStorage.theme`.
+  Yeni kart yüzeyi için `bg-card` kullan (`bg-white` DEĞİL — koyu modda dönmez).
+- **Nav**: `web/src/components/nav.ts` (tenant), `AdminShell.tsx` içi `NAV` (admin).
+
+## Çalıştırma
+
+```bash
+# Backend (.NET) — appsettings.json'daki connection string orijinal geliştiriciye göre;
+# kendi makinende env override ile:
+cd api-net
+ConnectionStrings__Default="Host=127.0.0.1;Port=5432;Database=liftonom;Username=<kullanıcı>;Password=" \
+ASPNETCORE_ENVIRONMENT=Development dotnet run --urls http://localhost:5080
+
+# Web
+cd web && npm install && npm run dev        # http://localhost:3000
+
+# Mobil (production'da HTTPS zorunlu)
+cd mobile && flutter pub get && flutter run
+#   flutter build ipa/appbundle --dart-define=API_BASE_URL=https://api.liftonom.com/api/v1
+```
+
+**Demo giriş**: Süper Admin `admin@liftonom.com` / `admin123` · Panel yöneticisi `0543 123 45 67` / `123456`
+· Test teknisyeni (DB'de) `0555 123 45 67` / `teknik123`.
+
+## Veritabanı & migration
+
+- Şema **RAW SQL** ile. Uygulama sırası (idempotent, `IF NOT EXISTS`):
+  ```
+  psql -d liftonom -f api-net/Migrations/2026_06_28_fault_lifecycle.sql
+  psql -d liftonom -f api-net/Migrations/2026_06_30_extra_modules.sql
+  psql -d liftonom -f api-net/Migrations/2026_06_30_device_tokens.sql
+  ```
+- Program.cs başlangıçta varsayılan Süper Admin'i idempotent seed eder.
+
+## Modüller
+
+- **Tenant paneli**: Müşteri/Bina/Asansör, TSE, Bakım (+Takvim, Toplu, Ücretler), Arıza (6 aşamalı
+  yaşam döngüsü), İş Emri, Asansör Siparişleri, Projeler, Sözleşme/Teklif/Revizyon Teklifi/ATF/DTR/
+  Kurtarma/Eğitim formları, Tahsilat/Cari/Kasa/Çek-Senet/Finansal Özet, Stok/Düşük Stok/Kategori/
+  Lokasyon/Tedarikçi, Personel/Hakediş/Devamsızlık/Araç Takip/Personel Konum, Bildirimler, Hızlı
+  Kurulum, Hesabım, SMS/WhatsApp, Abonelik, Ayarlar.
+- **Süper Admin** (`/admin`): Genel Bakış, Firmalar (oluştur/sil/plan/impersonate + detay:
+  kullanıcılar+ödemeler), Gelir & Abonelik (MRR), Planlar, Platform Yöneticileri. Ayrı JWT `scope=admin`
+  + ayrı token (`lo_admin_token`).
+- **Mobil (teknisyen)**: Görevler (kendine atanan arızalar, `?mine=true`), Bakım (kendine atanan),
+  QR tara. Arka planda **canlı konum** (yalnızca aktif görev varken — pil dostu) → `/auth/location`.
+  **Yeni atama push** (FCM).
+
+## Firebase / FCM / Push
+
+- **Firebase projesi**: `liftonom-saha` · Android+iOS app: paket/bundle `com.liftonom.liftonom`.
+- **Config dosyaları** (repoda İZLENMEZ, gitignore'lu — gerekince yeniden indir):
+  `firebase apps:sdkconfig ANDROID/IOS <appId> --out=<yol>`.
+- **Mobil**: `firebase_core` + `firebase_messaging`; login sonrası token `POST /auth/device-token`,
+  çıkışta `DELETE`. Ön planda local notification (`flutter_local_notifications` + Android desugaring).
+- **Backend**: `PushService` (FCM HTTP v1, service account OAuth). Arıza/bakım atamasında ilgili
+  teknisyene push. Config: `appsettings.json → Fcm:{ProjectId, ServiceAccountPath}`. Anahtar yoksa
+  push sessizce devre dışı (bildirim + mobil yoklama yedeği çalışır).
+- **APNs (iOS)**: Firebase → Cloud Messaging'e yüklü (auth key). Key ID `A3F5M8AQ57`, Team ID
+  `VACK9584U9`. (Sadece dev satırı yüklüyse production satırına da aynı .p8 yüklenmeli.)
+- **Durum**: Android push uçtan uca doğrulandı; iOS APNs yapılandırıldı. Gerçek cihaz + token gerekir.
+
+## Sırlar & güvenlik
+
+- **ASLA commit edilmez** (gitignore'lu):
+  `api-net/secrets/fcm-service-account.json` (FCM özel anahtarı — gerçek sır),
+  `mobile/android/app/google-services.json`, `mobile/ios/Runner/GoogleService-Info.plist`.
+- **Not**: `google-services.json`/`plist` içindeki "Google API Key" Firebase **istemci** anahtarıdır;
+  gizli değildir (her uygulamada gömülü), Google'a göre güvenli. GitHub secret-scan yine de flag'ler →
+  bu yüzden izlemeden çıkarıldılar. Tehlikeli olan **service account** anahtarı hiç commit edilmedi.
+- iOS: `PrivacyInfo.xcprivacy` (Apple gizlilik manifesti) Runner target'ında; konum izin metinleri +
+  `UIBackgroundModes: location` + `ITSAppUsesNonExemptEncryption=false` Info.plist'te.
+
+## Sık karşılaşılan tuzaklar
+
+- **Ürün ucu `/inventory`** (`/products` DEĞİL). Kategoriler `/inventory/categories`, düşük stok
+  `/inventory/low-stock`.
+- Query'den gelen `DateTime` **Kind=Unspecified** olur; `timestamptz` karşılaştırmasında
+  `DateTime.SpecifyKind(x, DateTimeKind.Utc)` ile UTC'ye çevir (yoksa 500).
+- `MaintenanceRecord.AssignedUsers` jsonb dizi; teknisyen filtresi
+  `EF.Functions.JsonContains(m.AssignedUsers!, $"[{uid}]")`.
+- Web'de yeni kart yüzeyi `bg-card`; `text-white` yalnızca renkli zeminlerde (koyu modda dönmesin).
+- Mobil: kurulu Flutter sürümü projeninkiyle (`^3.12.2` / Flutter 3.44) uyuşmuyorsa `flutter pub get`
+  başarısız olur; analiz için pubspec SDK'sını geçici gevşetip **sonra geri yükle**, otomatik üretilen
+  dosyaları (xcconfig/Podfile/GeneratedPluginRegistrant) HEAD'e al.
+```
