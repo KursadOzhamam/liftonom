@@ -66,6 +66,10 @@ public class AppDbContext : DbContext
     public DbSet<DocumentForm> DocumentForms => Set<DocumentForm>();
     public DbSet<DeviceToken> DeviceTokens => Set<DeviceToken>();
 
+    // Süper Admin (platform geneli — tenant filtresi YOK)
+    public DbSet<SubscriptionContract> SubscriptionContracts => Set<SubscriptionContract>();
+    public DbSet<PlatformSetting> PlatformSettings => Set<PlatformSetting>();
+
     protected override void OnModelCreating(ModelBuilder b)
     {
         // Auth: User & Tenant yalnızca soft-delete (tenant filtresi YOK — login firmalar arası arar)
@@ -116,6 +120,9 @@ public class AppDbContext : DbContext
         b.Entity<Notification>().HasQueryFilter(e => e.TenantId == CurrentTenantId);
         b.Entity<DeviceToken>().HasQueryFilter(e => e.TenantId == CurrentTenantId);
         b.Entity<DeviceToken>().HasIndex(e => e.Token).IsUnique();
+
+        // Süper Admin: platform geneli — tenant filtresi YOK (yalnız soft-delete)
+        b.Entity<SubscriptionContract>().HasQueryFilter(e => e.DeletedAt == null);
 
         // jsonb kolonlar (string olarak ham JSON tutulur)
         b.Entity<MaintenanceRecord>(e =>
