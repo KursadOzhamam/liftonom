@@ -13,6 +13,7 @@ public class AuthController(
     AppDbContext db,
     OtpService otp,
     TokenService tokens,
+    IConfiguration config,
     IHostEnvironment env) : ControllerBase
 {
     public record LoginDto(string Phone, string Password, long? TenantId);
@@ -20,6 +21,8 @@ public class AuthController(
     public record PhoneDto(string Phone);
 
     private bool Debug => env.IsDevelopment();
+    // SMS OTP kapatılabilir (Otp:Disabled=true) → login doğrudan token verir (SMS maliyeti yok).
+    private bool OtpDisabled => config.GetValue<bool>("Otp:Disabled");
 
     [HttpPost("login")]
     public async Task<IActionResult> Login(LoginDto dto)
@@ -49,6 +52,20 @@ public class AuthController(
         }
 
         var user = candidates[0];
+
+        // OTP kapalıysa doğrudan token ver (verify-otp ile aynı yanıt biçimi) — SMS gerektirmez.
+        if (OtpDisabled)
+        {
+            user.LastLoginAt = DateTime.UtcNow;
+            await db.SaveChangesAsync();
+            return Ok(new
+            {
+                token = tokens.Create(user),
+                user = UserPayload(user),
+                tenant = new { id = user.Tenant!.Id, name = user.Tenant.Name, slug = user.Tenant.Slug, plan = user.Tenant.Plan },
+            });
+        }
+
         var code = await otp.GenerateAsync(phone, user.TenantId, "login");
 
         return Ok(new

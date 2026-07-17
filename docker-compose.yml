@@ -32,6 +32,8 @@ services:
       ASPNETCORE_ENVIRONMENT: Production
       ConnectionStrings__Default: "Host=db;Port=5432;Database=${POSTGRES_DB:-liftonom};Username=${POSTGRES_USER:-liftonom};Password=${POSTGRES_PASSWORD:-liftonom_demo_pw}"
       Jwt__Key: ${JWT_KEY:-liftonom-CHANGE-this-production-secret-please-0123456789}
+      # SMS OTP kapalı (SMS maliyeti yok) → login doğrudan token verir. SMS bütçesi olursa false yap.
+      Otp__Disabled: "${OTP_DISABLED:-true}"
     depends_on:
       db:
         condition: service_healthy

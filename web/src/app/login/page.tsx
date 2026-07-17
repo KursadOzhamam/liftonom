@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { api, setToken, ApiError } from "@/lib/api";
 
-type LoginResp = { requires_otp?: boolean; dev_code?: string | null; phone?: string };
+type LoginResp = { requires_otp?: boolean; dev_code?: string | null; phone?: string; token?: string };
 type VerifyResp = { token: string; user: { name: string }; tenant: { name: string } };
 
 export default function LoginPage() {
@@ -27,6 +27,12 @@ export default function LoginPage() {
         auth: false,
         body: { phone, password },
       });
+      // OTP kapalıysa API doğrudan token döner → giriş tamam.
+      if (res.token) {
+        setToken(res.token);
+        router.push("/dashboard");
+        return;
+      }
       if (res.requires_otp) {
         setStep("otp");
         setDevCode(res.dev_code ?? null);
