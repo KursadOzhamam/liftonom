@@ -40,7 +40,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
   }
 
   return (
-    <div className="flex min-h-screen bg-surface">
+    <div className="flex h-screen overflow-hidden bg-surface">
       {/* Sidebar — admin kimliği belli olsun diye koyu yüzey */}
       <aside className="hidden w-60 shrink-0 flex-col border-r border-line bg-[#0B1120] text-white md:flex">
         <div className="flex h-16 items-center gap-2 border-b border-white/10 px-5">
