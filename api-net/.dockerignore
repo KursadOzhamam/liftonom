@@ -1,0 +1,8 @@
+bin/
+obj/
+secrets/
+appsettings.Development.json
+*.user
+.vs/
+Dockerfile
+.dockerignore

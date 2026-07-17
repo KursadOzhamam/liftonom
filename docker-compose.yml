@@ -1,0 +1,54 @@
+# Liftonom — üretim benzeri tam yığın.
+# Kullanım:
+#   • Coolify → "Docker Compose" kaynağı olarak bu repoyu seç; her servise alan adı ata:
+#       api  → liftonom-api.rslabsdev.site  (port 8080)
+#       web  → liftonom.rslabsdev.site      (port 3000)
+#     SSL Coolify/Traefik tarafından otomatik verilir.
+#   • Yerel prod denemesi: `POSTGRES_PASSWORD=... JWT_KEY=... docker compose up --build`
+#
+# NOT: NEXT_PUBLIC_API_URL BUILD anında gömülür; web'i farklı API adresiyle
+#      çalıştıracaksan yeniden build gerekir.
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-liftonom}
+      POSTGRES_USER: ${POSTGRES_USER:-liftonom}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-liftonom_demo_pw}
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-liftonom} -d ${POSTGRES_DB:-liftonom}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  api:
+    build:
+      context: ./api-net
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__Default: "Host=db;Port=5432;Database=${POSTGRES_DB:-liftonom};Username=${POSTGRES_USER:-liftonom};Password=${POSTGRES_PASSWORD:-liftonom_demo_pw}"
+      Jwt__Key: ${JWT_KEY:-liftonom-CHANGE-this-production-secret-please-0123456789}
+    depends_on:
+      db:
+        condition: service_healthy
+    expose:
+      - "8080"
+    restart: unless-stopped
+
+  web:
+    build:
+      context: ./web
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-https://liftonom-api.rslabsdev.site/api/v1}
+    depends_on:
+      - api
+    expose:
+      - "3000"
+    restart: unless-stopped
+
+volumes:
+  db_data:

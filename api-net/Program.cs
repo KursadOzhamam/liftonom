@@ -72,10 +72,25 @@ builder.Services.AddCors(o => o.AddDefaultPolicy(p =>
 
 var app = builder.Build();
 
-// Varsayılan süper admin (idempotent)
+// Veritabanı hazırlığı + varsayılan süper admin (idempotent).
+// Taze/boş DB'de EF modeli tam şema kaynağıdır → EnsureCreated tüm tabloları kurar
+// (tablolar zaten varsa hiçbir şey yapmaz). RAW SQL migration'lar yalnız eski DB'yi evriltir.
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<Liftonom.Api.Data.AppDbContext>();
+    var startupLog = scope.ServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger("Startup");
+
+    // Postgres konteyneri API'den sonra hazır olabilir — kısa yeniden deneme döngüsü.
+    for (var attempt = 1; ; attempt++)
+    {
+        try { await db.Database.EnsureCreatedAsync(); break; }
+        catch (Exception ex) when (attempt < 12)
+        {
+            startupLog.LogWarning("DB hazır değil (deneme {Attempt}/12): {Message}", attempt, ex.Message);
+            await Task.Delay(TimeSpan.FromSeconds(3));
+        }
+    }
+
     if (!await db.PlatformAdmins.AnyAsync())
     {
         db.PlatformAdmins.Add(new Liftonom.Api.Models.PlatformAdmin

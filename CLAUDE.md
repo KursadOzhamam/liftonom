@@ -5,7 +5,9 @@
 > yaptığında **bu dosyayı da aynı commit içinde güncelle**. Buradaki bir bilgi kodla
 > çelişiyorsa **kod esastır** — çelişkiyi düzelt, uydurma.
 >
-> Son güncelleme: 2026-06-30 · Branch: `feature/web-admin-mobile-push`
+> Son güncelleme: 2026-07-17 · Branch: `feature/web-admin-mobile-push`
+> Canlı/demo dağıtımı Coolify ile: bkz. [`DEPLOY.md`](DEPLOY.md) — API `liftonom-api.rslabsdev.site`,
+> Web (landing `/` + panel) `liftonom.rslabsdev.site`, VPS `76.13.53.93`.
 
 ---
 
@@ -17,6 +19,9 @@
    (`Migrations/` içinde `.cs` dosyası yok). `dotnet ef migrations add` **KULLANMA**; yeni tablo
    için elle `.sql` yaz + EF model + `DbSet` + query filter ekle. (`dotnet ef` kullanman gerekirse
    `Microsoft.EntityFrameworkCore.Design` paketi projede YOK.)
+   **Taze/boş DB istisnası (dağıtım):** `Program.cs` açılışta `EnsureCreatedAsync()` çağırır → EF
+   modelinden **tüm şemayı** kurar (tablolar zaten varsa hiçbir şey yapmaz). `Migrations/*.sql`
+   yalnız **mevcut/eski** DB'yi evriltmek için; taze DB'de gerekmez.
 3. **JSON ve DB kolonları `snake_case`** (`JsonNamingPolicy.SnakeCaseLower` + EF
    `UseSnakeCaseNamingConvention`). API'ye `snake_case` gönder/bekle.
 4. **Multi-tenant**: tenant izolasyonu EF **global query filter** ile otomatik
