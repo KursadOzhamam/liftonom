@@ -10,11 +10,9 @@ type Settings = { hero_badge: string | null; hero_title: string | null; hero_tit
 
 const SECTIONS: { key: string; label: string; hasIcon: boolean }[] = [
   { key: "feature", label: "Özellikler", hasIcon: true },
-  { key: "module", label: "Modüller", hasIcon: true },
   { key: "step", label: "Nasıl Çalışır Adımları", hasIcon: true },
   { key: "compare_old", label: "Karşılaştırma — Eski Yöntem", hasIcon: false },
   { key: "compare_new", label: "Karşılaştırma — Liftonom ile", hasIcon: false },
-  { key: "testimonial", label: "Müşteri Yorumları (Başlık: Ad — Firma · Açıklama: yorum)", hasIcon: false },
   { key: "faq", label: "Sıkça Sorulan Sorular (Başlık: soru · Açıklama: cevap)", hasIcon: false },
 ];
 const ICON_NAMES = ["CalendarClock", "Wrench", "WifiOff", "QrCode", "ShieldCheck", "Wallet", "Smartphone", "Receipt", "Boxes", "Users", "UserPlus", "Upload", "Rocket", "Building2", "MapPin", "Bell", "Gauge", "FileText", "Route", "Zap"];

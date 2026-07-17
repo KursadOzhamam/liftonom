@@ -35,7 +35,6 @@ public class PublicLandingController(AppDbContext db) : ControllerBase
             steps = items.Where(i => i.Section == "step"),
             compare_old = items.Where(i => i.Section == "compare_old"),
             compare_new = items.Where(i => i.Section == "compare_new"),
-            testimonials = items.Where(i => i.Section == "testimonial"),
             faqs = items.Where(i => i.Section == "faq"),
         });
     }

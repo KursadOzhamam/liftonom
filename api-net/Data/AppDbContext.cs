@@ -71,6 +71,7 @@ public class AppDbContext : DbContext
     public DbSet<PlatformSetting> PlatformSettings => Set<PlatformSetting>();
     public DbSet<LandingItem> LandingItems => Set<LandingItem>();
     public DbSet<LandingSetting> LandingSettings => Set<LandingSetting>();
+    public DbSet<ContentPage> ContentPages => Set<ContentPage>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -125,6 +126,7 @@ public class AppDbContext : DbContext
 
         // Süper Admin: platform geneli — tenant filtresi YOK (yalnız soft-delete)
         b.Entity<SubscriptionContract>().HasQueryFilter(e => e.DeletedAt == null);
+        b.Entity<ContentPage>().HasQueryFilter(e => e.DeletedAt == null);
 
         // jsonb kolonlar (string olarak ham JSON tutulur)
         b.Entity<MaintenanceRecord>(e =>

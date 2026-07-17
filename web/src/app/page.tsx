@@ -3,14 +3,14 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { api } from "@/lib/api";
-import ThemeToggle from "@/components/ThemeToggle";
+import SiteHeader from "@/components/SiteHeader";
+import SiteFooter from "@/components/SiteFooter";
 import {
   ArrowRight, Building2, Wrench, CalendarClock, Boxes, Wallet, Users, FileText,
-  ShieldCheck, MapPin, Bell, QrCode, Smartphone, Check, X, Menu, Gauge, Phone, Mail,
-  WifiOff, Receipt, UserPlus, Upload, Rocket, Route, Zap, Sparkles, ChevronDown, Quote,
+  ShieldCheck, MapPin, Bell, QrCode, Smartphone, Check, X, Gauge,
+  WifiOff, Receipt, UserPlus, Upload, Rocket, Route, Zap, Sparkles, ChevronDown, ChevronRight,
 } from "lucide-react";
 
-/* ── ikon eşlemesi (admin string → bileşen) ── */
 const ICONS: Record<string, React.ComponentType<{ size?: number; className?: string }>> = {
   Building2, Wrench, CalendarClock, Boxes, Wallet, Users, FileText, ShieldCheck, MapPin,
   Bell, QrCode, Smartphone, Gauge, WifiOff, Receipt, UserPlus, Upload, Rocket, Route, Zap,
@@ -21,14 +21,13 @@ function LucideIcon({ name, size = 20, className = "" }: { name?: string | null;
 }
 
 type Item = { id: number; section: string; title: string; description: string | null; icon: string | null };
+type Content = { id: number; slug: string; title: string; excerpt: string | null; icon: string | null };
 type Landing = {
   settings: { hero_badge: string | null; hero_title: string | null; hero_title_accent: string | null; hero_subtitle: string | null; show_pricing: boolean };
-  features: Item[]; modules: Item[]; steps: Item[]; compare_old: Item[]; compare_new: Item[];
-  testimonials: Item[]; faqs: Item[];
+  features: Item[]; steps: Item[]; compare_old: Item[]; compare_new: Item[]; faqs: Item[];
 };
 type Plan = { id: number; code: string; name: string; monthly_price: number; max_users: number | null; max_elevators: number | null };
 
-/* ── varsayılan içerik (API'den önce SSR göstersin) ── */
 const DEFAULT: Landing = {
   settings: {
     hero_badge: "Asansör bakım & servis yönetim platformu",
@@ -43,14 +42,6 @@ const DEFAULT: Landing = {
     { id: 4, section: "feature", title: "QR ile Sıfır Temaslı Arıza", description: "Müşteri kabindeki QR'ı okutur, uygulama indirmeden arıza bildirir.", icon: "QrCode" },
     { id: 5, section: "feature", title: "TSE A/B/C/D Dijital Form", description: "Periyodik kontrol formları mobilde doldurulur, imzalanır, arşivlenir.", icon: "ShieldCheck" },
     { id: 6, section: "feature", title: "Sahada Mobil Tahsilat", description: "Teknisyen nakit/kart/online link ile anında tahsilat alır.", icon: "Wallet" },
-  ],
-  modules: [
-    { id: 11, section: "module", title: "Bakım Takip", description: "Planla, ata, dijital form + fotoğraf + imzayla raporla.", icon: "CalendarClock" },
-    { id: 12, section: "module", title: "Arıza Yönetimi", description: "Tek panele düşer, en yakın teknisyene atanır, SLA ölçülür.", icon: "Wrench" },
-    { id: 13, section: "module", title: "Teknisyen Mobil", description: "iOS + Android native; sahada görev al, offline çalış.", icon: "Smartphone" },
-    { id: 14, section: "module", title: "Fatura & Tahsilat", description: "Tek tıkla fatura; online ödeme linki ve vade takibi.", icon: "Receipt" },
-    { id: 15, section: "module", title: "Stok & Depo", description: "Ürün, lokasyon, tedarikçi + düşük stok uyarıları.", icon: "Boxes" },
-    { id: 16, section: "module", title: "Müşteri Portalı", description: "Bina yöneticisi bakım ve arızalarını görür.", icon: "Users" },
   ],
   steps: [
     { id: 21, section: "step", title: "60 Saniyede Kayıt", description: "E-posta ile firmanı oluştur; hesabın anında aktif.", icon: "UserPlus" },
@@ -70,59 +61,42 @@ const DEFAULT: Landing = {
     { id: 43, section: "compare_new", title: "Dijital form bulutta; denetimde 30 saniyede belge", description: null, icon: null },
     { id: 44, section: "compare_new", title: "Bakım kapanırken tek tıkla fatura + online ödeme", description: null, icon: null },
   ],
-  testimonials: [
-    { id: 51, section: "testimonial", title: "Mehmet Demir — Demir Asansör", description: "Bakım takvimini artık hiç kaçırmıyoruz. Teknisyenlerin sahadaki durumunu anlık görmek işimizi kökten değiştirdi.", icon: null },
-    { id: 52, section: "testimonial", title: "Ayşe Kaya — Kaya Lift", description: "Kağıt formlardan kurtulduk; TSE denetiminde tüm belgeler saniyeler içinde elimizde. Tahsilat da hızlandı.", icon: null },
-    { id: 53, section: "testimonial", title: "Kürşad Özhamam — Öz Asansör", description: "Tek panelden bakım, arıza ve faturayı yönetmek harika. Ekip verimliliğimiz belirgin arttı.", icon: null },
-  ],
   faqs: [
     { id: 61, section: "faq", title: "Kurulum ve eğitim ücretli mi?", description: "Hayır. Kurulum, veri aktarımı ve ekip eğitimi abonelik fiyatına dahildir.", icon: null },
     { id: 62, section: "faq", title: "Mevcut Excel verilerimi aktarabilir miyim?", description: "Evet. Şablona dönüştürüp toplu yükleyebilirsiniz; ekibimiz transfer desteği sunar.", icon: null },
-    { id: 63, section: "faq", title: "Teknisyen uygulaması internetsiz çalışır mı?", description: "Evet. Sinyalsiz bölgede bakım tamamlanır, imza alınır; bağlantı gelince otomatik senkronlanır.", icon: null },
-    { id: 64, section: "faq", title: "İstediğim zaman iptal edebilir miyim?", description: "Aylık abonelikte taahhüt yoktur, dilediğiniz zaman iptal edebilirsiniz. Yıllık abonelik daha avantajlıdır.", icon: null },
-    { id: 65, section: "faq", title: "Verilerim güvende mi?", description: "Her firmanın verisi izole tutulur (çok kiracılı mimari), düzenli yedeklenir ve şifreli saklanır.", icon: null },
+    { id: 63, section: "faq", title: "Teknisyen uygulaması internetsiz çalışır mı?", description: "Evet. Sinyalsiz bölgede bakım tamamlanır; bağlantı gelince otomatik senkronlanır.", icon: null },
+    { id: 64, section: "faq", title: "İstediğim zaman iptal edebilir miyim?", description: "Aylık abonelikte taahhüt yoktur, dilediğiniz zaman iptal edebilirsiniz.", icon: null },
   ],
 };
 
-const NAV = [
-  { href: "#ozellikler", label: "Özellikler" },
-  { href: "#moduller", label: "Modüller" },
-  { href: "#fiyatlar", label: "Fiyatlar" },
-  { href: "#sss", label: "SSS" },
-  { href: "#iletisim", label: "İletişim" },
+const DEFAULT_SOLUTIONS: Content[] = [
+  { id: 1, slug: "bakim-takip", title: "Bakım Takip", excerpt: "Periyodik bakımları planla, ata; dijital formla raporla.", icon: "CalendarClock" },
+  { id: 2, slug: "ariza-yonetimi", title: "Arıza Yönetimi", excerpt: "Tek panele düşer, en yakın teknisyene atanır, SLA ölçülür.", icon: "Wrench" },
+  { id: 3, slug: "teknisyen-mobil", title: "Teknisyen Mobil", excerpt: "iOS + Android native; sahada görev al, offline çalış.", icon: "Smartphone" },
+  { id: 4, slug: "fatura-tahsilat", title: "Fatura & Tahsilat", excerpt: "Tek tıkla fatura; online ödeme linki ve vade takibi.", icon: "Receipt" },
+  { id: 5, slug: "stok-depo", title: "Stok & Depo", excerpt: "Ürün, lokasyon, tedarikçi + düşük stok uyarıları.", icon: "Boxes" },
+  { id: 6, slug: "musteri-portali", title: "Müşteri Portalı", excerpt: "Bina yöneticisi bakım ve arızalarını görür.", icon: "Users" },
 ];
+
 const TRY0 = (n: number) => "₺" + Math.round(n).toLocaleString("tr-TR");
 
-function Logo() {
-  return (
-    <span className="inline-flex items-center gap-2 font-semibold">
-      <span className="grid h-9 w-9 place-items-center rounded-xl bg-primary text-white shadow-sm"><Building2 size={19} strokeWidth={2.2} /></span>
-      <span className="text-lg tracking-tight text-ink">Liftonom</span>
-    </span>
-  );
-}
-
 export default function Landing() {
-  const [menuOpen, setMenuOpen] = useState(false);
   const [d, setD] = useState<Landing>(DEFAULT);
+  const [solutions, setSolutions] = useState<Content[]>(DEFAULT_SOLUTIONS);
   const [plans, setPlans] = useState<Plan[]>([]);
   const [yearly, setYearly] = useState(true);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
 
   useEffect(() => {
-    api<Landing>("/public/landing", { auth: false }).then((r) => {
-      // boş bölümleri varsayılana düşür (içerik hiç yoksa boş görünmesin)
-      setD({
-        settings: r.settings ?? DEFAULT.settings,
-        features: r.features?.length ? r.features : DEFAULT.features,
-        modules: r.modules?.length ? r.modules : DEFAULT.modules,
-        steps: r.steps?.length ? r.steps : DEFAULT.steps,
-        compare_old: r.compare_old?.length ? r.compare_old : DEFAULT.compare_old,
-        compare_new: r.compare_new?.length ? r.compare_new : DEFAULT.compare_new,
-        testimonials: r.testimonials?.length ? r.testimonials : DEFAULT.testimonials,
-        faqs: r.faqs?.length ? r.faqs : DEFAULT.faqs,
-      });
-    }).catch(() => {});
+    api<Landing>("/public/landing", { auth: false }).then((r) => setD({
+      settings: r.settings ?? DEFAULT.settings,
+      features: r.features?.length ? r.features : DEFAULT.features,
+      steps: r.steps?.length ? r.steps : DEFAULT.steps,
+      compare_old: r.compare_old?.length ? r.compare_old : DEFAULT.compare_old,
+      compare_new: r.compare_new?.length ? r.compare_new : DEFAULT.compare_new,
+      faqs: r.faqs?.length ? r.faqs : DEFAULT.faqs,
+    })).catch(() => {});
+    api<Content[]>("/public/content?type=solution", { auth: false }).then((r) => { if (r?.length) setSolutions(r); }).catch(() => {});
     api<Plan[]>("/public/plans", { auth: false }).then((p) => setPlans(p ?? [])).catch(() => {});
   }, []);
 
@@ -130,30 +104,9 @@ export default function Landing() {
 
   return (
     <div className="min-h-screen bg-surface text-ink">
-      {/* ── Header ── */}
-      <header className="sticky top-0 z-40 border-b border-line/70 bg-card/80 backdrop-blur-md">
-        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
-          <Logo />
-          <nav className="hidden items-center gap-7 md:flex">
-            {NAV.map((n) => <a key={n.href} href={n.href} className="text-sm text-ink-soft transition hover:text-primary">{n.label}</a>)}
-          </nav>
-          <div className="flex items-center gap-2">
-            <ThemeToggle />
-            <Link href="/login" className="hidden rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-primary-dark sm:inline-flex">Panele Giriş</Link>
-            <button onClick={() => setMenuOpen((v) => !v)} aria-label="Menü" className="grid h-9 w-9 place-items-center rounded-lg border border-line text-ink-soft md:hidden">{menuOpen ? <X size={18} /> : <Menu size={18} />}</button>
-          </div>
-        </div>
-        {menuOpen && (
-          <div className="border-t border-line bg-card px-4 py-3 md:hidden">
-            <nav className="flex flex-col gap-1">
-              {NAV.map((n) => <a key={n.href} href={n.href} onClick={() => setMenuOpen(false)} className="rounded-lg px-3 py-2 text-sm text-ink-soft hover:bg-surface">{n.label}</a>)}
-              <Link href="/login" className="mt-1 rounded-lg bg-primary px-3 py-2 text-center text-sm font-medium text-white">Panele Giriş</Link>
-            </nav>
-          </div>
-        )}
-      </header>
+      <SiteHeader />
 
-      {/* ── Hero ── */}
+      {/* Hero */}
       <section className="relative overflow-hidden">
         <div aria-hidden className="pointer-events-none absolute inset-0 -z-10 bg-gradient-to-b from-primary-light/50 to-transparent" />
         <div className="mx-auto grid max-w-6xl items-center gap-12 px-4 py-16 sm:px-6 lg:grid-cols-2 lg:py-24">
@@ -175,8 +128,6 @@ export default function Landing() {
               <span className="inline-flex items-center gap-1.5"><Check size={15} className="text-success" /> Mobil saha desteği</span>
             </div>
           </div>
-
-          {/* Ürün önizleme */}
           <div className="relative">
             <div className="rounded-2xl border border-line bg-card p-5 shadow-xl shadow-primary/5">
               <div className="mb-4 flex items-center justify-between">
@@ -201,7 +152,7 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* ── Stats ── */}
+      {/* Stats */}
       <section className="border-y border-line bg-card">
         <div className="mx-auto grid max-w-6xl grid-cols-2 gap-6 px-4 py-8 sm:px-6 md:grid-cols-4">
           {[{ v: "40+", l: "Hazır modül" }, { v: "6", l: "Aşamalı arıza döngüsü" }, { v: "Çok kiracılı", l: "İzole firma verisi" }, { v: "iOS · Android", l: "Saha mobil app" }].map((x) => (
@@ -210,7 +161,7 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* ── Karşılaştırma ── */}
+      {/* Karşılaştırma */}
       <section className="mx-auto max-w-6xl px-4 py-20 sm:px-6">
         <div className="mx-auto max-w-2xl text-center">
           <span className="text-xs font-semibold uppercase tracking-wider text-primary">Neden geçmelisiniz?</span>
@@ -221,23 +172,19 @@ export default function Landing() {
           <div className="rounded-2xl border border-line bg-card p-6">
             <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-danger/10 px-3 py-1 text-xs font-semibold text-danger">Eski Yöntem</div>
             <ul className="space-y-3">
-              {d.compare_old.map((c) => (
-                <li key={c.id} className="flex items-start gap-3 text-sm text-ink-soft"><span className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full bg-danger/10 text-danger"><X size={13} /></span>{c.title}</li>
-              ))}
+              {d.compare_old.map((c) => <li key={c.id} className="flex items-start gap-3 text-sm text-ink-soft"><span className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full bg-danger/10 text-danger"><X size={13} /></span>{c.title}</li>)}
             </ul>
           </div>
           <div className="rounded-2xl border border-primary/30 bg-primary-light/40 p-6">
             <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-primary px-3 py-1 text-xs font-semibold text-white">Liftonom ile</div>
             <ul className="space-y-3">
-              {d.compare_new.map((c) => (
-                <li key={c.id} className="flex items-start gap-3 text-sm text-ink"><span className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full bg-success/15 text-success"><Check size={13} /></span>{c.title}</li>
-              ))}
+              {d.compare_new.map((c) => <li key={c.id} className="flex items-start gap-3 text-sm text-ink"><span className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full bg-success/15 text-success"><Check size={13} /></span>{c.title}</li>)}
             </ul>
           </div>
         </div>
       </section>
 
-      {/* ── Özellikler ── */}
+      {/* Özellikler */}
       <section id="ozellikler" className="border-y border-line bg-card">
         <div className="mx-auto max-w-6xl px-4 py-20 sm:px-6">
           <div className="mx-auto max-w-2xl text-center">
@@ -256,7 +203,7 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* ── Nasıl Çalışır ── */}
+      {/* Nasıl Çalışır */}
       <section className="mx-auto max-w-6xl px-4 py-20 sm:px-6">
         <div className="mx-auto max-w-2xl text-center">
           <span className="text-xs font-semibold uppercase tracking-wider text-primary">Nasıl çalışır</span>
@@ -274,26 +221,28 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* ── Modüller ── */}
+      {/* Çözümler (detay sayfalı) */}
       <section id="moduller" className="border-y border-line bg-card">
         <div className="mx-auto max-w-6xl px-4 py-20 sm:px-6">
           <div className="mx-auto max-w-2xl text-center">
-            <span className="text-xs font-semibold uppercase tracking-wider text-primary">Modüller</span>
+            <span className="text-xs font-semibold uppercase tracking-wider text-primary">Çözümler</span>
             <h2 className="mt-2 text-3xl font-bold tracking-tight text-ink">Tüm ihtiyaç tek pakette</h2>
-            <p className="mt-4 text-ink-soft">Modülleri ayrı ayrı satın almazsınız — tek abonelik, tüm modüller dahil.</p>
+            <p className="mt-4 text-ink-soft">Modülleri ayrı ayrı satın almazsınız — tek abonelik, tüm çözümler dahil.</p>
           </div>
           <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {d.modules.map((m) => (
-              <div key={m.id} className="flex gap-4 rounded-2xl border border-line bg-surface p-5">
-                <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-primary-light text-primary"><LucideIcon name={m.icon} size={20} /></span>
-                <div><h3 className="font-semibold text-ink">{m.title}</h3><p className="mt-1 text-sm leading-relaxed text-ink-soft">{m.description}</p></div>
-              </div>
+            {solutions.map((m) => (
+              <Link key={m.id} href={`/cozumler/${m.slug}`} className="group flex flex-col rounded-2xl border border-line bg-surface p-6 transition hover:border-primary/40 hover:shadow-md">
+                <span className="grid h-11 w-11 place-items-center rounded-xl bg-primary-light text-primary"><LucideIcon name={m.icon} size={20} /></span>
+                <h3 className="mt-4 font-semibold text-ink">{m.title}</h3>
+                <p className="mt-1 flex-1 text-sm leading-relaxed text-ink-soft">{m.excerpt}</p>
+                <span className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-primary">Detayları İncele <ChevronRight size={15} className="transition group-hover:translate-x-0.5" /></span>
+              </Link>
             ))}
           </div>
         </div>
       </section>
 
-      {/* ── Fiyatlandırma ── */}
+      {/* Fiyatlandırma */}
       {s.show_pricing && plans.length > 0 && (
         <section id="fiyatlar" className="mx-auto max-w-6xl px-4 py-20 sm:px-6">
           <div className="mx-auto max-w-2xl text-center">
@@ -313,10 +262,7 @@ export default function Landing() {
                 <div key={p.id} className={`relative rounded-2xl border p-6 ${featured ? "border-primary bg-card shadow-lg shadow-primary/10" : "border-line bg-card"}`}>
                   {featured && <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-primary px-3 py-0.5 text-xs font-semibold text-white">ÖNERİLEN</div>}
                   <h3 className="font-semibold text-ink">{p.name}</h3>
-                  <div className="mt-3 flex items-end gap-1">
-                    <span className="text-3xl font-bold text-ink">{TRY0(price)}</span>
-                    <span className="mb-1 text-sm text-muted">/{yearly ? "yıl" : "ay"}</span>
-                  </div>
+                  <div className="mt-3 flex items-end gap-1"><span className="text-3xl font-bold text-ink">{TRY0(price)}</span><span className="mb-1 text-sm text-muted">/{yearly ? "yıl" : "ay"}</span></div>
                   <ul className="mt-5 space-y-2.5 text-sm">
                     <li className="flex items-center gap-2 text-ink-soft"><Check size={15} className="text-success" /> {p.max_elevators ? `${p.max_elevators.toLocaleString("tr-TR")} asansöre kadar` : "Sınırsız asansör"}</li>
                     <li className="flex items-center gap-2 text-ink-soft"><Check size={15} className="text-success" /> {p.max_users ? `${p.max_users} kullanıcı` : "Sınırsız kullanıcı"}</li>
@@ -332,29 +278,7 @@ export default function Landing() {
         </section>
       )}
 
-      {/* ── Müşteri Yorumları ── */}
-      {d.testimonials.length > 0 && (
-        <section className="mx-auto max-w-6xl px-4 py-20 sm:px-6">
-          <div className="mx-auto max-w-2xl text-center">
-            <span className="text-xs font-semibold uppercase tracking-wider text-primary">Referanslar</span>
-            <h2 className="mt-2 text-3xl font-bold tracking-tight text-ink">Müşterilerimiz ne diyor?</h2>
-          </div>
-          <div className="mt-12 grid gap-5 md:grid-cols-3">
-            {d.testimonials.map((t) => (
-              <div key={t.id} className="flex flex-col rounded-2xl border border-line bg-card p-6">
-                <Quote size={22} className="text-primary/40" />
-                <p className="mt-3 flex-1 text-sm leading-relaxed text-ink-soft">{t.description}</p>
-                <div className="mt-5 flex items-center gap-3 border-t border-line pt-4">
-                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-primary-light text-sm font-bold text-primary">{t.title?.[0] ?? "?"}</span>
-                  <span className="text-sm font-medium text-ink">{t.title}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* ── SSS ── */}
+      {/* SSS */}
       {d.faqs.length > 0 && (
         <section id="sss" className="border-y border-line bg-card">
           <div className="mx-auto max-w-3xl px-4 py-20 sm:px-6">
@@ -377,8 +301,8 @@ export default function Landing() {
         </section>
       )}
 
-      {/* ── CTA ── */}
-      <section className="mx-auto max-w-6xl px-4 pb-20 sm:px-6">
+      {/* CTA */}
+      <section className="mx-auto max-w-6xl px-4 py-20 sm:px-6">
         <div className="overflow-hidden rounded-3xl bg-primary px-6 py-14 text-center shadow-lg sm:px-12">
           <h2 className="text-3xl font-bold tracking-tight text-white">Demoyu hemen deneyin</h2>
           <p className="mx-auto mt-3 max-w-lg text-primary-light">Firmanızı 60 saniyede oluşturun, asansör operasyonunu tek yerden yönetin.</p>
@@ -386,22 +310,7 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* ── Footer ── */}
-      <footer id="iletisim" className="border-t border-line bg-card">
-        <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
-          <div className="flex flex-col justify-between gap-8 md:flex-row">
-            <div className="max-w-xs"><Logo /><p className="mt-3 text-sm text-muted">Asansör bakım ve servis firmaları için uçtan uca operasyon yönetim platformu.</p></div>
-            <div className="flex flex-col gap-2 text-sm">
-              <span className="font-semibold text-ink">İletişim</span>
-              <a href="mailto:info@liftonom.com" className="inline-flex items-center gap-2 text-ink-soft hover:text-primary"><Mail size={15} /> info@liftonom.com</a>
-              <span className="inline-flex items-center gap-2 text-ink-soft"><Phone size={15} /> +90 (500) 000 00 00</span>
-            </div>
-          </div>
-          <div className="mt-10 flex flex-col items-center justify-between gap-3 border-t border-line pt-6 text-xs text-muted sm:flex-row">
-            <span>© {new Date().getFullYear()} Liftonom. Tüm hakları saklıdır.</span><span>Asansör Servis Yönetimi</span>
-          </div>
-        </div>
-      </footer>
+      <SiteFooter />
     </div>
   );
 }
