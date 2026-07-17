@@ -18,10 +18,7 @@ public class ExceptionMiddleware(RequestDelegate next, ILogger<ExceptionMiddlewa
         catch (Exception ex)
         {
             logger.LogError(ex, "Beklenmeyen hata");
-            // GEÇİCİ TANI: gerçek hatayı yanıtta göster (teşhis sonrası geri alınacak).
-            var detail = ex.GetType().Name + ": " + ex.Message +
-                (ex.InnerException != null ? " || INNER " + ex.InnerException.GetType().Name + ": " + ex.InnerException.Message : "");
-            await WriteJson(context, 500, detail);
+            await WriteJson(context, 500, "Sunucu hatası oluştu.");
         }
     }
 

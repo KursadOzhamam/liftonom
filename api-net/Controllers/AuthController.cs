@@ -19,7 +19,15 @@ public class AuthController(
     public record LoginDto(string? Email, string? Phone, string Password, long? TenantId);
     public record VerifyDto(string Phone, string Code);
     public record PhoneDto(string Phone);
-    public record RegisterDto(string CompanyName, string Name, string? Surname, string Email, string Password, string? Phone);
+    public class RegisterDto
+    {
+        public string? CompanyName { get; set; }
+        public string? Name { get; set; }
+        public string? Surname { get; set; }
+        public string? Email { get; set; }
+        public string? Password { get; set; }
+        public string? Phone { get; set; }
+    }
 
     private bool Debug => env.IsDevelopment();
     // SMS OTP kapatılabilir (Otp:Disabled=true) → login doğrudan token verir (SMS maliyeti yok).
@@ -116,53 +124,63 @@ public class AuthController(
 
     /// <summary>Herkese açık firma kaydı: yeni firma (tenant) + yönetici kullanıcı → doğrudan token.</summary>
     [HttpPost("register")]
-    public async Task<IActionResult> Register(RegisterDto dto, [FromServices] ITenantContext tenantCtx)
+    public async Task<IActionResult> Register([FromBody] RegisterDto dto, [FromServices] ITenantContext tenantCtx)
     {
-        if (string.IsNullOrWhiteSpace(dto.CompanyName)) throw new ApiException(422, "Firma adı zorunludur.");
-        if (string.IsNullOrWhiteSpace(dto.Name)) throw new ApiException(422, "Ad Soyad zorunludur.");
-        var email = (dto.Email ?? "").Trim().ToLowerInvariant();
-        if (email.Length == 0 || !email.Contains('@')) throw new ApiException(422, "Geçerli bir e-posta girin.");
-        if (string.IsNullOrWhiteSpace(dto.Password) || dto.Password.Length < 6)
-            throw new ApiException(422, "Şifre en az 6 karakter olmalıdır.");
-
-        if (await db.Users.IgnoreQueryFilters().AnyAsync(u => u.Email != null && u.Email.ToLower() == email && u.DeletedAt == null))
-            throw new ApiException(422, "Bu e-posta zaten kayıtlı.");
-
-        var phone = string.IsNullOrWhiteSpace(dto.Phone) ? "" : PhoneHelper.Normalize(dto.Phone);
-        var now = DateTime.UtcNow;
-
-        await using var tx = await db.Database.BeginTransactionAsync();
-
-        var tenant = new Models.Tenant
+        try
         {
-            Name = dto.CompanyName, Slug = await UniqueSlug(dto.CompanyName), Phone = phone, Email = email,
-            Plan = "trial", PlanExpiresAt = now.AddDays(30), SmsBalance = 100, IsActive = true,
-            CreatedAt = now, UpdatedAt = now,
-        };
-        db.Tenants.Add(tenant);
-        await db.SaveChangesAsync();
-        tenantCtx.TenantId = tenant.Id;
+            var company = (dto.CompanyName ?? "").Trim();
+            var name = (dto.Name ?? "").Trim();
+            var email = (dto.Email ?? "").Trim().ToLowerInvariant();
+            if (company.Length == 0) throw new ApiException(422, "Firma adı zorunludur.");
+            if (name.Length == 0) throw new ApiException(422, "Ad Soyad zorunludur.");
+            if (email.Length == 0 || !email.Contains('@')) throw new ApiException(422, "Geçerli bir e-posta girin.");
+            if (string.IsNullOrWhiteSpace(dto.Password) || dto.Password.Length < 6)
+                throw new ApiException(422, "Şifre en az 6 karakter olmalıdır.");
 
-        var user = new Models.User
+            if (await db.Users.IgnoreQueryFilters().AnyAsync(u => u.Email != null && u.Email.ToLower() == email && u.DeletedAt == null))
+                throw new ApiException(422, "Bu e-posta zaten kayıtlı.");
+
+            var phone = string.IsNullOrWhiteSpace(dto.Phone) ? "" : PhoneHelper.Normalize(dto.Phone);
+            var now = DateTime.UtcNow;
+
+            await using var tx = await db.Database.BeginTransactionAsync();
+
+            var tenant = new Models.Tenant
+            {
+                Name = company, Slug = await UniqueSlug(company), Phone = phone, Email = email,
+                Plan = "trial", PlanExpiresAt = now.AddDays(30), SmsBalance = 100, IsActive = true,
+                CreatedAt = now, UpdatedAt = now,
+            };
+            db.Tenants.Add(tenant);
+            await db.SaveChangesAsync();
+            tenantCtx.TenantId = tenant.Id;
+
+            var user = new Models.User
+            {
+                TenantId = tenant.Id, Name = name, Surname = dto.Surname, Phone = phone, Email = email,
+                Password = BCrypt.Net.BCrypt.HashPassword(dto.Password!), Role = Models.User.RoleManager,
+                IsActive = true, CreatedAt = now, UpdatedAt = now, LastLoginAt = now,
+            };
+            db.Users.Add(user);
+
+            db.Subscriptions.Add(new Models.Subscription
+            {
+                TenantId = tenant.Id, PlanId = null, Status = "trialing", StartedAt = now,
+                CurrentPeriodEnd = now.AddDays(30), CreatedAt = now, UpdatedAt = now,
+            });
+            db.SmsPreferences.Add(new Models.SmsPreference { TenantId = tenant.Id, CreatedAt = now, UpdatedAt = now });
+
+            await db.SaveChangesAsync();
+            await tx.CommitAsync();
+
+            user.Tenant = tenant;
+            return StatusCode(201, TokenResponse(user));
+        }
+        catch (ApiException) { throw; }
+        catch (Exception ex)
         {
-            TenantId = tenant.Id, Name = dto.Name, Surname = dto.Surname, Phone = phone, Email = email,
-            Password = BCrypt.Net.BCrypt.HashPassword(dto.Password), Role = Models.User.RoleManager,
-            IsActive = true, CreatedAt = now, UpdatedAt = now, LastLoginAt = now,
-        };
-        db.Users.Add(user);
-
-        db.Subscriptions.Add(new Models.Subscription
-        {
-            TenantId = tenant.Id, PlanId = null, Status = "trialing", StartedAt = now,
-            CurrentPeriodEnd = now.AddDays(30), CreatedAt = now, UpdatedAt = now,
-        });
-        db.SmsPreferences.Add(new Models.SmsPreference { TenantId = tenant.Id, CreatedAt = now, UpdatedAt = now });
-
-        await db.SaveChangesAsync();
-        await tx.CommitAsync();
-
-        user.Tenant = tenant;
-        return StatusCode(201, TokenResponse(user));
+            throw new ApiException(500, "REGERR|" + ex.GetType().Name + "|" + ex.Message + "|INNER:" + (ex.InnerException?.Message ?? "-"));
+        }
     }
 
     [Authorize]
