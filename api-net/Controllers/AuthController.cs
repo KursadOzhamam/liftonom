@@ -124,10 +124,11 @@ public class AuthController(
 
     /// <summary>Herkese açık firma kaydı: yeni firma (tenant) + yönetici kullanıcı → doğrudan token.</summary>
     [HttpPost("register")]
-    public async Task<IActionResult> Register([FromBody] RegisterDto dto, [FromServices] ITenantContext tenantCtx)
+    public async Task<IActionResult> Register([FromBody] RegisterDto dto)
     {
         try
         {
+            var tenantCtx = HttpContext.RequestServices.GetRequiredService<ITenantContext>();
             var company = (dto.CompanyName ?? "").Trim();
             var name = (dto.Name ?? "").Trim();
             var email = (dto.Email ?? "").Trim().ToLowerInvariant();
