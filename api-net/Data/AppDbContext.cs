@@ -69,6 +69,8 @@ public class AppDbContext : DbContext
     // Süper Admin (platform geneli — tenant filtresi YOK)
     public DbSet<SubscriptionContract> SubscriptionContracts => Set<SubscriptionContract>();
     public DbSet<PlatformSetting> PlatformSettings => Set<PlatformSetting>();
+    public DbSet<LandingItem> LandingItems => Set<LandingItem>();
+    public DbSet<LandingSetting> LandingSettings => Set<LandingSetting>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {

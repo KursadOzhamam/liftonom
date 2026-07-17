@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { api, getAdminToken, clearAdminToken } from "@/lib/api";
 import ThemeToggle from "./ThemeToggle";
-import { LayoutDashboard, Building2, ShieldCheck, TrendingUp, CreditCard, FileText, Receipt, Settings, UserCog, LogOut, type LucideIcon } from "lucide-react";
+import { LayoutDashboard, Building2, ShieldCheck, TrendingUp, CreditCard, FileText, Receipt, Settings, UserCog, LayoutTemplate, LogOut, type LucideIcon } from "lucide-react";
 
 type Admin = { id: number; name: string | null; email: string };
 
@@ -16,6 +16,7 @@ const NAV: { label: string; href: string; icon: LucideIcon; exact?: boolean }[] 
   { label: "Gelir & Abonelik", href: "/admin/revenue", icon: TrendingUp },
   { label: "Ödemeler & Faturalar", href: "/admin/payments", icon: Receipt },
   { label: "Planlar", href: "/admin/plans", icon: CreditCard },
+  { label: "Tanıtım Sayfası", href: "/admin/landing", icon: LayoutTemplate },
   { label: "Yöneticiler", href: "/admin/admins", icon: ShieldCheck },
   { label: "Global Ayarlar", href: "/admin/settings", icon: Settings },
   { label: "Hesabım", href: "/admin/account", icon: UserCog },
