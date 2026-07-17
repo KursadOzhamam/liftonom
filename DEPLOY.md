@@ -8,10 +8,18 @@ Bu repo Coolify ile üretim benzeri bir demoya alınacak şekilde hazırlandı.
 | Web (Next.js — landing `/` + panel) | `https://liftonom.rslabsdev.site` | `3000` |
 | PostgreSQL | (yalnız iç ağ) | `5432` |
 
-- **VPS / Coolify sunucusu:** `76.13.53.93`
+- **VPS / Coolify sunucusu:** `76.13.53.93` · Coolify: `https://coolify.rslabsdev.site`
+- **Production repo:** `RasulSonmez/liftonom` (private), dal `main`. Coolify SSH **deploy key** ile çeker.
 - **DNS:** `rslabsdev.site` Hostinger'da. `liftonom-api` ve `liftonom` A kayıtları `76.13.53.93`'e eklendi
   (zaten `*` joker kaydı da aynı IP'ye işaret ediyor). SSL Coolify/Traefik ile otomatik (Let's Encrypt).
-- **Dağıtım dalı:** `feature/web-admin-mobile-push`
+- **Otomatik deploy:** `main`'e push → GitHub webhook → Coolify yeniden derler.
+
+## ✅ Mevcut canlı kurulum
+
+Tek **Docker Compose** kaynağı olarak kuruldu (Coolify projesi **Liftonom**, ortam `production`):
+`docker-compose.yml` → `db` (postgres + kalıcı volume) + `api` (8080) + `web` (3000).
+Servis→alan adı eşlemesi Coolify'da: `api`→`liftonom-api.rslabsdev.site`, `web`→`liftonom.rslabsdev.site`.
+Gizli env (Coolify'da tutulur): `POSTGRES_PASSWORD`, `JWT_KEY`. Süper Admin ilk açılışta tohumlanır.
 
 ## Şema & tohum (önemli)
 
@@ -22,8 +30,8 @@ Bu repo Coolify ile üretim benzeri bir demoya alınacak şekilde hazırlandı.
 
 ## Yol A — Docker Compose (tek kaynak, önerilen)
 
-1. Coolify → **+ New → Docker Compose**, kaynak: GitHub `KursadOzhamam/liftonom`, dal
-   `feature/web-admin-mobile-push`, compose yolu `docker-compose.yml`.
+1. Coolify → **+ New → Docker Compose**, kaynak: GitHub `RasulSonmez/liftonom`, dal
+   `main`, compose yolu `docker-compose.yml`.
 2. Ortam değişkenleri (Coolify → Environment Variables):
    ```
    POSTGRES_PASSWORD=<güçlü-parola>

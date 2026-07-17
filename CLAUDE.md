@@ -6,8 +6,9 @@
 > çelişiyorsa **kod esastır** — çelişkiyi düzelt, uydurma.
 >
 > Son güncelleme: 2026-07-17 · Branch: `feature/web-admin-mobile-push`
-> Canlı/demo dağıtımı Coolify ile: bkz. [`DEPLOY.md`](DEPLOY.md) — API `liftonom-api.rslabsdev.site`,
-> Web (landing `/` + panel) `liftonom.rslabsdev.site`, VPS `76.13.53.93`.
+> Canlı demo (Coolify): API `liftonom-api.rslabsdev.site`, Web (landing `/` + panel) `liftonom.rslabsdev.site`,
+> VPS `76.13.53.93`. **Production repo: `RasulSonmez/liftonom` (`main`)** — Coolify buradan otomatik deploy
+> eder (push → webhook). Kurulum detayı: [`DEPLOY.md`](DEPLOY.md).
 
 ---
 
@@ -28,7 +29,8 @@
    (`e.TenantId == CurrentTenantId`). Filtreyi aşmak için `IgnoreQueryFilters()` (sadece Süper Admin
    veya token/cihaz gibi tenant-ötesi işlemlerde).
 5. **`git`**: aktif branch `feature/web-admin-mobile-push`, remote `KursadOzhamam/liftonom`. Default
-   branch'e doğrudan push etme.
+   branch'e doğrudan push etme. **Canlı/production repo ayrı:** `RasulSonmez/liftonom` (`main`) — Coolify
+   buradan otomatik deploy eder; production değişikliği bu repoya `main` push'uyla yayına girer.
 6. **Gizli anahtarlar ASLA commit edilmez** — bkz. [Sırlar](#sırlar--güvenlik).
 7. **Mobil uygulama YALNIZCA teknisyenler içindir** (rol kontrolü login'de).
 8. Konum/port sabitleri: **API `5080`**, **Web `3000`**. Mobil API adresi build-time `--dart-define`.
