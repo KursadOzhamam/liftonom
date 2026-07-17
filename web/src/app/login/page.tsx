@@ -4,61 +4,49 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { api, setToken, ApiError } from "@/lib/api";
 
-type LoginResp = { requires_otp?: boolean; dev_code?: string | null; phone?: string; token?: string };
-type VerifyResp = { token: string; user: { name: string }; tenant: { name: string } };
+type AuthResp = { token: string; user: { name: string }; tenant: { name: string } };
+type Mode = "login" | "register";
 
-export default function LoginPage() {
+export default function AuthPage() {
   const router = useRouter();
-  const [step, setStep] = useState<"login" | "otp">("login");
-  const [phone, setPhone] = useState("");
+  const [mode, setMode] = useState<Mode>("login");
+
+  // ortak
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [code, setCode] = useState("");
-  const [devCode, setDevCode] = useState<string | null>(null);
+  // kayıt
+  const [company, setCompany] = useState("");
+  const [name, setName] = useState("");
+
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  async function submitLogin(e: React.FormEvent) {
-    e.preventDefault();
+  function switchMode(m: Mode) {
+    setMode(m);
     setError(null);
-    setLoading(true);
-    try {
-      const res = await api<LoginResp>("/auth/login", {
-        method: "POST",
-        auth: false,
-        body: { phone, password },
-      });
-      // OTP kapalıysa API doğrudan token döner → giriş tamam.
-      if (res.token) {
-        setToken(res.token);
-        router.push("/dashboard");
-        return;
-      }
-      if (res.requires_otp) {
-        setStep("otp");
-        setDevCode(res.dev_code ?? null);
-        if (res.dev_code) setCode(res.dev_code);
-      }
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Giriş başarısız.");
-    } finally {
-      setLoading(false);
-    }
   }
 
-  async function submitOtp(e: React.FormEvent) {
+  async function submit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
     setLoading(true);
     try {
-      const res = await api<VerifyResp>("/auth/verify-otp", {
-        method: "POST",
-        auth: false,
-        body: { phone, code },
-      });
+      const res =
+        mode === "login"
+          ? await api<AuthResp>("/auth/login", {
+              method: "POST",
+              auth: false,
+              body: { email, password },
+            })
+          : await api<AuthResp>("/auth/register", {
+              method: "POST",
+              auth: false,
+              body: { company_name: company, name, email, password },
+            });
       setToken(res.token);
       router.push("/dashboard");
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Doğrulama başarısız.");
+      setError(err instanceof ApiError ? err.message : mode === "login" ? "Giriş başarısız." : "Kayıt başarısız.");
     } finally {
       setLoading(false);
     }
@@ -79,77 +67,101 @@ export default function LoginPage() {
         </div>
 
         <div className="rounded-xl border border-line bg-card p-6 shadow-sm">
-          {step === "login" ? (
-            <form onSubmit={submitLogin} className="space-y-4">
-              <h1 className="text-lg font-semibold text-ink">Giriş Yap</h1>
-              <Field label="Telefon">
-                <input
-                  id="phone"
-                  name="phone"
-                  type="tel"
-                  inputMode="tel"
-                  placeholder="05XX XXX XX XX"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  required
-                  className="input"
-                />
-              </Field>
-              <Field label="Şifre">
-                <input
-                  id="password"
-                  name="password"
-                  type="password"
-                  placeholder="••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  className="input"
-                />
-              </Field>
-              {error && <p className="text-sm text-danger">{error}</p>}
-              <button type="submit" disabled={loading} className="btn-primary w-full">
-                {loading ? "Gönderiliyor…" : "Devam Et"}
-              </button>
-            </form>
-          ) : (
-            <form onSubmit={submitOtp} className="space-y-4">
-              <h1 className="text-lg font-semibold text-ink">Doğrulama Kodu</h1>
-              <p className="text-sm text-muted">
-                {phone} numarasına gönderilen 6 haneli kodu girin.
-              </p>
-              {devCode && (
-                <p className="rounded-lg bg-primary-light px-3 py-2 text-sm text-primary-dark">
-                  Geliştirme kodu: <b>{devCode}</b>
-                </p>
-              )}
-              <Field label="Kod">
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  maxLength={6}
-                  value={code}
-                  onChange={(e) => setCode(e.target.value)}
-                  required
-                  className="input tracking-[0.4em] text-center text-lg"
-                />
-              </Field>
-              {error && <p className="text-sm text-danger">{error}</p>}
-              <button type="submit" disabled={loading} className="btn-primary w-full">
-                {loading ? "Doğrulanıyor…" : "Giriş Yap"}
-              </button>
+          {/* Sekmeler */}
+          <div className="mb-5 grid grid-cols-2 gap-1 rounded-lg bg-surface p-1">
+            {(["login", "register"] as Mode[]).map((m) => (
               <button
+                key={m}
                 type="button"
-                onClick={() => { setStep("login"); setError(null); }}
-                className="w-full text-sm text-muted hover:text-ink"
+                onClick={() => switchMode(m)}
+                className={`rounded-md py-2 text-sm font-medium transition ${
+                  mode === m ? "bg-card text-primary shadow-sm" : "text-muted hover:text-ink"
+                }`}
               >
-                ← Geri dön
+                {m === "login" ? "Giriş Yap" : "Kayıt Ol"}
               </button>
-            </form>
-          )}
+            ))}
+          </div>
+
+          <form onSubmit={submit} className="space-y-4">
+            {mode === "register" && (
+              <>
+                <Field label="Firma Adı">
+                  <input
+                    type="text"
+                    placeholder="Örn. Yıldız Asansör Ltd."
+                    value={company}
+                    onChange={(e) => setCompany(e.target.value)}
+                    required
+                    className="input"
+                  />
+                </Field>
+                <Field label="Ad Soyad">
+                  <input
+                    type="text"
+                    placeholder="Adınız Soyadınız"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    required
+                    className="input"
+                  />
+                </Field>
+              </>
+            )}
+
+            <Field label="E-posta">
+              <input
+                type="email"
+                inputMode="email"
+                autoComplete="email"
+                placeholder="ornek@firma.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                className="input"
+              />
+            </Field>
+            <Field label="Şifre">
+              <input
+                type="password"
+                autoComplete={mode === "login" ? "current-password" : "new-password"}
+                placeholder="••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                minLength={mode === "register" ? 6 : undefined}
+                className="input"
+              />
+            </Field>
+
+            {error && <p className="text-sm text-danger">{error}</p>}
+
+            <button type="submit" disabled={loading} className="btn-primary w-full">
+              {loading ? "Lütfen bekleyin…" : mode === "login" ? "Giriş Yap" : "Firma Oluştur"}
+            </button>
+          </form>
+
+          <p className="mt-4 text-center text-xs text-muted">
+            {mode === "login" ? (
+              <>
+                Hesabın yok mu?{" "}
+                <button type="button" onClick={() => switchMode("register")} className="font-medium text-primary hover:underline">
+                  Kayıt ol
+                </button>
+              </>
+            ) : (
+              <>
+                Zaten hesabın var mı?{" "}
+                <button type="button" onClick={() => switchMode("login")} className="font-medium text-primary hover:underline">
+                  Giriş yap
+                </button>
+              </>
+            )}
+          </p>
         </div>
+
         <p className="mt-6 text-center text-xs text-muted">
-          © 2026 Liftonom · Demo: 0543 123 45 67 / 123456
+          © 2026 Liftonom · Demo: demo@liftonom.com / demo1234
         </p>
       </div>
     </div>

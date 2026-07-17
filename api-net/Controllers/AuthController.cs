@@ -16,9 +16,10 @@ public class AuthController(
     IConfiguration config,
     IHostEnvironment env) : ControllerBase
 {
-    public record LoginDto(string Phone, string Password, long? TenantId);
+    public record LoginDto(string? Email, string? Phone, string Password, long? TenantId);
     public record VerifyDto(string Phone, string Code);
     public record PhoneDto(string Phone);
+    public record RegisterDto(string CompanyName, string Name, string? Surname, string Email, string Password, string? Phone);
 
     private bool Debug => env.IsDevelopment();
     // SMS OTP kapatılabilir (Otp:Disabled=true) → login doğrudan token verir (SMS maliyeti yok).
@@ -27,52 +28,55 @@ public class AuthController(
     [HttpPost("login")]
     public async Task<IActionResult> Login(LoginDto dto)
     {
-        var phone = PhoneHelper.Normalize(dto.Phone);
+        var byEmail = !string.IsNullOrWhiteSpace(dto.Email);
 
-        var candidates = await db.Users
-            .Include(u => u.Tenant)
-            .Where(u => u.Phone == phone && u.IsActive)
-            .ToListAsync();
+        List<User> candidates;
+        if (byEmail)
+        {
+            var email = dto.Email!.Trim().ToLowerInvariant();
+            candidates = await db.Users.Include(u => u.Tenant)
+                .Where(u => u.Email != null && u.Email.ToLower() == email && u.IsActive).ToListAsync();
+        }
+        else
+        {
+            var phone = PhoneHelper.Normalize(dto.Phone ?? "");
+            candidates = await db.Users.Include(u => u.Tenant)
+                .Where(u => u.Phone == phone && u.IsActive).ToListAsync();
+        }
 
         candidates = candidates.Where(u => BCrypt.Net.BCrypt.Verify(dto.Password, u.Password)).ToList();
         if (dto.TenantId is { } tid)
             candidates = candidates.Where(u => u.TenantId == tid).ToList();
 
         if (candidates.Count == 0)
-            throw new ApiException(422, "Telefon veya şifre hatalı.");
+            throw new ApiException(422, byEmail ? "E-posta veya şifre hatalı." : "Telefon veya şifre hatalı.");
 
         if (candidates.Count > 1)
         {
             return Conflict(new
             {
                 requires_tenant = true,
-                message = "Bu telefon birden çok firmada kayıtlı. Lütfen firma seçin.",
+                message = "Bu hesap birden çok firmada kayıtlı. Lütfen firma seçin.",
                 tenants = candidates.Select(u => new { tenant_id = u.TenantId, name = u.Tenant!.Name }),
             });
         }
 
         var user = candidates[0];
 
-        // OTP kapalıysa doğrudan token ver (verify-otp ile aynı yanıt biçimi) — SMS gerektirmez.
-        if (OtpDisabled)
+        // E-posta ile giriş veya OTP kapalıysa doğrudan token (SMS gerektirmez).
+        if (byEmail || OtpDisabled)
         {
             user.LastLoginAt = DateTime.UtcNow;
             await db.SaveChangesAsync();
-            return Ok(new
-            {
-                token = tokens.Create(user),
-                user = UserPayload(user),
-                tenant = new { id = user.Tenant!.Id, name = user.Tenant.Name, slug = user.Tenant.Slug, plan = user.Tenant.Plan },
-            });
+            return Ok(TokenResponse(user));
         }
 
-        var code = await otp.GenerateAsync(phone, user.TenantId, "login");
-
+        var code = await otp.GenerateAsync(user.Phone, user.TenantId, "login");
         return Ok(new
         {
             requires_otp = true,
             message = "Doğrulama kodu telefonunuza gönderildi.",
-            phone,
+            phone = user.Phone,
             dev_code = Debug ? code : null,
         });
     }
@@ -108,6 +112,57 @@ public class AuthController(
 
         var code = await otp.GenerateAsync(phone, user.TenantId, "login");
         return Ok(new { message = "Yeni doğrulama kodu gönderildi.", dev_code = Debug ? code : null });
+    }
+
+    /// <summary>Herkese açık firma kaydı: yeni firma (tenant) + yönetici kullanıcı → doğrudan token.</summary>
+    [HttpPost("register")]
+    public async Task<IActionResult> Register(RegisterDto dto, [FromServices] ITenantContext tenantCtx)
+    {
+        if (string.IsNullOrWhiteSpace(dto.CompanyName)) throw new ApiException(422, "Firma adı zorunludur.");
+        if (string.IsNullOrWhiteSpace(dto.Name)) throw new ApiException(422, "Ad Soyad zorunludur.");
+        var email = (dto.Email ?? "").Trim().ToLowerInvariant();
+        if (email.Length == 0 || !email.Contains('@')) throw new ApiException(422, "Geçerli bir e-posta girin.");
+        if (string.IsNullOrWhiteSpace(dto.Password) || dto.Password.Length < 6)
+            throw new ApiException(422, "Şifre en az 6 karakter olmalıdır.");
+
+        if (await db.Users.IgnoreQueryFilters().AnyAsync(u => u.Email != null && u.Email.ToLower() == email && u.DeletedAt == null))
+            throw new ApiException(422, "Bu e-posta zaten kayıtlı.");
+
+        var phone = string.IsNullOrWhiteSpace(dto.Phone) ? "" : PhoneHelper.Normalize(dto.Phone);
+        var now = DateTime.UtcNow;
+
+        await using var tx = await db.Database.BeginTransactionAsync();
+
+        var tenant = new Models.Tenant
+        {
+            Name = dto.CompanyName, Slug = await UniqueSlug(dto.CompanyName), Phone = phone, Email = email,
+            Plan = "trial", PlanExpiresAt = now.AddDays(30), SmsBalance = 100, IsActive = true,
+            CreatedAt = now, UpdatedAt = now,
+        };
+        db.Tenants.Add(tenant);
+        await db.SaveChangesAsync();
+        tenantCtx.TenantId = tenant.Id;
+
+        var user = new Models.User
+        {
+            TenantId = tenant.Id, Name = dto.Name, Surname = dto.Surname, Phone = phone, Email = email,
+            Password = BCrypt.Net.BCrypt.HashPassword(dto.Password), Role = Models.User.RoleManager,
+            IsActive = true, CreatedAt = now, UpdatedAt = now, LastLoginAt = now,
+        };
+        db.Users.Add(user);
+
+        db.Subscriptions.Add(new Models.Subscription
+        {
+            TenantId = tenant.Id, PlanId = null, Status = "trialing", StartedAt = now,
+            CurrentPeriodEnd = now.AddDays(30), CreatedAt = now, UpdatedAt = now,
+        });
+        db.SmsPreferences.Add(new Models.SmsPreference { TenantId = tenant.Id, CreatedAt = now, UpdatedAt = now });
+
+        await db.SaveChangesAsync();
+        await tx.CommitAsync();
+
+        user.Tenant = tenant;
+        return StatusCode(201, TokenResponse(user));
     }
 
     [Authorize]
@@ -204,6 +259,34 @@ public class AuthController(
     [Authorize]
     [HttpPost("logout")]
     public IActionResult Logout() => Ok(new { message = "Çıkış yapıldı." });
+
+    private object TokenResponse(User user) => new
+    {
+        token = tokens.Create(user),
+        user = UserPayload(user),
+        tenant = new { id = user.Tenant!.Id, name = user.Tenant.Name, slug = user.Tenant.Slug, plan = user.Tenant.Plan },
+    };
+
+    private async Task<string> UniqueSlug(string name)
+    {
+        var baseSlug = Slugify(name);
+        if (string.IsNullOrEmpty(baseSlug)) baseSlug = "firma";
+        var slug = baseSlug;
+        var i = 1;
+        while (await db.Tenants.IgnoreQueryFilters().AnyAsync(t => t.Slug == slug))
+            slug = $"{baseSlug}-{++i}";
+        return slug;
+    }
+
+    private static string Slugify(string input)
+    {
+        var s = input.ToLowerInvariant().Trim();
+        s = s.Replace('ı', 'i').Replace('ğ', 'g').Replace('ü', 'u').Replace('ş', 's').Replace('ö', 'o').Replace('ç', 'c');
+        var chars = s.Select(c => char.IsLetterOrDigit(c) ? c : '-').ToArray();
+        s = new string(chars);
+        while (s.Contains("--")) s = s.Replace("--", "-");
+        return s.Trim('-');
+    }
 
     private static object UserPayload(User u) => new
     {
