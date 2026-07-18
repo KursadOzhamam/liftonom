@@ -6,7 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { api, getToken, clearToken } from "@/lib/api";
 import { NAV } from "./nav";
 import ThemeToggle from "./ThemeToggle";
-import { LogOut } from "lucide-react";
+import { LogOut, Building2 } from "lucide-react";
 
 type Me = { name: string; surname?: string; role: string };
 
@@ -41,35 +41,40 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex h-screen overflow-hidden bg-surface">
       {/* Sidebar */}
-      <aside className="hidden w-60 shrink-0 flex-col border-r border-line bg-card md:flex">
-        <div className="flex h-16 items-center gap-2 border-b border-line px-5">
-          <div className="grid h-8 w-8 place-items-center rounded-lg bg-primary text-sm font-bold text-white">L</div>
-          <span className="font-bold text-ink">Liftonom</span>
+      <aside className="hidden w-64 shrink-0 flex-col border-r border-line bg-card md:flex">
+        <div className="flex h-16 items-center gap-2.5 border-b border-line px-5">
+          <span className="grid h-9 w-9 place-items-center rounded-xl bg-primary text-white shadow-sm"><Building2 size={19} strokeWidth={2.2} /></span>
+          <div className="leading-tight">
+            <div className="text-[15px] font-bold tracking-tight text-ink">Liftonom</div>
+            <div className="text-[10px] font-medium uppercase tracking-wider text-muted">Firma Paneli</div>
+          </div>
         </div>
         <nav className="flex-1 overflow-y-auto px-3 py-4">
           {NAV.map((group) => (
-            <div key={group.title} className="mb-5">
-              <div className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-muted">
+            <div key={group.title} className="mb-4">
+              <div className="px-3 pb-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted/80">
                 {group.title}
               </div>
-              {group.items.map((item) => {
-                const active = pathname === item.href;
-                const Icon = item.icon;
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href as never}
-                    className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition ${
-                      active
-                        ? "bg-primary-light font-medium text-primary border-l-[3px] border-primary"
-                        : "text-ink-soft hover:bg-surface"
-                    }`}
-                  >
-                    <Icon size={18} className={active ? "text-primary" : "text-muted"} />
-                    {item.label}
-                  </Link>
-                );
-              })}
+              <div className="space-y-0.5">
+                {group.items.map((item) => {
+                  const active = pathname === item.href;
+                  const Icon = item.icon;
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href as never}
+                      className={`group flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition ${
+                        active
+                          ? "bg-primary-light font-semibold text-primary"
+                          : "font-medium text-ink-soft hover:bg-surface hover:text-ink"
+                      }`}
+                    >
+                      <Icon size={18} className={active ? "text-primary" : "text-muted transition group-hover:text-ink-soft"} />
+                      {item.label}
+                    </Link>
+                  );
+                })}
+              </div>
             </div>
           ))}
         </nav>
@@ -77,22 +82,22 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
       {/* Main */}
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-10 flex h-16 items-center justify-between border-b border-line bg-card px-6">
-          <div className="text-sm text-muted md:hidden font-bold text-ink">Liftonom</div>
-          <div className="ml-auto flex items-center gap-4">
+        <header className="sticky top-0 z-10 flex h-16 items-center justify-between border-b border-line bg-card/80 px-6 backdrop-blur-md">
+          <div className="text-sm font-bold text-ink md:hidden">Liftonom</div>
+          <div className="ml-auto flex items-center gap-3">
             <ThemeToggle />
             {me && (
-              <div className="flex items-center gap-2">
-                <div className="grid h-8 w-8 place-items-center rounded-full bg-primary-light text-xs font-bold text-primary">
+              <div className="flex items-center gap-2.5 rounded-full border border-line bg-surface py-1 pl-1 pr-3">
+                <span className="grid h-7 w-7 place-items-center rounded-full bg-primary text-xs font-bold text-white">
                   {me.name?.[0] ?? "?"}
-                </div>
-                <span className="hidden text-sm text-ink-soft sm:block">
-                  {me.name} {me.surname} · <span className="text-muted">{me.role}</span>
+                </span>
+                <span className="hidden text-sm font-medium text-ink sm:block">
+                  {me.name} {me.surname} <span className="font-normal text-muted">· {me.role}</span>
                 </span>
               </div>
             )}
-            <button onClick={logout} className="flex items-center gap-1 text-sm text-danger hover:underline">
-              <LogOut size={16} /> Çıkış
+            <button onClick={logout} className="grid h-9 w-9 place-items-center rounded-lg border border-line text-muted transition hover:border-danger/40 hover:text-danger" aria-label="Çıkış" title="Çıkış">
+              <LogOut size={16} />
             </button>
           </div>
         </header>

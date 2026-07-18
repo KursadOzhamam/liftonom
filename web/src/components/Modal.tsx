@@ -9,11 +9,14 @@ export default function Modal({
   footer?: React.ReactNode;
 }) {
   return (
-    <div className="fixed inset-0 z-20 grid place-items-center bg-black/40 p-4" onClick={onClose}>
-      <div className="w-full max-w-md rounded-xl bg-card p-6 shadow-lg" onClick={(e) => e.stopPropagation()}>
-        <h2 className="text-lg font-semibold text-ink">{title}</h2>
-        <div className="mt-4 space-y-3">{children}</div>
-        {footer && <div className="mt-5 flex justify-end gap-2">{footer}</div>}
+    <div className="fade-in fixed inset-0 z-30 grid place-items-center bg-slate-950/50 p-4 backdrop-blur-sm" onClick={onClose}>
+      <div
+        className="pop-in surface-pop flex max-h-[90vh] w-full max-w-md flex-col rounded-2xl border border-line bg-card"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h2 className="border-b border-line px-6 py-4 text-lg font-semibold tracking-tight text-ink">{title}</h2>
+        <div className="flex-1 space-y-3.5 overflow-y-auto px-6 py-5">{children}</div>
+        {footer && <div className="flex justify-end gap-2 border-t border-line px-6 py-4">{footer}</div>}
       </div>
     </div>
   );
@@ -22,7 +25,7 @@ export default function Modal({
 export function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="block">
-      <span className="mb-1 block text-xs font-medium text-muted">{label}</span>
+      <span className="mb-1.5 block text-xs font-medium text-ink-soft">{label}</span>
       {children}
     </label>
   );

@@ -5,52 +5,61 @@
 
 /* === Liftonom Tasarım Sistemi (açık mod — varsayılan) === */
 @theme {
+  /* Marka */
   --color-primary: #2563EB;
   --color-primary-dark: #1D4ED8;
-  --color-primary-light: #DBEAFE;
+  --color-primary-light: #EAF1FF;
 
-  --color-success: #16A34A;
+  --color-success: #059669;
   --color-warning: #D97706;
-  --color-danger: #DC2626;
+  --color-danger: #E11D48;
   --color-info: #0891B2;
 
-  --color-ink: #111827;
-  --color-ink-soft: #374151;
-  --color-muted: #6B7280;
-  --color-line: #E5E7EB;
-  --color-surface: #F9FAFB;
+  /* Nötrler — slate paleti (modern B2B) */
+  --color-ink: #0F172A;
+  --color-ink-soft: #475569;
+  --color-muted: #64748B;
+  --color-line: #E4E9F0;
+  --color-surface: #F6F8FB;
   --color-card: #FFFFFF;
 
-  --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-sans: var(--font-jakarta), ui-sans-serif, system-ui, -apple-system, sans-serif;
 
   --radius-card: 12px;
+
+  /* Elevasyon */
+  --shadow-card: 0 1px 2px rgba(15, 23, 42, 0.04), 0 1px 3px rgba(15, 23, 42, 0.05);
+  --shadow-pop: 0 16px 40px -16px rgba(15, 23, 42, 0.24), 0 2px 8px rgba(15, 23, 42, 0.06);
 }
 
 :root {
-  --background: #F9FAFB;
-  --foreground: #111827;
+  --background: #F6F8FB;
+  --foreground: #0F172A;
 }
 
 /* === Koyu mod — semantik token'lar yeniden eşlenir (slate paleti) === */
 .dark {
   --color-primary: #3B82F6;
   --color-primary-dark: #2563EB;
-  --color-primary-light: #1E3357;
+  --color-primary-light: #17233F;
 
   --color-success: #22C55E;
   --color-warning: #F59E0B;
-  --color-danger: #F87171;
+  --color-danger: #FB7185;
   --color-info: #22D3EE;
 
-  --color-ink: #E8EDF4;
-  --color-ink-soft: #C2CBD8;
-  --color-muted: #8A95A6;
-  --color-line: #25304A;
-  --color-surface: #0B1120;
-  --color-card: #131C2E;
+  --color-ink: #E9EEF7;
+  --color-ink-soft: #AEB9CC;
+  --color-muted: #7E8AA0;
+  --color-line: #223049;
+  --color-surface: #0A101E;
+  --color-card: #121B2E;
 
-  --background: #0B1120;
-  --foreground: #E8EDF4;
+  --background: #0A101E;
+  --foreground: #E9EEF7;
+
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.30), 0 1px 3px rgba(0, 0, 0, 0.35);
+  --shadow-pop: 0 18px 44px -14px rgba(0, 0, 0, 0.65), 0 2px 10px rgba(0, 0, 0, 0.4);
 
   color-scheme: dark;
 }
@@ -60,42 +69,91 @@ html, body {
   color: var(--foreground);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
+
+h1, h2, h3 { letter-spacing: -0.018em; }
 
 /* Tema geçişi yumuşak olsun (büyük tablolarda jank yaratmayacak kadar hafif) */
 body, aside, header, .input, [class*="bg-card"], [class*="bg-surface"] {
   transition: background-color 0.2s ease, border-color 0.2s ease;
 }
 
+/* Erişilebilir odak halkası (klavye) */
+:where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+button:not(:disabled) { cursor: pointer; }
+
+/* Hareket azaltma tercihi */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+}
+
+/* Tablo/rakam hizalaması */
+table { font-variant-numeric: tabular-nums; }
+
 /* === Ortak bileşen sınıfları === */
 .input {
   width: 100%;
   border: 1px solid var(--color-line);
-  border-radius: 8px;
-  padding: 0.55rem 0.75rem;
+  border-radius: 10px;
+  padding: 0.58rem 0.8rem;
   font-size: 0.875rem;
   outline: none;
   background: var(--color-card);
   color: var(--color-ink);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 .input::placeholder { color: var(--color-muted); }
 .input:focus {
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px var(--color-primary-light);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 20%, transparent);
 }
+select.input { cursor: pointer; }
 
 .btn-primary {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.5rem;
-  border-radius: 8px;
+  gap: 0.45rem;
+  border-radius: 10px;
   background: var(--color-primary);
   color: #fff;
   font-size: 0.875rem;
   font-weight: 600;
-  padding: 0.6rem 1rem;
-  transition: background 0.15s;
+  padding: 0.6rem 1.05rem;
+  box-shadow: 0 1px 2px rgba(37, 99, 235, 0.25);
+  transition: background 0.15s ease, transform 0.1s ease, box-shadow 0.15s ease;
 }
-.btn-primary:hover { background: var(--color-primary-dark); }
-.btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+.btn-primary:hover { background: var(--color-primary-dark); box-shadow: 0 4px 12px -2px rgba(37, 99, 235, 0.4); }
+.btn-primary:active { transform: scale(0.98); }
+.btn-primary:disabled { opacity: 0.55; cursor: not-allowed; box-shadow: none; }
+
+/* İkincil / hafif buton (opsiyonel — bordürlü) */
+.btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  border-radius: 10px;
+  border: 1px solid var(--color-line);
+  background: var(--color-card);
+  color: var(--color-ink);
+  font-size: 0.875rem;
+  font-weight: 500;
+  padding: 0.55rem 1rem;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.btn-ghost:hover { background: var(--color-surface); border-color: color-mix(in srgb, var(--color-line) 60%, var(--color-ink)); }
+
+/* Yükselen yüzey (modal, açılır menü) */
+.surface-pop { box-shadow: var(--shadow-pop); }
+
+/* Giriş animasyonları (hareket azaltmaya saygılı) */
+@keyframes pop-in { from { opacity: 0; transform: translateY(8px) scale(0.98); } to { opacity: 1; transform: none; } }
+@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+.pop-in { animation: pop-in 0.18s cubic-bezier(0.16, 1, 0.3, 1); }
+.fade-in { animation: fade-in 0.15s ease-out; }
