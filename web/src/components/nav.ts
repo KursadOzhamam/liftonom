@@ -5,7 +5,7 @@ import {
   Receipt, Package, Settings, Crown, MessageCircle,
   FileSignature, ClipboardCheck, FileCheck, ShoppingCart, FolderKanban,
   TrendingUp, Truck, Banknote, CalendarX, CalendarDays, HandCoins, PackageMinus,
-  Rocket, Bell, CalendarPlus, CircleDollarSign, ScrollText, LifeBuoy, GraduationCap,
+  Rocket, CalendarPlus, CircleDollarSign, ScrollText, LifeBuoy, GraduationCap,
   Coins, Tags, Warehouse, Car, Navigation, UserCircle, type LucideIcon,
 } from "lucide-react";
 
@@ -18,7 +18,6 @@ export const NAV: NavGroup[] = [
     items: [
       { label: "Kontrol Paneli", href: "/dashboard", icon: LayoutDashboard },
       { label: "Hızlı Kurulum", href: "/quick-setup", icon: Rocket },
-      { label: "Bildirimler", href: "/notifications", icon: Bell },
     ],
   },
   {

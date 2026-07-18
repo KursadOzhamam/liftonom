@@ -7,7 +7,7 @@ import { api, getToken, clearToken } from "@/lib/api";
 import { NAV } from "./nav";
 import ThemeToggle from "./ThemeToggle";
 import { ConfirmProvider } from "./ConfirmDialog";
-import { LogOut, Building2, ChevronDown } from "lucide-react";
+import { LogOut, Building2, ChevronDown, Bell } from "lucide-react";
 
 type Me = { name: string; surname?: string; role: string };
 
@@ -134,6 +134,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         <header className="sticky top-0 z-10 flex h-16 items-center justify-between border-b border-line bg-card/80 px-6 backdrop-blur-md">
           <div className="text-sm font-bold text-ink md:hidden">Liftonom</div>
           <div className="ml-auto flex items-center gap-3">
+            <Link href={"/notifications" as never} className="grid h-9 w-9 place-items-center rounded-lg border border-line text-muted transition hover:border-primary/40 hover:text-primary" aria-label="Bildirimler" title="Bildirimler">
+              <Bell size={16} />
+            </Link>
             <ThemeToggle />
             {me && (
               <div className="flex items-center gap-2.5 rounded-full border border-line bg-surface py-1 pl-1 pr-3">

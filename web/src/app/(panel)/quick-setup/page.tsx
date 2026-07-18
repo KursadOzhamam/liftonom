@@ -132,7 +132,7 @@ export default function QuickSetupPage() {
 
       {error && <div className="mt-5 rounded-lg border border-danger/30 bg-danger/5 px-4 py-3 text-sm text-danger">{error}</div>}
 
-      <div className="mt-6 space-y-4">
+      <div className="mt-6 grid items-start gap-4 lg:grid-cols-2">
         {/* 1 · Müşteri */}
         <Section n={1} icon={User} title="Müşteri Bilgileri">
           <div className="grid gap-4 sm:grid-cols-2">
@@ -209,7 +209,8 @@ export default function QuickSetupPage() {
           </div>
         </Section>
 
-        {/* 3 · Asansörler */}
+        {/* 3 · Asansörler (tam genişlik) */}
+        <div className="lg:col-span-2">
         <Section n={3} icon={ArrowUpDown} title="Asansörler" hint="opsiyonel — birden fazla ekleyebilirsiniz">
           <div className="space-y-3">
             {elevators.map((e, i) => (
@@ -236,8 +237,10 @@ export default function QuickSetupPage() {
             </button>
           </div>
         </Section>
+        </div>
 
-        {/* 4 · Bakım ücreti */}
+        {/* 4 · Bakım ücreti (tam genişlik) */}
+        <div className="lg:col-span-2">
         <Section n={4} icon={Wrench} title="Bakım Ücreti" hint="opsiyonel — eklenen tüm asansörler için uygulanır">
           <div className="grid gap-4 sm:grid-cols-3">
             <Field label="Aylık Ücret (₺, KDV Dahil)" hint="KDV dahil tutar girin">
@@ -251,6 +254,7 @@ export default function QuickSetupPage() {
             </Field>
           </div>
         </Section>
+        </div>
       </div>
 
       {/* Sabit alt bar */}

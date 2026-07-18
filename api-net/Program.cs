@@ -183,6 +183,16 @@ using (var scope = app.Services.CreateScope())
         ALTER TABLE buildings ADD COLUMN IF NOT EXISTS unit_count integer;
         ALTER TABLE elevators ADD COLUMN IF NOT EXISTS stop_count integer;
         ALTER TABLE maintenance_fees ADD COLUMN IF NOT EXISTS valid_to date;
+        -- Bina detay alanları (yeni bina formu)
+        ALTER TABLE buildings ADD COLUMN IF NOT EXISTS postal_code text;
+        ALTER TABLE buildings ADD COLUMN IF NOT EXISTS phone text;
+        ALTER TABLE buildings ADD COLUMN IF NOT EXISTS email text;
+        ALTER TABLE buildings ADD COLUMN IF NOT EXISTS built_year integer;
+        ALTER TABLE buildings ADD COLUMN IF NOT EXISTS manager_email text;
+        ALTER TABLE buildings ADD COLUMN IF NOT EXISTS default_technician_user_id bigint;
+        ALTER TABLE buildings ADD COLUMN IF NOT EXISTS is_active boolean NOT NULL DEFAULT true;
+        ALTER TABLE buildings ADD COLUMN IF NOT EXISTS door_code text;
+        ALTER TABLE buildings ADD COLUMN IF NOT EXISTS access_note text;
         """);
 
     if (!await db.PlatformSettings.AnyAsync())

@@ -13,7 +13,9 @@ namespace Liftonom.Api.Controllers;
 public class BuildingController(AppDbContext db) : ControllerBase
 {
     public record BuildingDto(string Name, string? Type, long? CustomerId, long? RegionId, string? Address,
-        string? District, string? City, int? FloorCount, int? UnitCount, string? ManagerName, string? ManagerPhone, string? Notes,
+        string? District, string? City, string? PostalCode, string? Phone, string? Email,
+        int? FloorCount, int? UnitCount, int? BuiltYear, string? ManagerName, string? ManagerPhone, string? ManagerEmail,
+        long? DefaultTechnicianUserId, bool? IsActive, string? DoorCode, string? AccessNote, string? Notes,
         decimal? Latitude, decimal? Longitude);
 
     [HttpGet]
@@ -66,7 +68,11 @@ public class BuildingController(AppDbContext db) : ControllerBase
             TenantId = db.CurrentTenantId!.Value,
             Name = dto.Name, Type = dto.Type, CustomerId = dto.CustomerId, RegionId = dto.RegionId,
             Address = dto.Address, District = dto.District, City = dto.City,
-            FloorCount = dto.FloorCount, UnitCount = dto.UnitCount, ManagerName = dto.ManagerName, ManagerPhone = dto.ManagerPhone,
+            PostalCode = dto.PostalCode, Phone = dto.Phone, Email = dto.Email,
+            FloorCount = dto.FloorCount, UnitCount = dto.UnitCount, BuiltYear = dto.BuiltYear,
+            ManagerName = dto.ManagerName, ManagerPhone = dto.ManagerPhone, ManagerEmail = dto.ManagerEmail,
+            DefaultTechnicianUserId = dto.DefaultTechnicianUserId, IsActive = dto.IsActive ?? true,
+            DoorCode = dto.DoorCode, AccessNote = dto.AccessNote,
             Notes = dto.Notes, Latitude = dto.Latitude, Longitude = dto.Longitude, CreatedAt = now, UpdatedAt = now,
         };
         db.Buildings.Add(b);
@@ -80,9 +86,12 @@ public class BuildingController(AppDbContext db) : ControllerBase
         var b = await db.Buildings.FirstOrDefaultAsync(x => x.Id == id)
             ?? throw new ApiException(404, "Bina bulunamadı.");
         if (!string.IsNullOrWhiteSpace(dto.Name)) b.Name = dto.Name;
-        b.CustomerId = dto.CustomerId; b.RegionId = dto.RegionId; b.Address = dto.Address;
-        b.District = dto.District; b.City = dto.City; b.FloorCount = dto.FloorCount;
-        b.ManagerName = dto.ManagerName; b.ManagerPhone = dto.ManagerPhone; b.Notes = dto.Notes;
+        b.Type = dto.Type; b.CustomerId = dto.CustomerId; b.RegionId = dto.RegionId; b.Address = dto.Address;
+        b.District = dto.District; b.City = dto.City; b.PostalCode = dto.PostalCode; b.Phone = dto.Phone; b.Email = dto.Email;
+        b.FloorCount = dto.FloorCount; b.UnitCount = dto.UnitCount; b.BuiltYear = dto.BuiltYear;
+        b.ManagerName = dto.ManagerName; b.ManagerPhone = dto.ManagerPhone; b.ManagerEmail = dto.ManagerEmail;
+        b.DefaultTechnicianUserId = dto.DefaultTechnicianUserId; if (dto.IsActive is { } a) b.IsActive = a;
+        b.DoorCode = dto.DoorCode; b.AccessNote = dto.AccessNote; b.Notes = dto.Notes;
         b.Latitude = dto.Latitude; b.Longitude = dto.Longitude;
         b.UpdatedAt = DateTime.UtcNow;
         await db.SaveChangesAsync();
