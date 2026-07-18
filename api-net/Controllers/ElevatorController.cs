@@ -13,8 +13,14 @@ namespace Liftonom.Api.Controllers;
 public class ElevatorController(AppDbContext db) : ControllerBase
 {
     public record ElevatorDto(long? BuildingId, string? Code, string Name, string? Type, string? Brand,
-        string? Model, int? CapacityKg, int? StopCount, string? SerialNumber, string? TseCertificateNo,
-        DateOnly? TseStartDate, DateOnly? TseEndDate, string? Status, int? MaintenancePeriod, string? Notes);
+        string? Model, int? CapacityKg, int? CapacityPersons, int? StopCount, string? ServedFloors, decimal? SpeedMs,
+        string? DoorType, string? SerialNumber, string? RegistrationNo, int? ManufactureYear, DateOnly? InstallationDate,
+        string? TseCertificateNo, DateOnly? TseStartDate, DateOnly? TseEndDate, string? TseLabelColor, string? TseLabelNote,
+        bool? HasEmergencyPhone, bool? HasUps, bool? HasFireSystem, bool? HasEarthquakeSensor,
+        DateOnly? LastMaintenanceDate, DateOnly? NextMaintenanceDate,
+        string? Status, int? MaintenancePeriod, string? Notes);
+
+    private static DateTime? ToUtc(DateOnly? d) => d?.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
 
     [HttpGet]
     public async Task<IActionResult> Index([FromQuery] string? search,
@@ -99,8 +105,15 @@ public class ElevatorController(AppDbContext db) : ControllerBase
         {
             TenantId = db.CurrentTenantId!.Value,
             BuildingId = dto.BuildingId, Code = dto.Code, Name = dto.Name, Type = dto.Type,
-            Brand = dto.Brand, Model = dto.Model, CapacityKg = dto.CapacityKg, StopCount = dto.StopCount, SerialNumber = dto.SerialNumber,
+            Brand = dto.Brand, Model = dto.Model, CapacityKg = dto.CapacityKg, CapacityPersons = dto.CapacityPersons,
+            StopCount = dto.StopCount, ServedFloors = dto.ServedFloors, SpeedMs = dto.SpeedMs, DoorType = dto.DoorType,
+            SerialNumber = dto.SerialNumber, RegistrationNo = dto.RegistrationNo, ManufactureYear = dto.ManufactureYear,
+            InstallationDate = dto.InstallationDate,
             TseCertificateNo = dto.TseCertificateNo, TseStartDate = dto.TseStartDate, TseEndDate = dto.TseEndDate,
+            TseLabelColor = dto.TseLabelColor, TseLabelNote = dto.TseLabelNote,
+            HasEmergencyPhone = dto.HasEmergencyPhone ?? false, HasUps = dto.HasUps ?? false,
+            HasFireSystem = dto.HasFireSystem ?? false, HasEarthquakeSensor = dto.HasEarthquakeSensor ?? false,
+            LastMaintenanceAt = ToUtc(dto.LastMaintenanceDate), NextMaintenanceAt = ToUtc(dto.NextMaintenanceDate),
             Status = dto.Status ?? "active", MaintenancePeriod = dto.MaintenancePeriod ?? 30, Notes = dto.Notes,
             QrToken = Guid.NewGuid().ToString("N"), CreatedAt = now, UpdatedAt = now,
         };
@@ -116,8 +129,18 @@ public class ElevatorController(AppDbContext db) : ControllerBase
             ?? throw new ApiException(404, "Asansör bulunamadı.");
         if (!string.IsNullOrWhiteSpace(dto.Name)) e.Name = dto.Name;
         e.BuildingId = dto.BuildingId; e.Code = dto.Code; e.Type = dto.Type; e.Brand = dto.Brand;
-        e.Model = dto.Model; e.CapacityKg = dto.CapacityKg; e.SerialNumber = dto.SerialNumber;
+        e.Model = dto.Model; e.CapacityKg = dto.CapacityKg; e.CapacityPersons = dto.CapacityPersons;
+        e.StopCount = dto.StopCount; e.ServedFloors = dto.ServedFloors; e.SpeedMs = dto.SpeedMs; e.DoorType = dto.DoorType;
+        e.SerialNumber = dto.SerialNumber; e.RegistrationNo = dto.RegistrationNo; e.ManufactureYear = dto.ManufactureYear;
+        e.InstallationDate = dto.InstallationDate;
         e.TseCertificateNo = dto.TseCertificateNo; e.TseStartDate = dto.TseStartDate; e.TseEndDate = dto.TseEndDate;
+        e.TseLabelColor = dto.TseLabelColor; e.TseLabelNote = dto.TseLabelNote;
+        if (dto.HasEmergencyPhone is { } h1) e.HasEmergencyPhone = h1;
+        if (dto.HasUps is { } h2) e.HasUps = h2;
+        if (dto.HasFireSystem is { } h3) e.HasFireSystem = h3;
+        if (dto.HasEarthquakeSensor is { } h4) e.HasEarthquakeSensor = h4;
+        if (dto.LastMaintenanceDate is not null) e.LastMaintenanceAt = ToUtc(dto.LastMaintenanceDate);
+        if (dto.NextMaintenanceDate is not null) e.NextMaintenanceAt = ToUtc(dto.NextMaintenanceDate);
         if (dto.Status != null) e.Status = dto.Status;
         if (dto.MaintenancePeriod is { } mp) e.MaintenancePeriod = mp;
         e.Notes = dto.Notes; e.UpdatedAt = DateTime.UtcNow;

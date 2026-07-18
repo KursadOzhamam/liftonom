@@ -193,6 +193,20 @@ using (var scope = app.Services.CreateScope())
         ALTER TABLE buildings ADD COLUMN IF NOT EXISTS is_active boolean NOT NULL DEFAULT true;
         ALTER TABLE buildings ADD COLUMN IF NOT EXISTS door_code text;
         ALTER TABLE buildings ADD COLUMN IF NOT EXISTS access_note text;
+        -- Asansör detay alanları (yeni asansör formu)
+        ALTER TABLE elevators ADD COLUMN IF NOT EXISTS capacity_persons integer;
+        ALTER TABLE elevators ADD COLUMN IF NOT EXISTS served_floors text;
+        ALTER TABLE elevators ADD COLUMN IF NOT EXISTS speed_ms numeric;
+        ALTER TABLE elevators ADD COLUMN IF NOT EXISTS door_type text;
+        ALTER TABLE elevators ADD COLUMN IF NOT EXISTS registration_no text;
+        ALTER TABLE elevators ADD COLUMN IF NOT EXISTS manufacture_year integer;
+        ALTER TABLE elevators ADD COLUMN IF NOT EXISTS installation_date date;
+        ALTER TABLE elevators ADD COLUMN IF NOT EXISTS tse_label_color text;
+        ALTER TABLE elevators ADD COLUMN IF NOT EXISTS tse_label_note text;
+        ALTER TABLE elevators ADD COLUMN IF NOT EXISTS has_emergency_phone boolean NOT NULL DEFAULT false;
+        ALTER TABLE elevators ADD COLUMN IF NOT EXISTS has_ups boolean NOT NULL DEFAULT false;
+        ALTER TABLE elevators ADD COLUMN IF NOT EXISTS has_fire_system boolean NOT NULL DEFAULT false;
+        ALTER TABLE elevators ADD COLUMN IF NOT EXISTS has_earthquake_sensor boolean NOT NULL DEFAULT false;
         """);
 
     if (!await db.PlatformSettings.AnyAsync())

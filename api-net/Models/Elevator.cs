@@ -14,11 +14,24 @@ public class Elevator
     public string? Brand { get; set; }
     public string? Model { get; set; }
     public int? CapacityKg { get; set; }
+    public int? CapacityPersons { get; set; }
     public int? StopCount { get; set; }
+    public string? ServedFloors { get; set; }
+    public decimal? SpeedMs { get; set; }
+    public string? DoorType { get; set; }
     public string? SerialNumber { get; set; }
+    public string? RegistrationNo { get; set; }
+    public int? ManufactureYear { get; set; }
+    public DateOnly? InstallationDate { get; set; }
     public string? TseCertificateNo { get; set; }
     public DateOnly? TseStartDate { get; set; }
     public DateOnly? TseEndDate { get; set; }
+    public string? TseLabelColor { get; set; }
+    public string? TseLabelNote { get; set; }
+    public bool HasEmergencyPhone { get; set; }
+    public bool HasUps { get; set; }
+    public bool HasFireSystem { get; set; }
+    public bool HasEarthquakeSensor { get; set; }
     public string Status { get; set; } = "active";
     public DateTime? LastMaintenanceAt { get; set; }
     public DateTime? NextMaintenanceAt { get; set; }
