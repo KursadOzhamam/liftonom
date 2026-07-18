@@ -95,41 +95,118 @@ public class MaintenanceController(AppDbContext db, PdfService pdf) : Controller
         return StatusCode(201, m);
     }
 
-    public record BulkDto(DateTime PlannedDate, string? Type, long? RegionId, bool? SkipExisting);
+    public record BulkDto(int Year, int Month, int StartDay, bool? HolidayShift,
+        string? Distribution, string? Strategy, long? TechnicianId, bool? FeeOnly,
+        long? RegionId, long? CustomerId, long? BuildingId, List<long>? ElevatorIds,
+        string? Type, bool? SkipExisting, bool? Preview);
 
-    /// <summary>Aylık toplu bakım: tüm (veya bölgedeki) asansörler için planlı bakım kaydı oluşturur.</summary>
+    /// <summary>Aylık toplu bakım — dönem/dağılım/atama/hedef; Preview=true iken hiçbir kayıt yazmaz, plan döner.</summary>
     [HttpPost("bulk")]
     public async Task<IActionResult> Bulk(BulkDto dto)
     {
         var uid = long.Parse(User.FindFirst("uid")!.Value);
         var now = DateTime.UtcNow;
-        var planned = DateTime.SpecifyKind(dto.PlannedDate, DateTimeKind.Utc).Date;
+        var year = dto.Year <= 0 ? now.Year : dto.Year;
+        var month = Math.Clamp(dto.Month <= 0 ? now.Month : dto.Month, 1, 12);
+        var startDay = Math.Clamp(dto.StartDay <= 0 ? 1 : dto.StartDay, 1, 28);
+        var startDate = new DateTime(year, month, startDay, 0, 0, 0, DateTimeKind.Utc);
+        var shift = dto.HolidayShift ?? false;
+        var dist = dto.Distribution ?? "single";
+        var strategy = dto.Strategy ?? "same";
 
-        var elevatorsQ = db.Elevators.AsQueryable();
-        if (dto.RegionId is { } rid)
-            elevatorsQ = elevatorsQ.Where(e => db.Buildings.Any(b => b.Id == e.BuildingId && b.RegionId == rid));
-        var elevatorIds = await elevatorsQ.Select(e => e.Id).ToListAsync();
+        // Hedef asansörler
+        var q = db.Elevators.Include(e => e.Building).AsQueryable();
+        if (dto.ElevatorIds is { Count: > 0 } ids) q = q.Where(e => ids.Contains(e.Id));
+        else
+        {
+            if (dto.BuildingId is { } bid) q = q.Where(e => e.BuildingId == bid);
+            if (dto.CustomerId is { } cid) q = q.Where(e => e.Building!.CustomerId == cid);
+            if (dto.RegionId is { } rid) q = q.Where(e => e.Building!.RegionId == rid);
+        }
+        var elevators = await q.Select(e => new
+        {
+            e.Id, Name = e.Name ?? $"#{e.Id}", e.BuildingId,
+            BuildingName = e.Building!.Name, e.Building.CustomerId, DefaultTech = e.Building.DefaultTechnicianUserId,
+        }).ToListAsync();
 
-        // Aynı gün zaten planlı olanları atla (varsayılan true)
+        // Yalnızca bakım ücreti tanımlı asansörler
+        if (dto.FeeOnly ?? false)
+        {
+            var fees = await db.MaintenanceFees.Where(f => f.IsActive).Select(f => new { f.BuildingId, f.CustomerId }).ToListAsync();
+            var feeB = fees.Where(f => f.BuildingId != null).Select(f => f.BuildingId!.Value).ToHashSet();
+            var feeC = fees.Where(f => f.CustomerId != null).Select(f => f.CustomerId!.Value).ToHashSet();
+            elevators = elevators.Where(e => (e.BuildingId != null && feeB.Contains(e.BuildingId.Value))
+                || (e.CustomerId != null && feeC.Contains(e.CustomerId.Value))).ToList();
+        }
+
+        // Bu ay zaten planlı olanları atla
         var skip = dto.SkipExisting ?? true;
         var existing = skip
-            ? await db.MaintenanceRecords.Where(m => m.PlannedDate!.Value.Date == planned).Select(m => m.ElevatorId).ToListAsync()
-            : new List<long?>();
+            ? (await db.MaintenanceRecords.Where(m => m.PlannedDate!.Value.Year == year && m.PlannedDate.Value.Month == month)
+                .Select(m => m.ElevatorId).ToListAsync()).Where(x => x != null).Select(x => x!.Value).ToHashSet()
+            : new HashSet<long>();
+
+        var targets = elevators.Where(e => !(skip && existing.Contains(e.Id))).ToList();
+        var skipped = elevators.Count - targets.Count;
+
+        // Tarih dağılımı
+        static DateTime NextWeekday(DateTime d)
+        {
+            while (d.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday) d = d.AddDays(1);
+            return d;
+        }
+        var weekdays = new List<DateTime>();
+        if (dist == "weekdays")
+        {
+            for (var d = startDate; d.Month == month; d = d.AddDays(1))
+                if (d.DayOfWeek is not (DayOfWeek.Saturday or DayOfWeek.Sunday)) weekdays.Add(d);
+            if (weekdays.Count == 0) weekdays.Add(NextWeekday(startDate));
+        }
+        var n = targets.Count;
+        DateTime DateFor(int i) => dist == "weekdays"
+            ? weekdays[(int)((long)i * weekdays.Count / Math.Max(1, n))]
+            : (shift ? NextWeekday(startDate) : startDate);
+
+        long? TechFor(long? buildingDefault) => strategy == "building_default" ? (buildingDefault ?? dto.TechnicianId) : dto.TechnicianId;
+
+        // Teknisyen adları
+        var techIds = targets.Select(e => TechFor(e.DefaultTech)).Where(x => x != null).Select(x => x!.Value).Distinct().ToList();
+        var techNames = await db.Users.Where(u => techIds.Contains(u.Id))
+            .ToDictionaryAsync(u => u.Id, u => (u.Name + " " + (u.Surname ?? "")).Trim());
+
+        var plan = new List<object>(n);
+        for (int i = 0; i < n; i++)
+        {
+            var e = targets[i];
+            var tech = TechFor(e.DefaultTech);
+            plan.Add(new
+            {
+                ElevatorId = e.Id, ElevatorName = e.Name, BuildingName = e.BuildingName,
+                PlannedDate = DateFor(i),
+                TechnicianId = tech,
+                TechnicianName = tech != null && techNames.TryGetValue(tech.Value, out var tn) ? tn : null,
+            });
+        }
+
+        if (dto.Preview ?? false)
+            return Ok(new { preview = true, count = n, skipped, total = elevators.Count, items = plan });
 
         var created = 0;
-        foreach (var eid in elevatorIds)
+        for (int i = 0; i < n; i++)
         {
-            if (skip && existing.Contains(eid)) continue;
+            var e = targets[i];
+            var tech = TechFor(e.DefaultTech);
             db.MaintenanceRecords.Add(new MaintenanceRecord
             {
-                TenantId = db.CurrentTenantId!.Value, ElevatorId = eid, Type = dto.Type ?? "periodic",
-                PlannedDate = planned, Status = "pending", AssignedUsers = "[]",
+                TenantId = db.CurrentTenantId!.Value, ElevatorId = e.Id, Type = dto.Type ?? "periodic",
+                PlannedDate = DateFor(i), Status = "pending",
+                AssignedUsers = tech != null ? $"[{tech}]" : "[]",
                 CreatedBy = uid, CreatedAt = now, UpdatedAt = now,
             });
             created++;
         }
         await db.SaveChangesAsync();
-        return Ok(new { message = $"{created} bakım oluşturuldu.", created, total_elevators = elevatorIds.Count });
+        return Ok(new { message = $"{created} bakım oluşturuldu.", created, skipped, total = elevators.Count });
     }
 
     [HttpGet("{id:long}")]
