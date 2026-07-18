@@ -52,8 +52,8 @@ public class ElevatorController(AppDbContext db) : ControllerBase
     }
 
     [HttpGet("tse-report")]
-    public async Task<IActionResult> TseReport([FromQuery] string list = "upcoming",
-        [FromQuery(Name = "per_page")] int perPage = 25, [FromQuery] int page = 1)
+    public async Task<IActionResult> TseReport([FromQuery] string list = "upcoming", [FromQuery] string? search = null,
+        [FromQuery] string sort = "near", [FromQuery(Name = "per_page")] int perPage = 25, [FromQuery] int page = 1)
     {
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
         var in30 = today.AddDays(30);
@@ -68,10 +68,20 @@ public class ElevatorController(AppDbContext db) : ControllerBase
         };
 
         var q = db.Elevators.Include(e => e.Building).AsQueryable();
+        if (!string.IsNullOrWhiteSpace(search))
+            q = q.Where(e => EF.Functions.ILike(e.Name ?? "", $"%{search}%")
+                || EF.Functions.ILike(e.RegistrationNo ?? "", $"%{search}%")
+                || EF.Functions.ILike(e.SerialNumber ?? "", $"%{search}%")
+                || EF.Functions.ILike(e.Building!.Name, $"%{search}%"));
+
         if (list == "upcoming") q = q.Where(e => e.TseEndDate != null && e.TseEndDate >= today && e.TseEndDate <= in30);
         else if (list == "expired") q = q.Where(e => e.TseEndDate != null && e.TseEndDate < today);
+        else if (list == "missing") q = q.Where(e => e.TseEndDate == null);
+        // list == "all" → filtre yok
 
-        var items = await q.OrderBy(e => e.TseEndDate).ToPagedAsync(page, perPage);
+        q = sort == "far" ? q.OrderByDescending(e => e.TseEndDate) : q.OrderBy(e => e.TseEndDate);
+
+        var items = await q.ToPagedAsync(page, perPage);
         return Ok(new { summary, items });
     }
 
