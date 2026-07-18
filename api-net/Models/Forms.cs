@@ -37,11 +37,23 @@ public class ElevatorOrder
     public long Id { get; set; }
     public long TenantId { get; set; }
     public long? CustomerId { get; set; }
+    public long? BuildingId { get; set; }
     public string? OrderNumber { get; set; }
+    public string? ProjectName { get; set; }
     public string? ElevatorType { get; set; }
     public int Quantity { get; set; } = 1;
+    public int? CapacityKg { get; set; }
+    public int? CapacityPersons { get; set; }
+    public int? FloorCount { get; set; }
+    public int? StopCount { get; set; }
+    public decimal? SpeedMs { get; set; }
+    public string? DoorType { get; set; }
+    public DateOnly? OrderDate { get; set; }
+    public DateOnly? EstimatedEnd { get; set; }
     public decimal? Amount { get; set; }
-    public string Status { get; set; } = "quote";
+    public decimal? Downpayment { get; set; }
+    public string Status { get; set; } = "draft";
+    public string? TechnicalDetails { get; set; }
     public string? Notes { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }

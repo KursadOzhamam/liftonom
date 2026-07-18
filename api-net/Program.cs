@@ -224,6 +224,19 @@ using (var scope = app.Services.CreateScope())
         ALTER TABLE fault_reports ADD COLUMN IF NOT EXISTS under_warranty boolean NOT NULL DEFAULT false;
         ALTER TABLE fault_reports ADD COLUMN IF NOT EXISTS billable boolean NOT NULL DEFAULT true;
         ALTER TABLE fault_reports ADD COLUMN IF NOT EXISTS notes text;
+        -- Asansör siparişi ek alanları
+        ALTER TABLE elevator_orders ADD COLUMN IF NOT EXISTS building_id bigint;
+        ALTER TABLE elevator_orders ADD COLUMN IF NOT EXISTS project_name text;
+        ALTER TABLE elevator_orders ADD COLUMN IF NOT EXISTS capacity_kg integer;
+        ALTER TABLE elevator_orders ADD COLUMN IF NOT EXISTS capacity_persons integer;
+        ALTER TABLE elevator_orders ADD COLUMN IF NOT EXISTS floor_count integer;
+        ALTER TABLE elevator_orders ADD COLUMN IF NOT EXISTS stop_count integer;
+        ALTER TABLE elevator_orders ADD COLUMN IF NOT EXISTS speed_ms numeric;
+        ALTER TABLE elevator_orders ADD COLUMN IF NOT EXISTS door_type text;
+        ALTER TABLE elevator_orders ADD COLUMN IF NOT EXISTS order_date date;
+        ALTER TABLE elevator_orders ADD COLUMN IF NOT EXISTS estimated_end date;
+        ALTER TABLE elevator_orders ADD COLUMN IF NOT EXISTS downpayment numeric;
+        ALTER TABLE elevator_orders ADD COLUMN IF NOT EXISTS technical_details text;
         """);
 
     if (!await db.PlatformSettings.AnyAsync())
