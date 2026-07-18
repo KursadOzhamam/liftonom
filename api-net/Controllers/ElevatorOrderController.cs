@@ -25,7 +25,7 @@ public class ElevatorOrderController(AppDbContext db) : ControllerBase
         if (!string.IsNullOrEmpty(status)) q = q.Where(o => o.Status == status);
         var projected = q.OrderByDescending(o => o.Id).Select(o => new
         {
-            o.Id, o.OrderNumber, o.ElevatorType, o.Quantity, o.Amount, o.Status,
+            o.Id, o.OrderNumber, o.ProjectName, o.ElevatorType, o.Quantity, o.Amount, o.Status,
             Customer = o.CustomerId == null ? null : new { o.Customer!.Name },
         });
         return Ok(await projected.ToPagedAsync(page, perPage));

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { api, ApiError } from "@/lib/api";
 import { TRY } from "@/lib/format";
 import { useOptions } from "@/lib/hooks";
-import { Plus, X } from "lucide-react";
+import { Plus, X, Pencil, HandCoins } from "lucide-react";
 
 type Row = {
   id: number; order_number: string | null; project_name: string | null; elevator_type: string | null;
@@ -19,6 +19,7 @@ const STATUSES = [
   { v: "completed", l: "Tamamlandı" }, { v: "cancelled", l: "İptal" },
 ];
 const TYPES = ["Elektrikli", "Hidrolik", "Panoramik", "Yük Asansörü", "Sedye Asansörü", "Yürüyen Merdiven", "Diğer"];
+const METHODS = [["cash", "Nakit"], ["transfer", "Havale / EFT"], ["card", "Kredi Kartı"], ["check", "Çek"]];
 
 const empty = {
   order_number: "", project_name: "", customer_id: "", building_id: "",
@@ -35,14 +36,18 @@ export default function ElevatorOrdersPage() {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState("");
-  const [modal, setModal] = useState(false);
+  const [modal, setModal] = useState<null | { mode: "create" | "edit"; id?: number }>(null);
   const [form, setForm] = useState<Form>(empty);
   const [saving, setSaving] = useState(false);
   const [extraCustomers, setExtraCustomers] = useState<Opt[]>([]);
   const [newCust, setNewCust] = useState<null | { name: string; phone: string }>(null);
+  // Tahsilat
+  const [coll, setColl] = useState({ amount: "", cashbox_id: "", method: "cash", description: "" });
+  const [collMsg, setCollMsg] = useState<string | null>(null);
 
   const customers = useOptions("/customers");
   const buildings = useOptions("/buildings");
+  const cashboxes = useOptions("/cashboxes");
   const allCustomers = [...extraCustomers, ...customers];
   const set = (patch: Partial<Form>) => setForm((f) => ({ ...f, ...patch }));
 
@@ -55,34 +60,66 @@ export default function ElevatorOrdersPage() {
   }, [status]);
   useEffect(() => { load(); }, [load]);
 
-  function open() { setForm(empty); setNewCust(null); setModal(true); }
+  function openCreate() { setForm(empty); setNewCust(null); setCollMsg(null); setModal({ mode: "create" }); }
+  async function openEdit(id: number) {
+    try {
+      const o = await api<Record<string, unknown>>(`/elevator-orders/${id}`);
+      const g = (k: string) => (o[k] == null ? "" : String(o[k]));
+      setForm({
+        order_number: g("order_number"), project_name: g("project_name"), customer_id: g("customer_id"), building_id: g("building_id"),
+        status: g("status") || "draft", elevator_type: g("elevator_type") || "Elektrikli",
+        capacity_kg: g("capacity_kg"), capacity_persons: g("capacity_persons"), floor_count: g("floor_count"), stop_count: g("stop_count"),
+        speed_ms: g("speed_ms"), door_type: g("door_type"), order_date: g("order_date"), estimated_end: g("estimated_end"),
+        amount: g("amount") || "0", downpayment: g("downpayment") || "0", technical_details: g("technical_details"), notes: g("notes"),
+      });
+      setColl({ amount: "", cashbox_id: "", method: "cash", description: "" }); setCollMsg(null);
+      setModal({ mode: "edit", id });
+    } catch (e) { alert(e instanceof ApiError ? e.message : "Sipariş yüklenemedi."); }
+  }
 
   async function addCustomer() {
     if (!newCust?.name.trim()) return;
     try {
       const c = await api<{ id: number }>("/customers", { method: "POST", body: { name: newCust.name, phone: newCust.phone || null } });
       setExtraCustomers((x) => [{ id: c.id, label: newCust.name }, ...x]);
-      set({ customer_id: String(c.id) });
-      setNewCust(null);
+      set({ customer_id: String(c.id) }); setNewCust(null);
     } catch (e) { alert(e instanceof ApiError ? e.message : "Müşteri eklenemedi."); }
   }
 
-  async function create() {
+  function orderBody() {
+    return {
+      customer_id: Number(form.customer_id), building_id: n(form.building_id), order_number: s(form.order_number),
+      project_name: s(form.project_name), elevator_type: form.elevator_type, status: form.status,
+      capacity_kg: n(form.capacity_kg), capacity_persons: n(form.capacity_persons),
+      floor_count: n(form.floor_count), stop_count: n(form.stop_count), speed_ms: n(form.speed_ms), door_type: s(form.door_type),
+      order_date: s(form.order_date), estimated_end: s(form.estimated_end),
+      amount: n(form.amount), downpayment: n(form.downpayment),
+      technical_details: s(form.technical_details), notes: s(form.notes),
+    };
+  }
+  async function save() {
     setSaving(true);
     try {
-      await api("/elevator-orders", { method: "POST", body: {
-        customer_id: Number(form.customer_id), building_id: n(form.building_id), order_number: s(form.order_number),
-        project_name: s(form.project_name), elevator_type: form.elevator_type, status: form.status,
-        capacity_kg: n(form.capacity_kg), capacity_persons: n(form.capacity_persons),
-        floor_count: n(form.floor_count), stop_count: n(form.stop_count), speed_ms: n(form.speed_ms), door_type: s(form.door_type),
-        order_date: s(form.order_date), estimated_end: s(form.estimated_end),
-        amount: n(form.amount), downpayment: n(form.downpayment),
-        technical_details: s(form.technical_details), notes: s(form.notes),
-      } });
-      setModal(false); setForm(empty); load();
+      if (modal?.mode === "edit") await api(`/elevator-orders/${modal.id}`, { method: "PUT", body: orderBody() });
+      else await api("/elevator-orders", { method: "POST", body: orderBody() });
+      setModal(null); setForm(empty); load();
     } catch (e) {
       alert(e instanceof ApiError ? e.message : "Kaydedilemedi.");
     } finally { setSaving(false); }
+  }
+
+  async function submitCollection() {
+    if (!form.customer_id) { alert("Önce müşteri seçili olmalı."); return; }
+    if (!coll.amount || Number(coll.amount) <= 0) { alert("Tutar 0'dan büyük olmalı."); return; }
+    if (!coll.cashbox_id) { alert("Kasa seçin."); return; }
+    try {
+      const r = await api<{ account_balance: number; cashbox_balance: number }>("/collections", { method: "POST", body: {
+        customer_id: Number(form.customer_id), amount: Number(coll.amount), payment_method: coll.method,
+        cashbox_id: Number(coll.cashbox_id), description: coll.description || `Sipariş ${form.order_number || ""} tahsilatı`,
+      } });
+      setCollMsg(`Tahsilat kaydedildi. Kasa bakiyesi: ${TRY(r.cashbox_balance)} · Cari bakiye: ${TRY(r.account_balance)}`);
+      setColl({ ...coll, amount: "", description: "" });
+    } catch (e) { alert(e instanceof ApiError ? e.message : "Tahsilat kaydedilemedi."); }
   }
 
   async function changeStatus(id: number, st: string) {
@@ -97,7 +134,7 @@ export default function ElevatorOrdersPage() {
           <h1 className="text-2xl font-bold text-ink">Asansör Siparişleri</h1>
           <p className="mt-1 text-sm text-muted">{total} sipariş</p>
         </div>
-        <button onClick={open} className="btn-primary"><Plus size={16} /> Yeni</button>
+        <button onClick={openCreate} className="btn-primary"><Plus size={16} /> Yeni</button>
       </div>
 
       <div className="mt-5">
@@ -116,19 +153,20 @@ export default function ElevatorOrdersPage() {
               <th className="px-4 py-3 font-medium">Tip</th>
               <th className="px-4 py-3 font-medium text-right">Tutar</th>
               <th className="px-4 py-3 font-medium">Durum</th>
+              <th className="px-4 py-3 font-medium text-right">İşlem</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={5} className="px-4 py-10 text-center text-muted">Yükleniyor…</td></tr>
+              <tr><td colSpan={6} className="px-4 py-10 text-center text-muted">Yükleniyor…</td></tr>
             ) : rows.length === 0 ? (
-              <tr><td colSpan={5} className="px-4 py-10 text-center text-muted">Henüz sipariş yok.</td></tr>
+              <tr><td colSpan={6} className="px-4 py-10 text-center text-muted">Henüz sipariş yok.</td></tr>
             ) : (
               rows.map((o) => (
                 <tr key={o.id} className="border-b border-line last:border-0 hover:bg-surface">
                   <td className="px-4 py-3 font-mono text-xs text-ink-soft">{o.order_number ?? `#${o.id}`}</td>
                   <td className="px-4 py-3">
-                    <div className="font-medium text-ink">{o.project_name ?? "—"}</div>
+                    <button onClick={() => openEdit(o.id)} className="font-medium text-primary hover:underline">{o.project_name ?? "—"}</button>
                     <div className="text-xs text-muted">{o.customer?.name ?? "—"}</div>
                   </td>
                   <td className="px-4 py-3 text-ink-soft">{o.elevator_type ?? "—"}</td>
@@ -139,6 +177,9 @@ export default function ElevatorOrdersPage() {
                       {STATUSES.map((st) => <option key={st.v} value={st.v}>{st.l}</option>)}
                     </select>
                   </td>
+                  <td className="px-4 py-3 text-right">
+                    <button onClick={() => openEdit(o.id)} className="text-muted hover:text-primary" title="Düzenle"><Pencil size={16} /></button>
+                  </td>
                 </tr>
               ))
             )}
@@ -147,11 +188,11 @@ export default function ElevatorOrdersPage() {
       </div>
 
       {modal && (
-        <div className="fade-in fixed inset-0 z-30 grid place-items-center bg-slate-950/50 p-4 backdrop-blur-sm" onClick={() => setModal(false)}>
+        <div className="fade-in fixed inset-0 z-30 grid place-items-center bg-slate-950/50 p-4 backdrop-blur-sm" onClick={() => setModal(null)}>
           <div className="pop-in surface-pop flex max-h-[92vh] w-full max-w-3xl flex-col rounded-2xl border border-line bg-card" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between border-b border-line px-6 py-4">
-              <h2 className="text-lg font-semibold tracking-tight text-ink">Yeni Sipariş</h2>
-              <button onClick={() => setModal(false)} className="grid h-8 w-8 place-items-center rounded-lg text-muted hover:bg-surface hover:text-ink"><X size={18} /></button>
+              <h2 className="text-lg font-semibold tracking-tight text-ink">{modal.mode === "edit" ? "Sipariş Düzenle" : "Yeni Sipariş"}</h2>
+              <button onClick={() => setModal(null)} className="grid h-8 w-8 place-items-center rounded-lg text-muted hover:bg-surface hover:text-ink"><X size={18} /></button>
             </div>
 
             <div className="flex-1 space-y-4 overflow-y-auto px-6 py-5">
@@ -210,7 +251,7 @@ export default function ElevatorOrdersPage() {
                 <F label="Toplam Fiyat (₺, KDV Dahil)" req hint="KDV dahil tutar; sistem KDV hesaplamaz">
                   <input className="input" type="number" value={form.amount} onChange={(e) => set({ amount: e.target.value })} />
                 </F>
-                <F label="Peşinat (bilgi)" hint="sadece bilgi; tahsilatı 'Tahsilat Al'dan kaydedin">
+                <F label="Peşinat (bilgi)" hint="sadece bilgi; tahsilatı aşağıdan kaydedin">
                   <input className="input" type="number" value={form.downpayment} onChange={(e) => set({ downpayment: e.target.value })} />
                 </F>
               </div>
@@ -218,14 +259,40 @@ export default function ElevatorOrdersPage() {
               <F label="Teknik Detaylar"><textarea className="input min-h-20" value={form.technical_details} onChange={(e) => set({ technical_details: e.target.value })} /></F>
               <F label="Notlar"><textarea className="input min-h-20" value={form.notes} onChange={(e) => set({ notes: e.target.value })} /></F>
 
-              <div className="rounded-xl border border-primary/20 bg-primary-light/50 px-4 py-3 text-sm text-ink-soft">
-                <b className="text-ink">Bilgi:</b> Peşinat/tahsilatı <b>Tahsilat Al</b> ekranından bu müşteriye kaydedin; tahsilat seçtiğin kasaya ve müşteri carisine otomatik yansır.
-              </div>
+              {modal.mode === "create" ? (
+                <div className="rounded-xl border border-primary/20 bg-primary-light/50 px-4 py-3 text-sm text-ink-soft">
+                  <b className="text-ink">Bilgi:</b> Sipariş kaydedildikten sonra <b>düzenleme</b> ekranındaki <b>“Yeni Tahsilat”</b> alanından peşinat/tahsilat girebilirsiniz; tahsilat seçtiğin kasaya ve müşteri carisine otomatik yansır.
+                </div>
+              ) : (
+                <div className="rounded-2xl border border-success/30 bg-success/5 p-4">
+                  <h3 className="flex items-center gap-2 text-sm font-semibold text-ink"><HandCoins size={16} className="text-success" /> Yeni Tahsilat</h3>
+                  <p className="mt-0.5 text-xs text-muted">Bu siparişin müşterisine tahsilat kaydı — seçilen kasaya ve müşteri carisine otomatik yansır.</p>
+                  <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                    <F label="Tutar (₺)"><input className="input" type="number" value={coll.amount} onChange={(e) => setColl({ ...coll, amount: e.target.value })} /></F>
+                    <F label="Kasa">
+                      <select className="input" value={coll.cashbox_id} onChange={(e) => setColl({ ...coll, cashbox_id: e.target.value })}>
+                        <option value="">Kasa seçin</option>
+                        {cashboxes.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
+                      </select>
+                    </F>
+                    <F label="Ödeme Yöntemi">
+                      <select className="input" value={coll.method} onChange={(e) => setColl({ ...coll, method: e.target.value })}>
+                        {METHODS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                      </select>
+                    </F>
+                    <F label="Açıklama"><input className="input" value={coll.description} onChange={(e) => setColl({ ...coll, description: e.target.value })} /></F>
+                  </div>
+                  <div className="mt-3 flex items-center gap-3">
+                    <button onClick={submitCollection} className="btn-primary"><HandCoins size={15} /> Tahsilat Kaydet</button>
+                    {collMsg && <span className="text-sm font-medium text-success">{collMsg}</span>}
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="flex justify-end gap-2 border-t border-line px-6 py-4">
-              <button onClick={() => setModal(false)} className="btn-ghost">İptal</button>
-              <button onClick={create} disabled={saving || !form.customer_id || !form.project_name.trim() || !form.order_date} className="btn-primary">{saving ? "Kaydediliyor…" : "Kaydet"}</button>
+              <button onClick={() => setModal(null)} className="btn-ghost">İptal</button>
+              <button onClick={save} disabled={saving || !form.customer_id || !form.project_name.trim() || !form.order_date} className="btn-primary">{saving ? "Kaydediliyor…" : "Kaydet"}</button>
             </div>
           </div>
         </div>
