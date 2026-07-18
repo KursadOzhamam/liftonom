@@ -213,6 +213,17 @@ using (var scope = app.Services.CreateScope())
         ALTER TABLE maintenance_records ADD COLUMN IF NOT EXISTS is_critical boolean NOT NULL DEFAULT false;
         ALTER TABLE maintenance_records ADD COLUMN IF NOT EXISTS description text;
         ALTER TABLE maintenance_records ADD COLUMN IF NOT EXISTS notes text;
+        -- Arıza bildirimi ek alanları
+        ALTER TABLE fault_reports ADD COLUMN IF NOT EXISTS title text;
+        ALTER TABLE fault_reports ADD COLUMN IF NOT EXISTS type text;
+        ALTER TABLE fault_reports ADD COLUMN IF NOT EXISTS code text;
+        ALTER TABLE fault_reports ADD COLUMN IF NOT EXISTS contact_name text;
+        ALTER TABLE fault_reports ADD COLUMN IF NOT EXISTS contact_phone text;
+        ALTER TABLE fault_reports ADD COLUMN IF NOT EXISTS symptoms text;
+        ALTER TABLE fault_reports ADD COLUMN IF NOT EXISTS work_done text;
+        ALTER TABLE fault_reports ADD COLUMN IF NOT EXISTS under_warranty boolean NOT NULL DEFAULT false;
+        ALTER TABLE fault_reports ADD COLUMN IF NOT EXISTS billable boolean NOT NULL DEFAULT true;
+        ALTER TABLE fault_reports ADD COLUMN IF NOT EXISTS notes text;
         """);
 
     if (!await db.PlatformSettings.AnyAsync())

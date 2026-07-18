@@ -16,7 +16,10 @@ public class FaultReportController(AppDbContext db, FaultNotificationService not
     private static readonly string[] Statuses =
         ["reported", "acknowledged", "dispatched", "inspected", "repairing", "completed"];
 
-    public record CreateDto(long ElevatorId, string? Priority, string Description, long? AssignedUserId);
+    public record CreateDto(long ElevatorId, string? Title, string? Type, string? Priority, string? Status,
+        string? Code, long? AssignedUserId, string? ContactName, string? ContactPhone,
+        string Description, string? Symptoms, string? Diagnosis, string? Solution, string? WorkDone,
+        bool? UnderWarranty, bool? Billable, string? Notes);
     public record StatusDto(string Status, string? ResolutionNote);
     public record AssignDto(long AssignedUserId);
     public record CommentDto(string Comment);
@@ -88,8 +91,12 @@ public class FaultReportController(AppDbContext db, FaultNotificationService not
         var f = new FaultReport
         {
             TenantId = db.CurrentTenantId!.Value,
-            ElevatorId = dto.ElevatorId, Priority = dto.Priority ?? "normal",
-            Status = "reported", Description = dto.Description,
+            ElevatorId = dto.ElevatorId, Title = dto.Title, Type = dto.Type, Code = dto.Code,
+            Priority = dto.Priority ?? "normal", Status = dto.Status ?? "reported",
+            ContactName = dto.ContactName, ContactPhone = dto.ContactPhone,
+            Description = dto.Description, Symptoms = dto.Symptoms,
+            FaultDiagnosis = dto.Diagnosis, ResolutionNote = dto.Solution, WorkDone = dto.WorkDone,
+            UnderWarranty = dto.UnderWarranty ?? false, Billable = dto.Billable ?? true, Notes = dto.Notes,
             AssignedUserId = dto.AssignedUserId, ReportedByType = "user", CreatedAt = now, UpdatedAt = now,
         };
         db.FaultReports.Add(f);

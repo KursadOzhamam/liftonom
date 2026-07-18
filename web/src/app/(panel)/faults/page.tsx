@@ -7,7 +7,7 @@ import { useOptions } from "@/lib/hooks";
 import Badge from "@/components/Badge";
 import Modal, { Field } from "@/components/Modal";
 import LiveMap from "@/components/LiveMap";
-import { Plus, MapPin } from "lucide-react";
+import { Plus, MapPin, X } from "lucide-react";
 
 type Row = {
   id: number; priority: string; status: string; description: string; created_at: string;
@@ -21,7 +21,13 @@ const STATUSES = [
   { v: "dispatched", l: "Servis Yola Çıktı" }, { v: "inspected", l: "Kontrol Edildi" },
   { v: "repairing", l: "Arıza Gideriliyor" }, { v: "completed", l: "İş Tamamlandı" },
 ];
-const emptyForm = { elevator_id: "", priority: "normal", description: "" };
+const FAULT_TYPES = ["Mekanik", "Elektrik", "Kapı", "Kumanda", "Motor", "Fren", "Kabin", "Halat", "Diğer"];
+const emptyForm = {
+  elevator_id: "", assigned_user_id: "", title: "", type: "Diğer", priority: "normal", status: "reported",
+  code: "", contact_name: "", contact_phone: "",
+  description: "", symptoms: "", diagnosis: "", solution: "", work_done: "",
+  under_warranty: false, billable: true, notes: "",
+};
 
 export default function FaultsPage() {
   const [rows, setRows] = useState<Row[]>([]);
@@ -35,6 +41,8 @@ export default function FaultsPage() {
   const [mapFault, setMapFault] = useState<number | null>(null);
 
   const elevators = useOptions("/elevators");
+  const techs = useOptions("/users?role=technician");
+  const set = (patch: Partial<typeof emptyForm>) => setForm((f) => ({ ...f, ...patch }));
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -49,8 +57,14 @@ export default function FaultsPage() {
   async function create() {
     setSaving(true);
     try {
+      const s = (v: string) => (v.trim() ? v.trim() : null);
       await api("/fault-reports", { method: "POST", body: {
-        elevator_id: Number(form.elevator_id), priority: form.priority, description: form.description,
+        elevator_id: Number(form.elevator_id), assigned_user_id: form.assigned_user_id ? Number(form.assigned_user_id) : null,
+        title: s(form.title), type: form.type, priority: form.priority, status: form.status, code: s(form.code),
+        contact_name: s(form.contact_name), contact_phone: s(form.contact_phone),
+        description: form.description, symptoms: s(form.symptoms), diagnosis: s(form.diagnosis),
+        solution: s(form.solution), work_done: s(form.work_done),
+        under_warranty: form.under_warranty, billable: form.billable, notes: s(form.notes),
       } });
       setModal(false); setForm(emptyForm); load();
     } catch (e) {
@@ -161,30 +175,98 @@ export default function FaultsPage() {
       </div>
 
       {modal && (
-        <Modal title="Yeni Arıza" onClose={() => setModal(false)} footer={
-          <>
-            <button onClick={() => setModal(false)} className="rounded-lg border border-line px-4 py-2 text-sm">İptal</button>
-            <button onClick={create} disabled={saving || !form.elevator_id || !form.description} className="btn-primary">
-              {saving ? "Kaydediliyor…" : "Kaydet"}
-            </button>
-          </>
-        }>
-          <Field label="Asansör *">
-            <select className="input" value={form.elevator_id} onChange={(e) => setForm({ ...form, elevator_id: e.target.value })}>
-              <option value="">Seçiniz…</option>
-              {elevators.map((e) => <option key={e.id} value={e.id}>{e.label}</option>)}
-            </select>
-          </Field>
-          <Field label="Öncelik">
-            <select className="input" value={form.priority} onChange={(e) => setForm({ ...form, priority: e.target.value })}>
-              <option value="urgent">Acil</option><option value="high">Yüksek</option>
-              <option value="normal">Normal</option><option value="low">Düşük</option>
-            </select>
-          </Field>
-          <Field label="Açıklama *">
-            <textarea className="input min-h-20" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
-          </Field>
-        </Modal>
+        <div className="fade-in fixed inset-0 z-30 grid place-items-center bg-slate-950/50 p-4 backdrop-blur-sm" onClick={() => setModal(false)}>
+          <div className="pop-in surface-pop flex max-h-[92vh] w-full max-w-3xl flex-col rounded-2xl border border-line bg-card" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between border-b border-line px-6 py-4">
+              <h2 className="text-lg font-semibold tracking-tight text-ink">Yeni Arıza Bildirimi</h2>
+              <button onClick={() => setModal(false)} className="grid h-8 w-8 place-items-center rounded-lg text-muted hover:bg-surface hover:text-ink"><X size={18} /></button>
+            </div>
+
+            <div className="flex-1 space-y-4 overflow-y-auto px-6 py-5">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <FieldR label="Asansör" req>
+                  <select className="input" value={form.elevator_id} onChange={(e) => set({ elevator_id: e.target.value })}>
+                    <option value="">Asansör ara…</option>
+                    {elevators.map((e) => <option key={e.id} value={e.id}>{e.label}</option>)}
+                  </select>
+                </FieldR>
+                <FieldR label="Atanan Teknisyen">
+                  <select className="input" value={form.assigned_user_id} onChange={(e) => set({ assigned_user_id: e.target.value })}>
+                    <option value="">— Atanmamış —</option>
+                    {techs.map((t) => <option key={t.id} value={t.id}>{t.label}</option>)}
+                  </select>
+                </FieldR>
+                <FieldR label="Arıza Başlığı" req>
+                  <input className="input" value={form.title} onChange={(e) => set({ title: e.target.value })} />
+                </FieldR>
+                <FieldR label="Arıza Tipi">
+                  <select className="input" value={form.type} onChange={(e) => set({ type: e.target.value })}>
+                    {FAULT_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+                  </select>
+                </FieldR>
+                <FieldR label="Öncelik">
+                  <select className="input" value={form.priority} onChange={(e) => set({ priority: e.target.value })}>
+                    <option value="urgent">Acil</option><option value="high">Yüksek</option>
+                    <option value="normal">Normal</option><option value="low">Düşük</option>
+                  </select>
+                </FieldR>
+                <FieldR label="Durum">
+                  <select className="input" value={form.status} onChange={(e) => set({ status: e.target.value })}>
+                    {STATUSES.map((s) => <option key={s.v} value={s.v}>{s.l}</option>)}
+                  </select>
+                </FieldR>
+                <FieldR label="Arıza Kodu">
+                  <input className="input" value={form.code} onChange={(e) => set({ code: e.target.value })} />
+                </FieldR>
+                <FieldR label="İlgili Kişi">
+                  <input className="input" value={form.contact_name} onChange={(e) => set({ contact_name: e.target.value })} />
+                </FieldR>
+                <FieldR label="İlgili Kişi Tel.">
+                  <div className="flex">
+                    <span className="inline-flex items-center rounded-l-[10px] border border-r-0 border-line bg-surface px-3 text-sm text-muted">+90</span>
+                    <input className="input rounded-l-none" placeholder="5XX XXX XX XX" value={form.contact_phone} onChange={(e) => set({ contact_phone: e.target.value })} />
+                  </div>
+                </FieldR>
+              </div>
+
+              <FieldR label="Açıklama" req>
+                <textarea className="input min-h-20" value={form.description} onChange={(e) => set({ description: e.target.value })} />
+              </FieldR>
+              <FieldR label="Belirtiler">
+                <textarea className="input min-h-16" value={form.symptoms} onChange={(e) => set({ symptoms: e.target.value })} />
+              </FieldR>
+              <FieldR label="Teşhis">
+                <textarea className="input min-h-16" value={form.diagnosis} onChange={(e) => set({ diagnosis: e.target.value })} />
+              </FieldR>
+              <FieldR label="Çözüm">
+                <textarea className="input min-h-16" value={form.solution} onChange={(e) => set({ solution: e.target.value })} />
+              </FieldR>
+              <FieldR label="Yapılan İşlemler">
+                <textarea className="input min-h-16" value={form.work_done} onChange={(e) => set({ work_done: e.target.value })} />
+              </FieldR>
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="flex items-center gap-2.5 text-sm text-ink">
+                  <input type="checkbox" className="h-4 w-4 rounded border-line accent-[color:var(--color-primary)]" checked={form.under_warranty} onChange={(e) => set({ under_warranty: e.target.checked })} />
+                  Garanti kapsamında
+                </label>
+                <label className="flex items-center gap-2.5 text-sm text-ink">
+                  <input type="checkbox" className="h-4 w-4 rounded border-line accent-[color:var(--color-primary)]" checked={form.billable} onChange={(e) => set({ billable: e.target.checked })} />
+                  Faturalandırılabilir
+                </label>
+              </div>
+
+              <FieldR label="Notlar">
+                <textarea className="input min-h-16" value={form.notes} onChange={(e) => set({ notes: e.target.value })} />
+              </FieldR>
+            </div>
+
+            <div className="flex justify-end gap-2 border-t border-line px-6 py-4">
+              <button onClick={() => setModal(false)} className="btn-ghost">İptal</button>
+              <button onClick={create} disabled={saving || !form.elevator_id || !form.title.trim() || !form.description.trim()} className="btn-primary">{saving ? "Kaydediliyor…" : "Kaydet"}</button>
+            </div>
+          </div>
+        </div>
       )}
 
       {inspect && (
@@ -217,5 +299,14 @@ export default function FaultsPage() {
 
       {mapFault !== null && <LiveMap faultId={mapFault} onClose={() => setMapFault(null)} />}
     </div>
+  );
+}
+
+function FieldR({ label, req, children }: { label: string; req?: boolean; children: React.ReactNode }) {
+  return (
+    <label className="block">
+      <span className="mb-1.5 block text-xs font-medium text-ink-soft">{label}{req && <span className="text-danger"> *</span>}</span>
+      {children}
+    </label>
   );
 }
