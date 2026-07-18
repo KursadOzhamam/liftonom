@@ -132,6 +132,25 @@ select.input { cursor: pointer; }
 .btn-primary:active { transform: scale(0.98); }
 .btn-primary:disabled { opacity: 0.55; cursor: not-allowed; box-shadow: none; }
 
+/* Tehlikeli işlem butonu (silme onayı) */
+.btn-danger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  border-radius: 10px;
+  background: var(--color-danger);
+  color: #fff;
+  font-size: 0.875rem;
+  font-weight: 600;
+  padding: 0.6rem 1.05rem;
+  box-shadow: 0 1px 2px rgba(225, 29, 72, 0.25);
+  transition: filter 0.15s ease, transform 0.1s ease, box-shadow 0.15s ease;
+}
+.btn-danger:hover { filter: brightness(0.94); box-shadow: 0 4px 12px -2px rgba(225, 29, 72, 0.4); }
+.btn-danger:active { transform: scale(0.98); }
+.btn-danger:disabled { opacity: 0.55; cursor: not-allowed; box-shadow: none; }
+
 /* İkincil / hafif buton (opsiyonel — bordürlü) */
 .btn-ghost {
   display: inline-flex;

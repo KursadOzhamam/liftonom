@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { api, getToken, clearToken } from "@/lib/api";
 import { NAV } from "./nav";
 import ThemeToggle from "./ThemeToggle";
+import { ConfirmProvider } from "./ConfirmDialog";
 import { LogOut, Building2, ChevronDown } from "lucide-react";
 
 type Me = { name: string; surname?: string; role: string };
@@ -68,6 +69,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   }
 
   return (
+    <ConfirmProvider>
     <div className="flex h-screen overflow-hidden bg-surface">
       {/* Sidebar */}
       <aside className="hidden w-64 shrink-0 flex-col border-r border-line bg-card md:flex">
@@ -151,5 +153,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         <main className="flex-1 overflow-y-auto p-6">{children}</main>
       </div>
     </div>
+    </ConfirmProvider>
   );
 }

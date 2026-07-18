@@ -7,6 +7,7 @@ import { useOptions } from "@/lib/hooks";
 import Badge from "@/components/Badge";
 import Modal, { Field } from "@/components/Modal";
 import { Plus, Trash2, FileDown, HandCoins } from "lucide-react";
+import { useConfirm } from "@/components/ConfirmDialog";
 
 type Row = {
   id: number; invoice_number: string | null; status: string;
@@ -28,6 +29,7 @@ const METHODS = [
 const emptyPay = { amount: "", payment_method: "nakit", cashbox_id: "" };
 
 export default function InvoicesPage() {
+  const confirm = useConfirm();
   const [rows, setRows] = useState<Row[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -75,7 +77,7 @@ export default function InvoicesPage() {
   }
 
   async function remove(id: number) {
-    if (!confirm("Bu faturayı silmek istediğinize emin misiniz?")) return;
+    if (!(await confirm("Bu faturayı silmek istediğinize emin misiniz?"))) return;
     await api(`/invoices/${id}`, { method: "DELETE" });
     load();
   }

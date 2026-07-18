@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { api, ApiError } from "@/lib/api";
 import { TRY, dateTR } from "@/lib/format";
 import { Check, Crown } from "lucide-react";
+import { useConfirm } from "@/components/ConfirmDialog";
 
 type Current = { plan: string; plan_expires_at: string | null; status: string };
 type Plan = { id: number; code: string; name: string; monthly_price: string; max_users: number | null; max_elevators: number | null; sms_quota: number | null };
@@ -11,6 +12,7 @@ type Plan = { id: number; code: string; name: string; monthly_price: string; max
 const STATUS: Record<string, string> = { trialing: "Deneme", active: "Aktif", past_due: "Gecikmiş", cancelled: "İptal", expired: "Süresi Doldu" };
 
 export default function SubscriptionPage() {
+  const confirm = useConfirm();
   const [current, setCurrent] = useState<Current | null>(null);
   const [plans, setPlans] = useState<Plan[]>([]);
   const [busy, setBusy] = useState<string | null>(null);
@@ -27,7 +29,7 @@ export default function SubscriptionPage() {
     const msg = price > 0
       ? `${plan.name} planına geçilecek. ${TRY(price)}/ay tahsil edilecek. Devam?`
       : `${plan.name} planına geçilecek. Devam?`;
-    if (!confirm(msg)) return;
+    if (!(await confirm(msg, { title: "Plan Değişikliği", confirmText: "Onayla", danger: false }))) return;
     setBusy(plan.code);
     try {
       await api("/subscription/upgrade", { method: "POST", body: { plan: plan.code } });

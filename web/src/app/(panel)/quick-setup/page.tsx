@@ -5,120 +5,168 @@ import Link from "next/link";
 import { api, ApiError } from "@/lib/api";
 import { User, Building2, ArrowUpDown, Check, Rocket } from "lucide-react";
 
-const STEPS = [
-  { n: 1, label: "Müşteri", icon: User },
-  { n: 2, label: "Bina", icon: Building2 },
-  { n: 3, label: "Asansör", icon: ArrowUpDown },
-];
-
 export default function QuickSetupPage() {
-  const [step, setStep] = useState(1);
   const [saving, setSaving] = useState(false);
-  const [customer, setCustomer] = useState({ name: "", phone: "", type: "individual" });
+  const [error, setError] = useState<string | null>(null);
+  const [customer, setCustomer] = useState({ name: "", authorized_person: "", phone: "", type: "corporate" });
   const [building, setBuilding] = useState({ name: "", address: "" });
   const [elevator, setElevator] = useState({ name: "", capacity_kg: "" });
-  const [ids, setIds] = useState<{ customer?: number; building?: number; elevator?: number }>({});
   const [done, setDone] = useState(false);
 
-  async function next() {
+  async function submit() {
+    setError(null);
     setSaving(true);
     try {
-      if (step === 1) {
-        const r = await api<{ id: number }>("/customers", { method: "POST", body: { name: customer.name, phone: customer.phone || null, type: customer.type } });
-        setIds((s) => ({ ...s, customer: r.id })); setStep(2);
-      } else if (step === 2) {
-        const r = await api<{ id: number }>("/buildings", { method: "POST", body: { customer_id: ids.customer, name: building.name, address: building.address || null } });
-        setIds((s) => ({ ...s, building: r.id })); setStep(3);
-      } else {
-        const r = await api<{ id: number }>("/elevators", { method: "POST", body: { building_id: ids.building, name: elevator.name, capacity_kg: elevator.capacity_kg ? Number(elevator.capacity_kg) : null } });
-        setIds((s) => ({ ...s, elevator: r.id })); setDone(true);
-      }
-    } catch (e) { alert(e instanceof ApiError ? e.message : "Kaydedilemedi."); } finally { setSaving(false); }
+      const c = await api<{ id: number }>("/customers", {
+        method: "POST",
+        body: {
+          type: customer.type,
+          name: customer.name,
+          authorized_person: customer.authorized_person || null,
+          phone: customer.phone || null,
+        },
+      });
+      const b = await api<{ id: number }>("/buildings", {
+        method: "POST",
+        body: { customer_id: c.id, name: building.name, address: building.address || null },
+      });
+      await api("/elevators", {
+        method: "POST",
+        body: { building_id: b.id, name: elevator.name, capacity_kg: elevator.capacity_kg ? Number(elevator.capacity_kg) : null },
+      });
+      setDone(true);
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : "Kaydedilemedi.");
+    } finally {
+      setSaving(false);
+    }
   }
 
-  function reset() { setStep(1); setCustomer({ name: "", phone: "", type: "individual" }); setBuilding({ name: "", address: "" }); setElevator({ name: "", capacity_kg: "" }); setIds({}); setDone(false); }
+  function reset() {
+    setCustomer({ name: "", authorized_person: "", phone: "", type: "corporate" });
+    setBuilding({ name: "", address: "" });
+    setElevator({ name: "", capacity_kg: "" });
+    setError(null);
+    setDone(false);
+  }
 
   if (done) {
     return (
-      <div className="max-w-xl">
-        <div className="grid place-items-center gap-3 rounded-xl border border-success/30 bg-success/10 p-10 text-center">
+      <div className="max-w-2xl">
+        <div className="pop-in grid place-items-center gap-3 rounded-2xl border border-success/30 bg-success/10 p-10 text-center">
           <div className="grid h-14 w-14 place-items-center rounded-full bg-success text-white"><Check size={28} /></div>
           <h1 className="text-xl font-bold text-ink">Kurulum tamamlandı! 🎉</h1>
-          <p className="text-sm text-ink-soft"><strong>{customer.name}</strong> müşterisi, <strong>{building.name}</strong> binası ve <strong>{elevator.name}</strong> asansörü oluşturuldu.</p>
+          <p className="text-sm text-ink-soft">
+            <strong>{customer.name}</strong> müşterisi, <strong>{building.name}</strong> binası ve <strong>{elevator.name}</strong> asansörü oluşturuldu.
+          </p>
           <div className="mt-2 flex gap-2">
-            <button onClick={reset} className="rounded-lg border border-line px-4 py-2 text-sm">Yeni Kurulum</button>
-            <Link href={`/elevators`} className="btn-primary">Asansörlere Git</Link>
+            <button onClick={reset} className="btn-ghost">Yeni Kurulum</button>
+            <Link href="/elevators" className="btn-primary">Asansörlere Git</Link>
           </div>
         </div>
       </div>
     );
   }
 
-  const canNext = step === 1 ? customer.name : step === 2 ? building.name : elevator.name;
+  const valid = customer.name.trim() && building.name.trim() && elevator.name.trim();
 
   return (
-    <div className="max-w-xl">
-      <div className="flex items-center gap-2">
-        <div className="grid h-9 w-9 place-items-center rounded-lg bg-primary/10 text-primary"><Rocket size={18} /></div>
+    <div className="max-w-2xl">
+      <div className="flex items-center gap-2.5">
+        <span className="grid h-10 w-10 place-items-center rounded-xl bg-primary-light text-primary"><Rocket size={20} /></span>
         <div>
           <h1 className="text-2xl font-bold text-ink">Hızlı Kurulum</h1>
-          <p className="text-sm text-muted">Müşteri, bina ve asansörü tek akışta ekle.</p>
+          <p className="text-sm text-muted">Müşteri, bina ve asansörü tek ekranda ekleyin.</p>
         </div>
       </div>
 
-      {/* Stepper */}
-      <div className="mt-6 flex items-center">
-        {STEPS.map((s, i) => {
-          const Icon = s.icon;
-          const active = step === s.n, complete = step > s.n;
-          return (
-            <div key={s.n} className="flex flex-1 items-center last:flex-none">
-              <div className="flex flex-col items-center gap-1">
-                <div className={`grid h-10 w-10 place-items-center rounded-full border-2 ${complete ? "border-success bg-success text-white" : active ? "border-primary bg-primary text-white" : "border-line bg-card text-muted"}`}>
-                  {complete ? <Check size={18} /> : <Icon size={18} />}
-                </div>
-                <span className={`text-xs ${active ? "font-medium text-ink" : "text-muted"}`}>{s.label}</span>
-              </div>
-              {i < STEPS.length - 1 && <div className={`mx-2 mb-5 h-0.5 flex-1 ${step > s.n ? "bg-success" : "bg-line"}`} />}
-            </div>
-          );
-        })}
-      </div>
+      {error && (
+        <div className="mt-5 rounded-lg border border-danger/30 bg-danger/5 px-4 py-3 text-sm text-danger">{error}</div>
+      )}
 
-      <div className="mt-6 space-y-4 rounded-xl border border-line bg-card p-6">
-        {step === 1 && (
-          <>
-            <label className="block"><span className="mb-1 block text-xs font-medium text-muted">Müşteri Adı *</span><input className="input" value={customer.name} onChange={(e) => setCustomer({ ...customer, name: e.target.value })} /></label>
-            <label className="block"><span className="mb-1 block text-xs font-medium text-muted">Telefon</span><input className="input" value={customer.phone} onChange={(e) => setCustomer({ ...customer, phone: e.target.value })} /></label>
-            <label className="block"><span className="mb-1 block text-xs font-medium text-muted">Tip</span>
+      <div className="mt-6 space-y-4">
+        {/* 1 · Müşteri */}
+        <Section step={1} icon={User} title="Müşteri" subtitle="Site / firma bilgisi">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Field label="Tip">
               <select className="input" value={customer.type} onChange={(e) => setCustomer({ ...customer, type: e.target.value })}>
-                <option value="individual">Bireysel</option><option value="corporate">Kurumsal</option>
+                <option value="corporate">Kurumsal</option>
+                <option value="individual">Bireysel</option>
               </select>
-            </label>
-          </>
-        )}
-        {step === 2 && (
-          <>
-            <div className="rounded-lg bg-surface px-3 py-2 text-xs text-muted">Müşteri: <span className="font-medium text-ink-soft">{customer.name}</span></div>
-            <label className="block"><span className="mb-1 block text-xs font-medium text-muted">Bina Adı *</span><input className="input" value={building.name} onChange={(e) => setBuilding({ ...building, name: e.target.value })} /></label>
-            <label className="block"><span className="mb-1 block text-xs font-medium text-muted">Adres</span><textarea className="input min-h-16" value={building.address} onChange={(e) => setBuilding({ ...building, address: e.target.value })} /></label>
-          </>
-        )}
-        {step === 3 && (
-          <>
-            <div className="rounded-lg bg-surface px-3 py-2 text-xs text-muted">Bina: <span className="font-medium text-ink-soft">{building.name}</span></div>
-            <label className="block"><span className="mb-1 block text-xs font-medium text-muted">Asansör Adı *</span><input className="input" value={elevator.name} onChange={(e) => setElevator({ ...elevator, name: e.target.value })} /></label>
-            <label className="block"><span className="mb-1 block text-xs font-medium text-muted">Kapasite (kg)</span><input className="input" type="number" value={elevator.capacity_kg} onChange={(e) => setElevator({ ...elevator, capacity_kg: e.target.value })} /></label>
-          </>
-        )}
+            </Field>
+            <Field label="Ad / Ünvan (Site adı) *">
+              <input className="input" placeholder="Örn. Yeşil Vadi Sitesi" value={customer.name}
+                onChange={(e) => setCustomer({ ...customer, name: e.target.value })} />
+            </Field>
+            <Field label="Yetkili Kişi">
+              <input className="input" placeholder="Örn. Ahmet Yılmaz (Yönetici)" value={customer.authorized_person}
+                onChange={(e) => setCustomer({ ...customer, authorized_person: e.target.value })} />
+            </Field>
+            <Field label="Telefon">
+              <input className="input" value={customer.phone} onChange={(e) => setCustomer({ ...customer, phone: e.target.value })} />
+            </Field>
+          </div>
+        </Section>
 
-        <div className="flex justify-between pt-2">
-          {step > 1 ? <button onClick={() => setStep(step - 1)} className="rounded-lg border border-line px-4 py-2 text-sm">Geri</button> : <span />}
-          <button onClick={next} disabled={saving || !canNext} className="btn-primary">
-            {saving ? "Kaydediliyor…" : step === 3 ? "Tamamla" : "Devam"}
-          </button>
-        </div>
+        {/* 2 · Bina */}
+        <Section step={2} icon={Building2} title="Bina" subtitle="Adres bilgisi">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Field label="Bina Adı *">
+              <input className="input" placeholder="Örn. A Blok" value={building.name}
+                onChange={(e) => setBuilding({ ...building, name: e.target.value })} />
+            </Field>
+            <Field label="Adres">
+              <input className="input" value={building.address} onChange={(e) => setBuilding({ ...building, address: e.target.value })} />
+            </Field>
+          </div>
+        </Section>
+
+        {/* 3 · Asansör */}
+        <Section step={3} icon={ArrowUpDown} title="Asansör" subtitle="Cihaz bilgisi">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Field label="Asansör Adı *">
+              <input className="input" placeholder="Örn. 1 No'lu Asansör" value={elevator.name}
+                onChange={(e) => setElevator({ ...elevator, name: e.target.value })} />
+            </Field>
+            <Field label="Kapasite (kg)">
+              <input className="input" type="number" value={elevator.capacity_kg}
+                onChange={(e) => setElevator({ ...elevator, capacity_kg: e.target.value })} />
+            </Field>
+          </div>
+        </Section>
+      </div>
+
+      <div className="mt-6 flex justify-end">
+        <button onClick={submit} disabled={saving || !valid} className="btn-primary">
+          {saving ? "Kaydediliyor…" : "Hepsini Kaydet"}
+        </button>
       </div>
     </div>
+  );
+}
+
+function Section({ step, icon: Icon, title, subtitle, children }: {
+  step: number; icon: typeof User; title: string; subtitle: string; children: React.ReactNode;
+}) {
+  return (
+    <div className="rounded-2xl border border-line bg-card p-5 shadow-card">
+      <div className="mb-4 flex items-center gap-3">
+        <span className="grid h-9 w-9 place-items-center rounded-xl bg-primary-light text-primary"><Icon size={18} /></span>
+        <div className="leading-tight">
+          <div className="text-sm font-semibold text-ink"><span className="text-muted">{step}.</span> {title}</div>
+          <div className="text-xs text-muted">{subtitle}</div>
+        </div>
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <label className="block">
+      <span className="mb-1.5 block text-xs font-medium text-ink-soft">{label}</span>
+      {children}
+    </label>
   );
 }

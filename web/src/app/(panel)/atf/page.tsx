@@ -7,6 +7,7 @@ import { useOptions } from "@/lib/hooks";
 import Badge from "@/components/Badge";
 import Modal, { Field } from "@/components/Modal";
 import { Plus, Trash2 } from "lucide-react";
+import { useConfirm } from "@/components/ConfirmDialog";
 
 type Row = {
   id: number; customer_id: number | null; building_id: number | null;
@@ -28,6 +29,7 @@ function parseNote(raw: string | null): string {
 }
 
 export default function AtfPage() {
+  const confirm = useConfirm();
   const [rows, setRows] = useState<Row[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -66,7 +68,7 @@ export default function AtfPage() {
   }
 
   async function remove(id: number) {
-    if (!confirm("Form silinsin mi?")) return;
+    if (!(await confirm("Form silinsin mi?"))) return;
     await api(`/atf/${id}`, { method: "DELETE" });
     load();
   }

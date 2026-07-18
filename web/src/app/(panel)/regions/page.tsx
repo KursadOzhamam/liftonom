@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { api, ApiError } from "@/lib/api";
 import { Plus, Search, Pencil, Trash2 } from "lucide-react";
+import { useConfirm } from "@/components/ConfirmDialog";
 
 type Region = {
   id: number;
@@ -17,6 +18,7 @@ type Paginated = { data: Region[]; meta: { current_page: number; last_page: numb
 const empty = { name: "", code: "", description: "", is_active: true };
 
 export default function RegionsPage() {
+  const confirm = useConfirm();
   const [rows, setRows] = useState<Region[]>([]);
   const [meta, setMeta] = useState<Paginated["meta"] | null>(null);
   const [search, setSearch] = useState("");
@@ -57,7 +59,7 @@ export default function RegionsPage() {
   }
 
   async function remove(id: number) {
-    if (!confirm("Bu bölgeyi silmek istediğinize emin misiniz?")) return;
+    if (!(await confirm("Bu bölgeyi silmek istediğinize emin misiniz?"))) return;
     try {
       await api(`/regions/${id}`, { method: "DELETE" });
       load();

@@ -6,6 +6,7 @@ import { dateTR } from "@/lib/format";
 import { useOptions } from "@/lib/hooks";
 import Badge from "@/components/Badge";
 import Modal, { Field } from "@/components/Modal";
+import { useConfirm } from "@/components/ConfirmDialog";
 import { Plus, Trash2 } from "lucide-react";
 
 type Row = {
@@ -22,6 +23,7 @@ const today = () => new Date().toISOString().slice(0, 10);
 const emptyForm = () => ({ user_id: "", date: today(), type: "present", note: "" });
 
 export default function AttendancePage() {
+  const confirm = useConfirm();
   const [rows, setRows] = useState<Row[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -55,7 +57,7 @@ export default function AttendancePage() {
   }
 
   async function remove(id: number) {
-    if (!confirm("Kayıt silinsin mi?")) return;
+    if (!(await confirm("Kayıt silinsin mi?"))) return;
     await api(`/attendance/${id}`, { method: "DELETE" });
     load();
   }

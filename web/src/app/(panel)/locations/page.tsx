@@ -4,12 +4,14 @@ import { useCallback, useEffect, useState } from "react";
 import { api, ApiError } from "@/lib/api";
 import Modal, { Field } from "@/components/Modal";
 import { Plus, Pencil, Trash2, MapPin } from "lucide-react";
+import { useConfirm } from "@/components/ConfirmDialog";
 
 type Row = { id: number; name: string; code: string | null; description: string | null };
 type Paginated = { data: Row[]; meta: { total: number } };
 const empty = { name: "", code: "", description: "" };
 
 export default function LocationsPage() {
+  const confirm = useConfirm();
   const [rows, setRows] = useState<Row[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -32,7 +34,7 @@ export default function LocationsPage() {
     try { await api(editId ? `/locations/${editId}` : "/locations", { method: editId ? "PUT" : "POST", body: form }); setModal(false); load(); }
     catch (e) { alert(e instanceof ApiError ? e.message : "Kaydedilemedi."); } finally { setSaving(false); }
   }
-  async function remove(id: number) { if (!confirm("Silinsin mi?")) return; await api(`/locations/${id}`, { method: "DELETE" }); load(); }
+  async function remove(id: number) { if (!(await confirm("Silinsin mi?"))) return; await api(`/locations/${id}`, { method: "DELETE" }); load(); }
 
   return (
     <div>

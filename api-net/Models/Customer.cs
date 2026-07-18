@@ -6,6 +6,7 @@ public class Customer
     public long TenantId { get; set; }
     public string Type { get; set; } = "corporate";
     public string Name { get; set; } = "";
+    public string? AuthorizedPerson { get; set; }
     public string? TaxNumber { get; set; }
     public string? TaxOffice { get; set; }
     public string? IdNumber { get; set; }

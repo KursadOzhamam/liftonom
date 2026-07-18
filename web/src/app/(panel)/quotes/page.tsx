@@ -7,6 +7,7 @@ import { useOptions } from "@/lib/hooks";
 import Badge from "@/components/Badge";
 import { Field } from "@/components/Modal";
 import { Plus, Pencil, Trash2, FileDown } from "lucide-react";
+import { useConfirm } from "@/components/ConfirmDialog";
 
 type Row = {
   id: number; quote_number: string | null; status: string;
@@ -37,6 +38,7 @@ function parseItems(raw: unknown): Item[] {
 }
 
 export default function QuotesPage() {
+  const confirm = useConfirm();
   const [rows, setRows] = useState<Row[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -98,7 +100,7 @@ export default function QuotesPage() {
   }
 
   async function remove(id: number) {
-    if (!confirm("Bu teklifi silmek istediğinize emin misiniz?")) return;
+    if (!(await confirm("Bu teklifi silmek istediğinize emin misiniz?"))) return;
     await api(`/quotes/${id}`, { method: "DELETE" });
     load();
   }

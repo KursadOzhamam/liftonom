@@ -6,6 +6,7 @@ import { dateTR, TRY } from "@/lib/format";
 import { useOptions } from "@/lib/hooks";
 import Modal, { Field } from "@/components/Modal";
 import { Plus, Pencil, Trash2 } from "lucide-react";
+import { useConfirm } from "@/components/ConfirmDialog";
 
 type Row = {
   id: number; amount: number; period: string; valid_from: string | null; is_active: boolean; notes: string | null;
@@ -17,6 +18,7 @@ const PERIODS: Record<string, string> = { monthly: "Aylık", quarterly: "3 Aylı
 const empty = { customer_id: "", building_id: "", amount: "", period: "monthly", valid_from: "", notes: "", is_active: true };
 
 export default function MaintenanceFeesPage() {
+  const confirm = useConfirm();
   const [rows, setRows] = useState<Row[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -56,7 +58,7 @@ export default function MaintenanceFeesPage() {
     } catch (e) { alert(e instanceof ApiError ? e.message : "Kaydedilemedi."); }
     finally { setSaving(false); }
   }
-  async function remove(id: number) { if (!confirm("Silinsin mi?")) return; await api(`/maintenance-fees/${id}`, { method: "DELETE" }); load(); }
+  async function remove(id: number) { if (!(await confirm("Silinsin mi?"))) return; await api(`/maintenance-fees/${id}`, { method: "DELETE" }); load(); }
 
   return (
     <div>

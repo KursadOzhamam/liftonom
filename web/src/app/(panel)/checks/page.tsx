@@ -7,6 +7,7 @@ import { useOptions } from "@/lib/hooks";
 import Badge from "@/components/Badge";
 import Modal, { Field } from "@/components/Modal";
 import { Plus, Pencil, Trash2, Wallet, CalendarClock, XCircle } from "lucide-react";
+import { useConfirm } from "@/components/ConfirmDialog";
 
 type Row = {
   id: number; type: string; direction: string; amount: number; bank: string | null;
@@ -23,6 +24,7 @@ const STATUSES = [
 const empty = { customer_id: "", type: "cek", direction: "received", amount: "", bank: "", serial_no: "", due_date: "", status: "portfolio", notes: "" };
 
 export default function ChecksPage() {
+  const confirm = useConfirm();
   const [rows, setRows] = useState<Row[]>([]);
   const [total, setTotal] = useState(0);
   const [summary, setSummary] = useState<Summary | null>(null);
@@ -80,7 +82,7 @@ export default function ChecksPage() {
   }
 
   async function remove(id: number) {
-    if (!confirm("Kayıt silinsin mi?")) return;
+    if (!(await confirm("Kayıt silinsin mi?"))) return;
     await api(`/checks/${id}`, { method: "DELETE" });
     load();
   }

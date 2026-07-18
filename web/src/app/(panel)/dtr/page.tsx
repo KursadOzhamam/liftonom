@@ -6,6 +6,7 @@ import { dateTR } from "@/lib/format";
 import { useOptions } from "@/lib/hooks";
 import Modal, { Field } from "@/components/Modal";
 import { Plus, Trash2, CheckCircle2, XCircle, Pencil } from "lucide-react";
+import { useConfirm } from "@/components/ConfirmDialog";
 
 type Row = {
   id: number; elevator_id: number; general_note: string | null;
@@ -43,6 +44,7 @@ function parseChecklist(raw: string | null): ChecklistItem[] {
 }
 
 export default function DtrPage() {
+  const confirm = useConfirm();
   const [rows, setRows] = useState<Row[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -100,7 +102,7 @@ export default function DtrPage() {
   }
 
   async function remove(id: number) {
-    if (!confirm("Rapor silinsin mi?")) return;
+    if (!(await confirm("Rapor silinsin mi?"))) return;
     await api(`/dtr/${id}`, { method: "DELETE" });
     load();
   }

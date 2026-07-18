@@ -7,6 +7,7 @@ import { useOptions } from "@/lib/hooks";
 import Badge from "@/components/Badge";
 import Modal, { Field } from "@/components/Modal";
 import { Plus, Pencil, Trash2, MapPin } from "lucide-react";
+import { useConfirm } from "@/components/ConfirmDialog";
 
 type Row = {
   id: number; plate: string; brand: string | null; model: string | null; status: string;
@@ -19,6 +20,7 @@ const STATUSES = [{ v: "active", l: "Aktif" }, { v: "maintenance", l: "Bakımda"
 const empty = { plate: "", brand: "", model: "", assigned_user_id: "", status: "active", notes: "" };
 
 export default function VehiclesPage() {
+  const confirm = useConfirm();
   const [rows, setRows] = useState<Row[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -50,7 +52,7 @@ export default function VehiclesPage() {
       setModal(false); load();
     } catch (e) { alert(e instanceof ApiError ? e.message : "Kaydedilemedi."); } finally { setSaving(false); }
   }
-  async function remove(id: number) { if (!confirm("Araç silinsin mi?")) return; await api(`/vehicles/${id}`, { method: "DELETE" }); load(); }
+  async function remove(id: number) { if (!(await confirm("Araç silinsin mi?"))) return; await api(`/vehicles/${id}`, { method: "DELETE" }); load(); }
 
   return (
     <div>

@@ -6,6 +6,7 @@ import { TRY } from "@/lib/format";
 import { useOptions } from "@/lib/hooks";
 import Modal, { Field } from "@/components/Modal";
 import { Plus, Search, Pencil, Trash2, AlertCircle, ArrowLeftRight } from "lucide-react";
+import { useConfirm } from "@/components/ConfirmDialog";
 
 type Row = {
   id: number;
@@ -26,6 +27,7 @@ type Form = typeof emptyForm;
 const emptyMove = { type: "in" as "in" | "out", quantity: "", unit_price: "", note: "" };
 
 export default function InventoryPage() {
+  const confirm = useConfirm();
   const [rows, setRows] = useState<Row[]>([]);
   const [meta, setMeta] = useState<Paginated["meta"] | null>(null);
   const [search, setSearch] = useState("");
@@ -91,7 +93,7 @@ export default function InventoryPage() {
   }
 
   async function remove(id: number) {
-    if (!confirm("Bu ürünü silmek istediğinize emin misiniz?")) return;
+    if (!(await confirm("Bu ürünü silmek istediğinize emin misiniz?"))) return;
     await api(`/inventory/${id}`, { method: "DELETE" });
     load();
   }

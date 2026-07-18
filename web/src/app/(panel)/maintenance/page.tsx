@@ -7,6 +7,7 @@ import { useOptions } from "@/lib/hooks";
 import Badge from "@/components/Badge";
 import Modal, { Field } from "@/components/Modal";
 import { Plus, CheckCircle, FileDown } from "lucide-react";
+import { useConfirm } from "@/components/ConfirmDialog";
 
 type Row = {
   id: number; type: string; status: string;
@@ -19,6 +20,7 @@ const TYPE: Record<string, string> = { periodic: "Periyodik", fault: "Arıza", r
 const emptyForm = { elevator_id: "", type: "periodic", planned_date: "" };
 
 export default function MaintenancePage() {
+  const confirm = useConfirm();
   const [rows, setRows] = useState<Row[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -52,7 +54,7 @@ export default function MaintenancePage() {
   }
 
   async function complete(id: number) {
-    if (!confirm("Bu bakımı tamamlandı olarak işaretle?")) return;
+    if (!(await confirm("Bu bakımı tamamlandı olarak işaretlemek istiyor musunuz?", { title: "Bakımı Tamamla", confirmText: "Tamamla", danger: false }))) return;
     await api(`/maintenance/${id}/complete`, { method: "POST", body: {} });
     load();
   }

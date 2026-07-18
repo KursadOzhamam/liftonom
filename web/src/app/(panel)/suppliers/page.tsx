@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { api, ApiError } from "@/lib/api";
 import Modal, { Field } from "@/components/Modal";
 import { Plus, Pencil, Trash2 } from "lucide-react";
+import { useConfirm } from "@/components/ConfirmDialog";
 
 type Row = {
   id: number; name: string; phone: string | null; email: string | null;
@@ -14,6 +15,7 @@ type Paginated = { data: Row[]; meta: { total: number } };
 const empty = { name: "", phone: "", email: "", tax_number: "", address: "", notes: "" };
 
 export default function SuppliersPage() {
+  const confirm = useConfirm();
   const [rows, setRows] = useState<Row[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -53,7 +55,7 @@ export default function SuppliersPage() {
   }
 
   async function remove(id: number) {
-    if (!confirm("Tedarikçi silinsin mi?")) return;
+    if (!(await confirm("Tedarikçi silinsin mi?"))) return;
     await api(`/suppliers/${id}`, { method: "DELETE" });
     load();
   }

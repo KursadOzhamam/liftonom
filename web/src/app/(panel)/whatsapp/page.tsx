@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { api, ApiError } from "@/lib/api";
 import Modal, { Field } from "@/components/Modal";
 import { MessageCircle, Plus, Pencil, Trash2, Send } from "lucide-react";
+import { useConfirm } from "@/components/ConfirmDialog";
 
 type Template = { id: number; name: string; body: string };
 type Customer = { id: number; name: string; phone: string | null };
@@ -21,6 +22,7 @@ function fmt(d: string) {
 }
 
 export default function WhatsAppPage() {
+  const confirm = useConfirm();
   const [templates, setTemplates] = useState<Template[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [logs, setLogs] = useState<Log[]>([]);
@@ -62,7 +64,7 @@ export default function WhatsAppPage() {
     finally { setSaving(false); }
   }
   async function del(t: Template) {
-    if (!confirm(`"${t.name}" şablonu silinsin mi?`)) return;
+    if (!(await confirm(`"${t.name}" şablonu silinsin mi?`))) return;
     try { await api(`/whatsapp/templates/${t.id}`, { method: "DELETE" }); load(); }
     catch (e) { alert(e instanceof ApiError ? e.message : "Silinemedi."); }
   }

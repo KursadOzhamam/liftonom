@@ -4,11 +4,13 @@ import { useCallback, useEffect, useState } from "react";
 import { api, ApiError } from "@/lib/api";
 import Modal, { Field } from "@/components/Modal";
 import { Tag, Plus, Pencil, Trash2 } from "lucide-react";
+import { useConfirm } from "@/components/ConfirmDialog";
 
 type Cat = { id: number; name: string };
 type Stat = { category: string; product_count: number; total_stock: number };
 
 export default function CategoriesPage() {
+  const confirm = useConfirm();
   const [cats, setCats] = useState<Cat[]>([]);
   const [stats, setStats] = useState<Stat[]>([]);
   const [loading, setLoading] = useState(true);
@@ -39,7 +41,7 @@ export default function CategoriesPage() {
     finally { setSaving(false); }
   }
   async function del(c: Cat) {
-    if (!confirm(`"${c.name}" kategorisi silinsin mi?`)) return;
+    if (!(await confirm(`"${c.name}" kategorisi silinsin mi?`))) return;
     try { await api(`/product-categories/${c.id}`, { method: "DELETE" }); load(); }
     catch (e) { alert(e instanceof ApiError ? e.message : "Silinemedi."); }
   }

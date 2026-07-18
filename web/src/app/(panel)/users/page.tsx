@@ -6,6 +6,7 @@ import { dateTR } from "@/lib/format";
 import { useOptions } from "@/lib/hooks";
 import Modal, { Field } from "@/components/Modal";
 import { Plus, Search, Pencil, Trash2, Power } from "lucide-react";
+import { useConfirm } from "@/components/ConfirmDialog";
 
 type Row = {
   id: number;
@@ -32,6 +33,7 @@ const ROLE: Record<string, string> = Object.fromEntries(ROLES.map((r) => [r.v, r
 const empty = { name: "", surname: "", phone: "", email: "", role: "technician", region_id: "", password: "" };
 
 export default function UsersPage() {
+  const confirm = useConfirm();
   const [rows, setRows] = useState<Row[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -82,7 +84,7 @@ export default function UsersPage() {
   }
 
   async function remove(id: number) {
-    if (!confirm("Bu personeli silmek istediğinize emin misiniz?")) return;
+    if (!(await confirm("Bu personeli silmek istediğinize emin misiniz?"))) return;
     try {
       await api(`/users/${id}`, { method: "DELETE" });
       load();

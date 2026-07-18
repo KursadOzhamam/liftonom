@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { api, ApiError } from "@/lib/api";
 import { Plus, Search, Pencil, Trash2 } from "lucide-react";
 import LocationPicker from "@/components/LocationPicker";
+import { useConfirm } from "@/components/ConfirmDialog";
 
 type Building = {
   id: number; name: string; city: string | null; floor_count: number | null;
@@ -16,6 +17,7 @@ type Customer = { id: number; name: string };
 const empty = { name: "", customer_id: "", city: "", floor_count: "", latitude: null as number | null, longitude: null as number | null };
 
 export default function BuildingsPage() {
+  const confirm = useConfirm();
   const [rows, setRows] = useState<Building[]>([]);
   const [meta, setMeta] = useState<Paginated["meta"] | null>(null);
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -59,7 +61,7 @@ export default function BuildingsPage() {
   }
 
   async function remove(id: number) {
-    if (!confirm("Bu binayı silmek istediğinize emin misiniz?")) return;
+    if (!(await confirm("Bu binayı silmek istediğinize emin misiniz?"))) return;
     await api(`/buildings/${id}`, { method: "DELETE" });
     load();
   }

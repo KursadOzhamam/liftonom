@@ -2,12 +2,14 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { api, ApiError } from "@/lib/api";
+import { useConfirm } from "@/components/ConfirmDialog";
 import { Plus, Search, Pencil, Trash2 } from "lucide-react";
 
 type Customer = {
   id: number;
   type: string;
   name: string;
+  authorized_person: string | null;
   phone: string | null;
   email: string | null;
   city: string | null;
@@ -15,7 +17,7 @@ type Customer = {
 };
 type Paginated = { data: Customer[]; meta: { current_page: number; last_page: number; total: number } };
 
-const empty = { type: "corporate", name: "", phone: "", email: "", city: "" };
+const empty = { type: "corporate", name: "", authorized_person: "", phone: "", email: "", city: "" };
 
 export default function CustomersPage() {
   const [rows, setRows] = useState<Customer[]>([]);
@@ -25,6 +27,7 @@ export default function CustomersPage() {
   const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState<null | { mode: "create" | "edit"; id?: number; form: typeof empty }>(null);
   const [saving, setSaving] = useState(false);
+  const confirm = useConfirm();
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -58,7 +61,7 @@ export default function CustomersPage() {
   }
 
   async function remove(id: number) {
-    if (!confirm("Bu müşteriyi silmek istediğinize emin misiniz?")) return;
+    if (!(await confirm("Bu müşteriyi silmek istediğinize emin misiniz?"))) return;
     await api(`/customers/${id}`, { method: "DELETE" });
     load();
   }
@@ -111,6 +114,7 @@ export default function CustomersPage() {
                 <tr key={c.id} className="border-b border-line last:border-0 hover:bg-surface">
                   <td className="px-4 py-3 font-medium">
                     <a href={`/customers/${c.id}`} className="text-primary hover:underline">{c.name}</a>
+                    {c.authorized_person && <div className="text-xs font-normal text-muted">Yetkili: {c.authorized_person}</div>}
                   </td>
                   <td className="px-4 py-3">
                     <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${
@@ -126,7 +130,8 @@ export default function CustomersPage() {
                     <div className="flex justify-end gap-2">
                       <button
                         onClick={() => setModal({ mode: "edit", id: c.id, form: {
-                          type: c.type, name: c.name, phone: c.phone ?? "", email: c.email ?? "", city: c.city ?? "",
+                          type: c.type, name: c.name, authorized_person: c.authorized_person ?? "",
+                          phone: c.phone ?? "", email: c.email ?? "", city: c.city ?? "",
                         } })}
                         className="text-muted hover:text-primary" title="Düzenle"
                       ><Pencil size={16} /></button>
@@ -170,9 +175,14 @@ export default function CustomersPage() {
                 </select>
               </label>
               <label className="block">
-                <span className="mb-1 block text-xs font-medium text-muted">Ad / Ünvan *</span>
-                <input className="input" value={modal.form.name}
+                <span className="mb-1 block text-xs font-medium text-muted">Ad / Ünvan (Site adı) *</span>
+                <input className="input" value={modal.form.name} placeholder="Örn. Yeşil Vadi Sitesi"
                   onChange={(e) => setModal({ ...modal, form: { ...modal.form, name: e.target.value } })} />
+              </label>
+              <label className="block">
+                <span className="mb-1 block text-xs font-medium text-muted">Yetkili Kişi</span>
+                <input className="input" value={modal.form.authorized_person} placeholder="Örn. Ahmet Yılmaz (Yönetici)"
+                  onChange={(e) => setModal({ ...modal, form: { ...modal.form, authorized_person: e.target.value } })} />
               </label>
               <div className="grid grid-cols-2 gap-3">
                 <label className="block">

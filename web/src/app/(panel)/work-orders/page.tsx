@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { api, ApiError } from "@/lib/api";
 import { dateTR } from "@/lib/format";
 import { Plus, Pencil, Trash2 } from "lucide-react";
+import { useConfirm } from "@/components/ConfirmDialog";
 
 type Row = {
   id: number; source_type: string | null; status: string;
@@ -27,6 +28,7 @@ const empty = { elevator_id: "", assigned_user_id: "", planned_date: "", status:
 const userLabel = (u: Option) => `${u.name}${u.surname ? " " + u.surname : ""}`;
 
 export default function WorkOrdersPage() {
+  const confirm = useConfirm();
   const [rows, setRows] = useState<Row[]>([]);
   const [meta, setMeta] = useState<Paginated["meta"] | null>(null);
   const [statusFilter, setStatusFilter] = useState("");
@@ -106,7 +108,7 @@ export default function WorkOrdersPage() {
   }
 
   async function remove(id: number) {
-    if (!confirm("Bu iş emrini silmek istediğinize emin misiniz?")) return;
+    if (!(await confirm("Bu iş emrini silmek istediğinize emin misiniz?"))) return;
     try {
       await api(`/work-orders/${id}`, { method: "DELETE" });
       load();

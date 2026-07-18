@@ -13,7 +13,7 @@ namespace Liftonom.Api.Controllers;
 public class CustomerController(AppDbContext db) : ControllerBase
 {
     public record CustomerDto(
-        string? Type, string Name, string? TaxNumber, string? TaxOffice,
+        string? Type, string Name, string? AuthorizedPerson, string? TaxNumber, string? TaxOffice,
         string? IdNumber, string? Phone, string? Email, string? Address,
         string? District, string? City, long? RegionId, string? Notes, bool? IsActive);
 
@@ -44,7 +44,7 @@ public class CustomerController(AppDbContext db) : ControllerBase
 
         var projected = q.Select(c => new
         {
-            c.Id, c.Type, c.Name, c.Phone, c.Email, c.City, c.IsActive, c.IsSample,
+            c.Id, c.Type, c.Name, c.AuthorizedPerson, c.Phone, c.Email, c.City, c.IsActive, c.IsSample,
             BuildingsCount = db.Buildings.Count(b => b.CustomerId == c.Id),
         });
 
@@ -71,6 +71,7 @@ public class CustomerController(AppDbContext db) : ControllerBase
             TenantId = db.CurrentTenantId!.Value,
             Type = dto.Type ?? Customer.TypeCorporate,
             Name = dto.Name,
+            AuthorizedPerson = dto.AuthorizedPerson,
             TaxNumber = dto.TaxNumber,
             TaxOffice = dto.TaxOffice,
             IdNumber = dto.IdNumber,
@@ -98,6 +99,7 @@ public class CustomerController(AppDbContext db) : ControllerBase
 
         if (dto.Type != null) c.Type = dto.Type;
         if (!string.IsNullOrWhiteSpace(dto.Name)) c.Name = dto.Name;
+        c.AuthorizedPerson = dto.AuthorizedPerson;
         c.TaxNumber = dto.TaxNumber;
         c.TaxOffice = dto.TaxOffice;
         c.IdNumber = dto.IdNumber;

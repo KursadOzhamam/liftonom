@@ -175,6 +175,9 @@ using (var scope = app.Services.CreateScope())
           deleted_at timestamptz
         );
         CREATE INDEX IF NOT EXISTS ix_product_categories_tenant ON product_categories (tenant_id);
+
+        -- Müşteri yetkili kişi alanı (mevcut/eski DB için idempotent)
+        ALTER TABLE customers ADD COLUMN IF NOT EXISTS authorized_person text;
         """);
 
     if (!await db.PlatformSettings.AnyAsync())
