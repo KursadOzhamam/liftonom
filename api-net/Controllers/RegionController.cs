@@ -12,7 +12,7 @@ namespace Liftonom.Api.Controllers;
 [Route("api/v1/regions")]
 public class RegionController(AppDbContext db) : ControllerBase
 {
-    public record RegionDto(string Name, string? Code, string? Description, bool? IsActive);
+    public record RegionDto(string Name, string? Code, string? Description, long? ResponsibleUserId, bool? IsActive);
 
     [HttpGet]
     public async Task<IActionResult> Index([FromQuery] string? search,
@@ -25,7 +25,9 @@ public class RegionController(AppDbContext db) : ControllerBase
 
         var projected = q.OrderBy(r => r.Name).Select(r => new
         {
-            r.Id, r.Name, r.Code, r.Description, r.IsActive, TechniciansCount = 0,
+            r.Id, r.Name, r.Code, r.Description, r.ResponsibleUserId, r.IsActive,
+            ResponsibleName = r.ResponsibleUserId == null ? null
+                : db.Users.Where(u => u.Id == r.ResponsibleUserId).Select(u => u.Name + " " + (u.Surname ?? "")).FirstOrDefault(),
         });
         return Ok(await projected.ToPagedAsync(page, perPage));
     }
@@ -42,7 +44,7 @@ public class RegionController(AppDbContext db) : ControllerBase
         var r = new Region
         {
             TenantId = db.CurrentTenantId!.Value,
-            Name = dto.Name, Code = dto.Code, Description = dto.Description,
+            Name = dto.Name, Code = dto.Code, Description = dto.Description, ResponsibleUserId = dto.ResponsibleUserId,
             IsActive = dto.IsActive ?? true, CreatedAt = now, UpdatedAt = now,
         };
         db.Regions.Add(r);
@@ -55,7 +57,7 @@ public class RegionController(AppDbContext db) : ControllerBase
     {
         var r = await db.Regions.FirstOrDefaultAsync(x => x.Id == id) ?? throw new ApiException(404, "Bölge bulunamadı.");
         if (!string.IsNullOrWhiteSpace(dto.Name)) r.Name = dto.Name;
-        r.Code = dto.Code; r.Description = dto.Description;
+        r.Code = dto.Code; r.Description = dto.Description; r.ResponsibleUserId = dto.ResponsibleUserId;
         if (dto.IsActive is { } a) r.IsActive = a;
         r.UpdatedAt = DateTime.UtcNow;
         await db.SaveChangesAsync();

@@ -188,7 +188,7 @@ function Stat({ icon: Icon, color, value, label, sub, href, good, bad }: {
   icon: LucideIcon; color: string; value: number; label: string; sub: string; href: string; good?: boolean; bad?: boolean;
 }) {
   return (
-    <Link href={href as never} className="pop-in group rounded-2xl border border-line bg-card p-4 shadow-card transition duration-200 hover:-translate-y-0.5 hover:shadow-pop">
+    <Link href={href as never} className="accent-card pop-in group rounded-2xl border border-line bg-card p-4 shadow-card transition duration-200 hover:-translate-y-0.5 hover:shadow-pop" style={{ "--accent": color } as React.CSSProperties}>
       <span className="grid h-9 w-9 place-items-center rounded-xl transition group-hover:scale-110"
         style={{ background: `color-mix(in srgb, ${color} 13%, transparent)`, color }}>
         <Icon size={17} />
@@ -314,7 +314,7 @@ function QuickActions() {
         {ACTIONS.map((a) => {
           const Icon = a.icon;
           return (
-            <Link key={a.title} href={a.href as never} className="group rounded-xl border border-line p-3.5 transition hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-card">
+            <Link key={a.title} href={a.href as never} className="accent-card group rounded-xl border border-line p-3.5 transition hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-card" style={{ "--accent": a.color } as React.CSSProperties}>
               <span className="grid h-9 w-9 place-items-center rounded-xl transition group-hover:scale-110" style={{ background: `color-mix(in srgb, ${a.color} 13%, transparent)`, color: a.color }}>
                 <Icon size={16} />
               </span>

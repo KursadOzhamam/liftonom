@@ -207,6 +207,8 @@ using (var scope = app.Services.CreateScope())
         ALTER TABLE elevators ADD COLUMN IF NOT EXISTS has_ups boolean NOT NULL DEFAULT false;
         ALTER TABLE elevators ADD COLUMN IF NOT EXISTS has_fire_system boolean NOT NULL DEFAULT false;
         ALTER TABLE elevators ADD COLUMN IF NOT EXISTS has_earthquake_sensor boolean NOT NULL DEFAULT false;
+        -- Bölge sorumlu personel
+        ALTER TABLE regions ADD COLUMN IF NOT EXISTS responsible_user_id bigint;
         """);
 
     if (!await db.PlatformSettings.AnyAsync())
