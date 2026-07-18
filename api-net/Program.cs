@@ -178,6 +178,11 @@ using (var scope = app.Services.CreateScope())
 
         -- Müşteri yetkili kişi alanı (mevcut/eski DB için idempotent)
         ALTER TABLE customers ADD COLUMN IF NOT EXISTS authorized_person text;
+        -- Hızlı kurulum ek alanları (bina tipi/daire, asansör durak, ücret bitiş)
+        ALTER TABLE buildings ADD COLUMN IF NOT EXISTS type text;
+        ALTER TABLE buildings ADD COLUMN IF NOT EXISTS unit_count integer;
+        ALTER TABLE elevators ADD COLUMN IF NOT EXISTS stop_count integer;
+        ALTER TABLE maintenance_fees ADD COLUMN IF NOT EXISTS valid_to date;
         """);
 
     if (!await db.PlatformSettings.AnyAsync())

@@ -7,10 +7,12 @@ public class Building
     public long? CustomerId { get; set; }
     public long? RegionId { get; set; }
     public string Name { get; set; } = "";
+    public string? Type { get; set; }
     public string? Address { get; set; }
     public string? District { get; set; }
     public string? City { get; set; }
     public int? FloorCount { get; set; }
+    public int? UnitCount { get; set; }
     public string? ManagerName { get; set; }
     public string? ManagerPhone { get; set; }
     public string? Notes { get; set; }

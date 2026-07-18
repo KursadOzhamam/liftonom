@@ -12,7 +12,7 @@ namespace Liftonom.Api.Controllers;
 [Route("api/v1/maintenance-fees")]
 public class MaintenanceFeeController(AppDbContext db) : ControllerBase
 {
-    public record FeeDto(long? CustomerId, long? BuildingId, decimal Amount, string? Period, DateOnly? ValidFrom, string? Notes, bool? IsActive);
+    public record FeeDto(long? CustomerId, long? BuildingId, decimal Amount, string? Period, DateOnly? ValidFrom, DateOnly? ValidTo, string? Notes, bool? IsActive);
 
     [HttpGet]
     public async Task<IActionResult> Index([FromQuery(Name = "per_page")] int perPage = 25, [FromQuery] int page = 1)
@@ -33,7 +33,7 @@ public class MaintenanceFeeController(AppDbContext db) : ControllerBase
         var f = new MaintenanceFee
         {
             TenantId = db.CurrentTenantId!.Value, CustomerId = dto.CustomerId, BuildingId = dto.BuildingId,
-            Amount = dto.Amount, Period = dto.Period ?? "monthly", ValidFrom = dto.ValidFrom,
+            Amount = dto.Amount, Period = dto.Period ?? "monthly", ValidFrom = dto.ValidFrom, ValidTo = dto.ValidTo,
             Notes = dto.Notes, IsActive = dto.IsActive ?? true, CreatedAt = now, UpdatedAt = now,
         };
         db.MaintenanceFees.Add(f);

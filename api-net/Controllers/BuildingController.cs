@@ -12,8 +12,8 @@ namespace Liftonom.Api.Controllers;
 [Route("api/v1/buildings")]
 public class BuildingController(AppDbContext db) : ControllerBase
 {
-    public record BuildingDto(string Name, long? CustomerId, long? RegionId, string? Address,
-        string? District, string? City, int? FloorCount, string? ManagerName, string? ManagerPhone, string? Notes,
+    public record BuildingDto(string Name, string? Type, long? CustomerId, long? RegionId, string? Address,
+        string? District, string? City, int? FloorCount, int? UnitCount, string? ManagerName, string? ManagerPhone, string? Notes,
         decimal? Latitude, decimal? Longitude);
 
     [HttpGet]
@@ -64,9 +64,9 @@ public class BuildingController(AppDbContext db) : ControllerBase
         var b = new Building
         {
             TenantId = db.CurrentTenantId!.Value,
-            Name = dto.Name, CustomerId = dto.CustomerId, RegionId = dto.RegionId,
+            Name = dto.Name, Type = dto.Type, CustomerId = dto.CustomerId, RegionId = dto.RegionId,
             Address = dto.Address, District = dto.District, City = dto.City,
-            FloorCount = dto.FloorCount, ManagerName = dto.ManagerName, ManagerPhone = dto.ManagerPhone,
+            FloorCount = dto.FloorCount, UnitCount = dto.UnitCount, ManagerName = dto.ManagerName, ManagerPhone = dto.ManagerPhone,
             Notes = dto.Notes, Latitude = dto.Latitude, Longitude = dto.Longitude, CreatedAt = now, UpdatedAt = now,
         };
         db.Buildings.Add(b);

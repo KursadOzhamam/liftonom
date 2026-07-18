@@ -205,11 +205,11 @@ export default function UsersPage() {
             </Field>
           </div>
           <Field label={modal.mode === "create" ? "Şifre (boş bırakılırsa otomatik oluşturulur)" : "Yeni Şifre (değiştirmek için)"}>
-            <input className="input" type="text" placeholder={modal.mode === "create" ? "SMS ile gönderilir" : "Boş bırak = değişmez"}
+            <input className="input" type="text" placeholder={modal.mode === "create" ? "Otomatik oluşturulur" : "Boş bırak = değişmez"}
               value={modal.form.password} onChange={(e) => setModal({ ...modal, form: { ...modal.form, password: e.target.value } })} />
           </Field>
           {modal.mode === "create" && (
-            <p className="text-xs text-muted">Personele giriş bilgileri SMS ile gönderilir. Teknisyenler bu bilgilerle mobil uygulamaya giriş yapar.</p>
+            <p className="text-xs text-muted">Teknisyenler telefon + şifre ile mobil uygulamaya giriş yapar.</p>
           )}
         </Modal>
       )}

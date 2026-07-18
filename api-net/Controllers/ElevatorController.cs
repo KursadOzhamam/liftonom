@@ -13,7 +13,7 @@ namespace Liftonom.Api.Controllers;
 public class ElevatorController(AppDbContext db) : ControllerBase
 {
     public record ElevatorDto(long? BuildingId, string? Code, string Name, string? Type, string? Brand,
-        string? Model, int? CapacityKg, string? SerialNumber, string? TseCertificateNo,
+        string? Model, int? CapacityKg, int? StopCount, string? SerialNumber, string? TseCertificateNo,
         DateOnly? TseStartDate, DateOnly? TseEndDate, string? Status, int? MaintenancePeriod, string? Notes);
 
     [HttpGet]
@@ -99,7 +99,7 @@ public class ElevatorController(AppDbContext db) : ControllerBase
         {
             TenantId = db.CurrentTenantId!.Value,
             BuildingId = dto.BuildingId, Code = dto.Code, Name = dto.Name, Type = dto.Type,
-            Brand = dto.Brand, Model = dto.Model, CapacityKg = dto.CapacityKg, SerialNumber = dto.SerialNumber,
+            Brand = dto.Brand, Model = dto.Model, CapacityKg = dto.CapacityKg, StopCount = dto.StopCount, SerialNumber = dto.SerialNumber,
             TseCertificateNo = dto.TseCertificateNo, TseStartDate = dto.TseStartDate, TseEndDate = dto.TseEndDate,
             Status = dto.Status ?? "active", MaintenancePeriod = dto.MaintenancePeriod ?? 30, Notes = dto.Notes,
             QrToken = Guid.NewGuid().ToString("N"), CreatedAt = now, UpdatedAt = now,

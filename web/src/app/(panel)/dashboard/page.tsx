@@ -149,7 +149,6 @@ function WelcomeBanner({ ov, greet }: { ov: Overview; greet: string }) {
               <Meta label="Deneme Bitişi" value={ov.plan.expires_at ? dateTR(ov.plan.expires_at) : "—"} />
             </div>
           )}
-          <Meta label="SMS Bakiyesi" value={`${ov.plan.sms_balance} SMS`} amber />
           <Link href="/subscription" className="inline-flex items-center gap-1.5 rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-[#12203C] shadow-sm transition hover:bg-white/90">
             <Crown size={15} /> Planı Satın Al <ChevronRight size={15} />
           </Link>

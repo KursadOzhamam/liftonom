@@ -55,10 +55,6 @@ export default function SettingsPage() {
           <div className="text-xs uppercase tracking-wide text-muted">Bitiş</div>
           <div className="mt-1 font-semibold text-ink">{dateTR(data.plan_expires_at)}</div>
         </div>
-        <div className="border-l border-line pl-4">
-          <div className="text-xs uppercase tracking-wide text-muted">SMS Bakiyesi</div>
-          <div className="mt-1 font-semibold text-ink">{data.sms_balance}</div>
-        </div>
       </div>
 
       {/* Firma bilgileri */}

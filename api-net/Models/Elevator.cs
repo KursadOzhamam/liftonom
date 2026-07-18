@@ -14,6 +14,7 @@ public class Elevator
     public string? Brand { get; set; }
     public string? Model { get; set; }
     public int? CapacityKg { get; set; }
+    public int? StopCount { get; set; }
     public string? SerialNumber { get; set; }
     public string? TseCertificateNo { get; set; }
     public DateOnly? TseStartDate { get; set; }

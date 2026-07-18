@@ -79,7 +79,6 @@ export default function SubscriptionPage() {
               <ul className="mt-4 space-y-2 text-sm text-ink-soft">
                 <Feature ok>{p.max_users == null ? "Sınırsız" : p.max_users} kullanıcı</Feature>
                 <Feature ok>{p.max_elevators == null ? "Sınırsız" : p.max_elevators} asansör</Feature>
-                <Feature ok>{p.sms_quota == null ? "Sınırsız" : p.sms_quota} SMS</Feature>
               </ul>
               <button
                 onClick={() => upgrade(p)}

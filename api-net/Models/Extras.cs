@@ -31,6 +31,7 @@ public class MaintenanceFee
     public decimal Amount { get; set; }
     public string Period { get; set; } = "monthly";    // monthly | quarterly | yearly
     public DateOnly? ValidFrom { get; set; }
+    public DateOnly? ValidTo { get; set; }
     public string? Notes { get; set; }
     public bool IsActive { get; set; } = true;
     public DateTime CreatedAt { get; set; }
