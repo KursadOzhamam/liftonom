@@ -6,7 +6,7 @@ import { dateTR, TRY } from "@/lib/format";
 import { useOptions } from "@/lib/hooks";
 import Badge from "@/components/Badge";
 import Modal, { Field } from "@/components/Modal";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, Pencil } from "lucide-react";
 
 type Row = { id: number; quote_number: string | null; total: number | null; valid_until: string | null; status: string; customer?: { name: string } | null };
 type Paginated = { data: Row[]; meta: { total: number } };
@@ -14,11 +14,33 @@ type Item = { description: string; quantity: string; unit_price: string };
 
 const newItem = (): Item => ({ description: "", quantity: "1", unit_price: "" });
 
+type QuoteDetail = {
+  customer_id: number | null; valid_until: string | null;
+  tax_rate: number | null; discount: number | null; notes: string | null; items: string | null;
+};
+
+function parseQuoteItems(raw: string | null): Item[] {
+  if (raw) {
+    try {
+      const arr = JSON.parse(raw) as Record<string, unknown>[];
+      if (Array.isArray(arr) && arr.length) {
+        return arr.map((x) => ({
+          description: String(x.description ?? x.Description ?? ""),
+          quantity: String(x.quantity ?? x.Quantity ?? "1"),
+          unit_price: String(x.unit_price ?? x.UnitPrice ?? ""),
+        }));
+      }
+    } catch { /* ignore */ }
+  }
+  return [newItem()];
+}
+
 export default function RevisionQuotesPage() {
   const [rows, setRows] = useState<Row[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState(false);
+  const [editId, setEditId] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({ customer_id: "", valid_until: "", tax_rate: "20", discount: "0", notes: "" });
   const [items, setItems] = useState<Item[]>([newItem()]);
@@ -32,21 +54,38 @@ export default function RevisionQuotesPage() {
   }, []);
   useEffect(() => { load(); }, [load]);
 
-  function openNew() { setForm({ customer_id: "", valid_until: "", tax_rate: "20", discount: "0", notes: "" }); setItems([newItem()]); setModal(true); }
+  function openNew() { setForm({ customer_id: "", valid_until: "", tax_rate: "20", discount: "0", notes: "" }); setItems([newItem()]); setEditId(null); setModal(true); }
   function setItem(i: number, patch: Partial<Item>) { setItems((arr) => arr.map((it, idx) => idx === i ? { ...it, ...patch } : it)); }
 
   const subtotal = items.reduce((s, it) => s + (Number(it.quantity) || 0) * (Number(it.unit_price) || 0), 0);
 
+  async function openEdit(id: number) {
+    try {
+      const d = await api<QuoteDetail>(`/quotes/${id}`);
+      setForm({
+        customer_id: d.customer_id != null ? String(d.customer_id) : "",
+        valid_until: d.valid_until ?? "",
+        tax_rate: d.tax_rate != null ? String(d.tax_rate) : "20",
+        discount: d.discount != null ? String(d.discount) : "0",
+        notes: d.notes ?? "",
+      });
+      setItems(parseQuoteItems(d.items));
+      setEditId(id); setModal(true);
+    } catch (e) { alert(e instanceof ApiError ? e.message : "Kayıt yüklenemedi."); }
+  }
+
   async function save() {
     setSaving(true);
     try {
-      await api("/quotes", { method: "POST", body: {
+      const body = {
         customer_id: Number(form.customer_id), type: "revision",
         valid_until: form.valid_until || null,
         items: items.filter((it) => it.description).map((it) => ({ description: it.description, quantity: Number(it.quantity) || 0, unit_price: Number(it.unit_price) || 0 })),
         tax_rate: Number(form.tax_rate) || 0, discount: Number(form.discount) || 0, notes: form.notes || null,
-      } });
-      setModal(false); load();
+      };
+      if (editId == null) await api("/quotes", { method: "POST", body });
+      else await api(`/quotes/${editId}`, { method: "PUT", body });
+      setModal(false); setEditId(null); load();
     } catch (e) { alert(e instanceof ApiError ? e.message : "Kaydedilemedi."); } finally { setSaving(false); }
   }
 
@@ -69,13 +108,14 @@ export default function RevisionQuotesPage() {
               <th className="px-4 py-3 font-medium">Geçerlilik</th>
               <th className="px-4 py-3 font-medium text-right">Tutar</th>
               <th className="px-4 py-3 font-medium">Durum</th>
+              <th className="px-4 py-3 font-medium text-right">İşlem</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={5} className="px-4 py-10 text-center text-muted">Yükleniyor…</td></tr>
+              <tr><td colSpan={6} className="px-4 py-10 text-center text-muted">Yükleniyor…</td></tr>
             ) : rows.length === 0 ? (
-              <tr><td colSpan={5} className="px-4 py-10 text-center text-muted">Henüz revizyon teklifi yok.</td></tr>
+              <tr><td colSpan={6} className="px-4 py-10 text-center text-muted">Henüz revizyon teklifi yok.</td></tr>
             ) : rows.map((q) => (
               <tr key={q.id} className="border-b border-line last:border-0 hover:bg-surface">
                 <td className="px-4 py-3 font-mono text-xs text-ink-soft">{q.quote_number ?? `#${q.id}`}</td>
@@ -83,6 +123,11 @@ export default function RevisionQuotesPage() {
                 <td className="px-4 py-3 text-ink-soft">{dateTR(q.valid_until)}</td>
                 <td className="px-4 py-3 text-right tabular-nums text-ink-soft">{q.total != null ? TRY(q.total) : "—"}</td>
                 <td className="px-4 py-3"><Badge status={q.status} /></td>
+                <td className="px-4 py-3">
+                  <div className="flex justify-end">
+                    <button onClick={() => openEdit(q.id)} className="text-muted hover:text-primary" title="Görüntüle / Düzenle"><Pencil size={16} /></button>
+                  </div>
+                </td>
               </tr>
             ))}
           </tbody>
@@ -90,7 +135,7 @@ export default function RevisionQuotesPage() {
       </div>
 
       {modal && (
-        <Modal title="Yeni Revizyon Teklifi" onClose={() => setModal(false)} footer={
+        <Modal title={editId == null ? "Yeni Revizyon Teklifi" : "Revizyon Teklifi Düzenle"} onClose={() => setModal(false)} footer={
           <>
             <button onClick={() => setModal(false)} className="rounded-lg border border-line px-4 py-2 text-sm">İptal</button>
             <button onClick={save} disabled={saving || !form.customer_id} className="btn-primary">{saving ? "Kaydediliyor…" : "Kaydet"}</button>

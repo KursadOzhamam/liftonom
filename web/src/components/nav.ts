@@ -2,7 +2,7 @@
 import {
   LayoutDashboard, Users, Building2, ArrowUpDown, ShieldCheck, MapPin,
   Wrench, AlertTriangle, ClipboardList, Wallet, Landmark, FileText,
-  Receipt, Package, MessageSquare, Settings, Crown, MessageCircle,
+  Receipt, Package, Settings, Crown, MessageCircle,
   FileSignature, ClipboardCheck, FileCheck, ShoppingCart, FolderKanban,
   TrendingUp, Truck, Banknote, CalendarX, CalendarDays, HandCoins, PackageMinus,
   Rocket, Bell, CalendarPlus, CircleDollarSign, ScrollText, LifeBuoy, GraduationCap,
@@ -90,7 +90,6 @@ export const NAV: NavGroup[] = [
   {
     title: "Sistem",
     items: [
-      { label: "SMS", href: "/sms", icon: MessageSquare },
       { label: "WhatsApp", href: "/whatsapp", icon: MessageCircle },
       { label: "Abonelik", href: "/subscription", icon: Crown },
       { label: "Hesabım", href: "/account", icon: UserCircle },

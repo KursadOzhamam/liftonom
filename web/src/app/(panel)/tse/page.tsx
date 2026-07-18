@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { api } from "@/lib/api";
 import { dateTR } from "@/lib/format";
+import { Info } from "lucide-react";
 
 type Elevator = { id: number; name: string | null; tse_end_date: string | null; building?: { name: string } | null };
 type Report = {
@@ -29,6 +31,16 @@ export default function TsePage() {
     <div>
       <h1 className="text-2xl font-bold text-ink">TSE Muayene Takibi</h1>
       <p className="mt-1 text-sm text-muted">Periyodik muayene durumu.</p>
+
+      <div className="mt-4 flex items-start gap-3 rounded-xl border border-primary/20 bg-primary-light/40 p-4 text-sm text-ink-soft">
+        <Info size={18} className="mt-0.5 shrink-0 text-primary" />
+        <div>
+          Muayene (TSE) tarihi her <b>asansörün kaydında</b> belirlenir.{" "}
+          <Link href="/elevators" className="font-medium text-primary hover:underline">Asansörler</Link>{" "}
+          modülünde asansörü düzenleyip <b>TSE / Muayene Tarihi</b>ni girin. Bu sayfa tüm asansörlerin
+          muayene durumunu ve yaklaşan tarihleri izler.
+        </div>
+      </div>
 
       <div className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-5">
         {cards.map((c) => (

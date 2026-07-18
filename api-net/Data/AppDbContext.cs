@@ -72,6 +72,8 @@ public class AppDbContext : DbContext
     public DbSet<LandingItem> LandingItems => Set<LandingItem>();
     public DbSet<LandingSetting> LandingSettings => Set<LandingSetting>();
     public DbSet<ContentPage> ContentPages => Set<ContentPage>();
+    public DbSet<WhatsAppTemplate> WhatsAppTemplates => Set<WhatsAppTemplate>();
+    public DbSet<ProductCategory> ProductCategories => Set<ProductCategory>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -127,6 +129,8 @@ public class AppDbContext : DbContext
         // Süper Admin: platform geneli — tenant filtresi YOK (yalnız soft-delete)
         b.Entity<SubscriptionContract>().HasQueryFilter(e => e.DeletedAt == null);
         b.Entity<ContentPage>().HasQueryFilter(e => e.DeletedAt == null);
+        b.Entity<WhatsAppTemplate>(e => { e.ToTable("whatsapp_templates"); e.HasQueryFilter(x => x.DeletedAt == null && x.TenantId == CurrentTenantId); });
+        b.Entity<ProductCategory>(e => { e.ToTable("product_categories"); e.HasQueryFilter(x => x.DeletedAt == null && x.TenantId == CurrentTenantId); });
 
         // jsonb kolonlar (string olarak ham JSON tutulur)
         b.Entity<MaintenanceRecord>(e =>

@@ -1,57 +1,98 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import Link from "next/link";
-import { api } from "@/lib/api";
-import { Tag, Package } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import { api, ApiError } from "@/lib/api";
+import Modal, { Field } from "@/components/Modal";
+import { Tag, Plus, Pencil, Trash2 } from "lucide-react";
 
-type Cat = { category: string; product_count: number; total_stock: number };
+type Cat = { id: number; name: string };
+type Stat = { category: string; product_count: number; total_stock: number };
 
 export default function CategoriesPage() {
-  const [rows, setRows] = useState<Cat[]>([]);
+  const [cats, setCats] = useState<Cat[]>([]);
+  const [stats, setStats] = useState<Stat[]>([]);
   const [loading, setLoading] = useState(true);
+  const [modal, setModal] = useState(false);
+  const [editId, setEditId] = useState<number | null>(null);
+  const [name, setName] = useState("");
+  const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    api<Cat[]>("/inventory/categories").then(setRows).finally(() => setLoading(false));
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      setCats(await api<Cat[]>("/product-categories"));
+      try { setStats(await api<Stat[]>("/inventory/categories")); } catch { /* opsiyonel */ }
+    } finally { setLoading(false); }
   }, []);
+  useEffect(() => { load(); }, [load]);
 
-  const maxCount = Math.max(1, ...rows.map((r) => r.product_count));
+  const countFor = (n: string) => stats.find((s) => s.category === n)?.product_count ?? 0;
+
+  function openNew() { setEditId(null); setName(""); setModal(true); }
+  function openEdit(c: Cat) { setEditId(c.id); setName(c.name); setModal(true); }
+  async function save() {
+    setSaving(true);
+    try {
+      await api(editId ? `/product-categories/${editId}` : "/product-categories", { method: editId ? "PUT" : "POST", body: { name } });
+      setModal(false); load();
+    } catch (e) { alert(e instanceof ApiError ? e.message : "Kaydedilemedi."); }
+    finally { setSaving(false); }
+  }
+  async function del(c: Cat) {
+    if (!confirm(`"${c.name}" kategorisi silinsin mi?`)) return;
+    try { await api(`/product-categories/${c.id}`, { method: "DELETE" }); load(); }
+    catch (e) { alert(e instanceof ApiError ? e.message : "Silinemedi."); }
+  }
 
   return (
     <div>
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-ink">Kategoriler</h1>
-          <p className="mt-1 text-sm text-muted">{rows.length} kategori · ürünler kategoriye göre gruplanır</p>
+          <div className="flex items-center gap-2"><Tag className="text-primary" size={22} /><h1 className="text-2xl font-bold text-ink">Stok Kategorileri</h1></div>
+          <p className="mt-1 text-sm text-muted">Ürün kategorilerini yönetin. Kategori, ürün eklerken (Stok modülü) seçilir.</p>
         </div>
-        <Link href="/inventory" className="inline-flex items-center gap-1.5 rounded-lg border border-line px-3 py-2 text-sm text-ink-soft hover:bg-surface">
-          <Package size={15} /> Tüm Stok
-        </Link>
+        <button onClick={openNew} className="btn-primary"><Plus size={16} /> Yeni Kategori</button>
       </div>
 
-      {loading ? (
-        <div className="mt-8 grid place-items-center text-muted">Yükleniyor…</div>
-      ) : rows.length === 0 ? (
-        <div className="mt-8 grid place-items-center rounded-xl border border-dashed border-line bg-card py-16 text-muted">
-          <Tag size={32} /> <span className="mt-2">Henüz kategorili ürün yok.</span>
-        </div>
-      ) : (
-        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {rows.map((c) => (
-            <div key={c.category} className="rounded-xl border border-line bg-card p-4">
-              <div className="flex items-center gap-2">
-                <div className="grid h-9 w-9 place-items-center rounded-lg bg-primary/10 text-primary"><Tag size={16} /></div>
-                <div className="min-w-0">
-                  <div className="truncate font-semibold text-ink">{c.category}</div>
-                  <div className="text-xs text-muted">{c.product_count} ürün · {c.total_stock} stok</div>
-                </div>
-              </div>
-              <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-surface">
-                <div className="h-full rounded-full bg-primary" style={{ width: `${(c.product_count / maxCount) * 100}%` }} />
-              </div>
-            </div>
-          ))}
-        </div>
+      <div className="mt-5 overflow-hidden rounded-xl border border-line bg-card">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-line text-left text-xs uppercase tracking-wide text-muted">
+              <th className="px-4 py-3 font-medium">Kategori</th>
+              <th className="px-4 py-3 font-medium text-center">Ürün Sayısı</th>
+              <th className="px-4 py-3 font-medium text-right">İşlem</th>
+            </tr>
+          </thead>
+          <tbody>
+            {loading ? (
+              <tr><td colSpan={3} className="px-4 py-10 text-center text-muted">Yükleniyor…</td></tr>
+            ) : cats.length === 0 ? (
+              <tr><td colSpan={3} className="px-4 py-10 text-center text-muted">Henüz kategori yok.</td></tr>
+            ) : cats.map((c) => (
+              <tr key={c.id} className="border-b border-line last:border-0 hover:bg-surface">
+                <td className="px-4 py-3 font-medium text-ink">{c.name}</td>
+                <td className="px-4 py-3 text-center text-ink-soft">{countFor(c.name)}</td>
+                <td className="px-4 py-3">
+                  <div className="flex justify-end gap-1">
+                    <button onClick={() => openEdit(c)} className="rounded-lg p-1.5 text-muted hover:bg-surface hover:text-primary" aria-label="Düzenle"><Pencil size={15} /></button>
+                    <button onClick={() => del(c)} className="rounded-lg p-1.5 text-muted hover:bg-surface hover:text-danger" aria-label="Sil"><Trash2 size={15} /></button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {modal && (
+        <Modal title={editId ? "Kategori Düzenle" : "Yeni Kategori"} onClose={() => setModal(false)} footer={
+          <>
+            <button onClick={() => setModal(false)} className="rounded-lg border border-line px-4 py-2 text-sm">İptal</button>
+            <button onClick={save} disabled={saving || !name.trim()} className="btn-primary">{saving ? "Kaydediliyor…" : "Kaydet"}</button>
+          </>
+        }>
+          <Field label="Kategori Adı *"><input className="input" placeholder="Kabin Aksesuarları" value={name} onChange={(e) => setName(e.target.value)} autoFocus /></Field>
+        </Modal>
       )}
     </div>
   );

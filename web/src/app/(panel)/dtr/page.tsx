@@ -5,7 +5,7 @@ import { api, ApiError } from "@/lib/api";
 import { dateTR } from "@/lib/format";
 import { useOptions } from "@/lib/hooks";
 import Modal, { Field } from "@/components/Modal";
-import { Plus, Trash2, CheckCircle2, XCircle } from "lucide-react";
+import { Plus, Trash2, CheckCircle2, XCircle, Pencil } from "lucide-react";
 
 type Row = {
   id: number; elevator_id: number; general_note: string | null;
@@ -13,6 +13,8 @@ type Row = {
   elevator?: { name: string } | null;
 };
 type Paginated = { data: Row[]; meta: { total: number } };
+type DtrDetail = { elevator_id: number | null; general_note: string | null; checklist_items: string | null };
+type ChecklistItem = { label: string; ok: boolean };
 
 const CHECKLIST = [
   "Kabin aydınlatması", "Kapı kilitleri", "Acil durdurma butonu", "Fren sistemi",
@@ -28,12 +30,25 @@ function okCount(raw: string | null): { ok: number; total: number } {
   } catch { return { ok: 0, total: 0 }; }
 }
 
+function parseChecklist(raw: string | null): ChecklistItem[] {
+  if (raw) {
+    try {
+      const arr = JSON.parse(raw) as unknown;
+      if (Array.isArray(arr) && arr.length && arr.every((x) => x && typeof (x as ChecklistItem).label === "string")) {
+        return (arr as ChecklistItem[]).map((x) => ({ label: String(x.label), ok: !!x.ok }));
+      }
+    } catch { /* ignore */ }
+  }
+  return CHECKLIST.map((label) => ({ label, ok: true }));
+}
+
 export default function DtrPage() {
   const [rows, setRows] = useState<Row[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState(false);
   const [form, setForm] = useState(empty);
+  const [editId, setEditId] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
 
   const elevators = useOptions("/elevators");
@@ -52,15 +67,33 @@ export default function DtrPage() {
     setForm((f) => ({ ...f, items: f.items.map((it, idx) => idx === i ? { ...it, ok: !it.ok } : it) }));
   }
 
-  async function create() {
+  function openNew() { setForm(empty()); setEditId(null); setModal(true); }
+
+  async function openEdit(id: number) {
+    try {
+      const d = await api<DtrDetail>(`/dtr/${id}`);
+      setForm({
+        elevator_id: d.elevator_id != null ? String(d.elevator_id) : "",
+        general_note: d.general_note ?? "",
+        items: parseChecklist(d.checklist_items),
+      });
+      setEditId(id); setModal(true);
+    } catch (e) {
+      alert(e instanceof ApiError ? e.message : "Kayıt yüklenemedi.");
+    }
+  }
+
+  async function save() {
     setSaving(true);
     try {
-      await api("/dtr", { method: "POST", body: {
+      const body = {
         elevator_id: Number(form.elevator_id),
         general_note: form.general_note || null,
         checklist_items: form.items,
-      } });
-      setModal(false); setForm(empty()); load();
+      };
+      if (editId == null) await api("/dtr", { method: "POST", body });
+      else await api(`/dtr/${editId}`, { method: "PUT", body });
+      setModal(false); setForm(empty()); setEditId(null); load();
     } catch (e) {
       alert(e instanceof ApiError ? e.message : "Kaydedilemedi.");
     } finally { setSaving(false); }
@@ -79,7 +112,7 @@ export default function DtrPage() {
           <h1 className="text-2xl font-bold text-ink">Durum Tespit Raporu</h1>
           <p className="mt-1 text-sm text-muted">{total} rapor · Asansör periyodik durum tespiti.</p>
         </div>
-        <button onClick={() => { setForm(empty()); setModal(true); }} className="btn-primary"><Plus size={16} /> Yeni</button>
+        <button onClick={openNew} className="btn-primary"><Plus size={16} /> Yeni</button>
       </div>
 
       <div className="mt-4 overflow-hidden rounded-xl border border-line bg-card">
@@ -112,7 +145,8 @@ export default function DtrPage() {
                     <td className="px-4 py-3 max-w-xs truncate text-ink-soft">{d.general_note ?? "—"}</td>
                     <td className="px-4 py-3 text-xs text-muted">{dateTR(d.created_at)}</td>
                     <td className="px-4 py-3">
-                      <div className="flex justify-end">
+                      <div className="flex items-center justify-end gap-1">
+                        <button onClick={() => openEdit(d.id)} className="rounded-lg p-1.5 text-muted hover:bg-surface hover:text-primary" aria-label="Görüntüle / Düzenle"><Pencil size={15} /></button>
                         <button onClick={() => remove(d.id)} className="rounded-lg p-1.5 text-muted hover:bg-surface hover:text-danger" aria-label="Sil"><Trash2 size={15} /></button>
                       </div>
                     </td>
@@ -125,17 +159,18 @@ export default function DtrPage() {
       </div>
 
       {modal && (
-        <Modal title="Yeni Durum Tespit Raporu" onClose={() => setModal(false)} footer={
+        <Modal title={editId == null ? "Yeni Durum Tespit Raporu" : "Durum Tespit Raporu Düzenle"} onClose={() => setModal(false)} footer={
           <>
             <button onClick={() => setModal(false)} className="rounded-lg border border-line px-4 py-2 text-sm">İptal</button>
-            <button onClick={create} disabled={saving || !form.elevator_id} className="btn-primary">{saving ? "Kaydediliyor…" : "Kaydet"}</button>
+            <button onClick={save} disabled={saving || !form.elevator_id} className="btn-primary">{saving ? "Kaydediliyor…" : "Kaydet"}</button>
           </>
         }>
           <Field label="Asansör *">
-            <select className="input" value={form.elevator_id} onChange={(e) => setForm({ ...form, elevator_id: e.target.value })}>
+            <select className="input disabled:opacity-60" value={form.elevator_id} disabled={editId != null} onChange={(e) => setForm({ ...form, elevator_id: e.target.value })}>
               <option value="">Seçiniz…</option>
               {elevators.map((el) => <option key={el.id} value={el.id}>{el.label}</option>)}
             </select>
+            {editId != null && <span className="mt-1 block text-xs text-muted">Rapor asansörü düzenlemede değiştirilemez.</span>}
           </Field>
           <div>
             <span className="mb-1 block text-xs font-medium text-muted">Kontrol Listesi</span>
