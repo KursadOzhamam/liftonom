@@ -209,6 +209,10 @@ using (var scope = app.Services.CreateScope())
         ALTER TABLE elevators ADD COLUMN IF NOT EXISTS has_earthquake_sensor boolean NOT NULL DEFAULT false;
         -- Bölge sorumlu personel
         ALTER TABLE regions ADD COLUMN IF NOT EXISTS responsible_user_id bigint;
+        -- Bakım kaydı ek alanları
+        ALTER TABLE maintenance_records ADD COLUMN IF NOT EXISTS is_critical boolean NOT NULL DEFAULT false;
+        ALTER TABLE maintenance_records ADD COLUMN IF NOT EXISTS description text;
+        ALTER TABLE maintenance_records ADD COLUMN IF NOT EXISTS notes text;
         """);
 
     if (!await db.PlatformSettings.AnyAsync())

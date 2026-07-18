@@ -14,6 +14,9 @@ public class MaintenanceRecord
     public string? Checklist { get; set; } = "[]";        // jsonb
     public string? MaterialsUsed { get; set; } = "[]";    // jsonb
     public string? TechnicianNote { get; set; }
+    public bool IsCritical { get; set; }
+    public string? Description { get; set; }
+    public string? Notes { get; set; }
     public string? CustomerSignatureUrl { get; set; }
     public string? Photos { get; set; } = "[]";           // jsonb
     public bool IsRecurring { get; set; }

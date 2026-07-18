@@ -14,7 +14,8 @@ namespace Liftonom.Api.Controllers;
 public class MaintenanceController(AppDbContext db, PdfService pdf) : ControllerBase
 {
     public record CreateDto(long ElevatorId, string Type, DateTime PlannedDate,
-        List<long>? AssignedUsers, bool? IsRecurring, string? RecurringPeriod, string? TechnicianNote);
+        List<long>? AssignedUsers, bool? IsRecurring, string? RecurringPeriod, string? TechnicianNote,
+        string? Description, bool? IsCritical, string? Notes, string? Status, DateTime? CompletedAt);
     public record UpdateDto(string? Type, DateTime? PlannedDate, string? Status, string? TechnicianNote);
     public record CompleteDto(string? TechnicianNote, string? CustomerSignatureUrl);
 
@@ -61,16 +62,19 @@ public class MaintenanceController(AppDbContext db, PdfService pdf) : Controller
             TenantId = db.CurrentTenantId!.Value,
             ElevatorId = dto.ElevatorId, Type = dto.Type,
             PlannedDate = DateTime.SpecifyKind(dto.PlannedDate, DateTimeKind.Utc),
-            Status = "pending",
+            Status = dto.Status ?? "pending",
+            CompletedAt = dto.CompletedAt is { } c ? DateTime.SpecifyKind(c, DateTimeKind.Utc) : null,
             AssignedUsers = JsonSerializer.Serialize(dto.AssignedUsers ?? []),
             IsRecurring = dto.IsRecurring ?? false, RecurringPeriod = dto.RecurringPeriod,
-            TechnicianNote = dto.TechnicianNote, CreatedBy = uid, CreatedAt = now, UpdatedAt = now,
+            TechnicianNote = dto.TechnicianNote, Description = dto.Description,
+            IsCritical = dto.IsCritical ?? false, Notes = dto.Notes,
+            CreatedBy = uid, CreatedAt = now, UpdatedAt = now,
         };
         db.MaintenanceRecords.Add(m);
         await db.SaveChangesAsync();
 
-        // Atanan teknisyenlere bildirim + push
-        var assigned = (dto.AssignedUsers ?? []).Distinct().ToList();
+        // Atanan teknisyenlere bildirim + push (yalnızca planlı/açık kayıtlarda)
+        var assigned = m.Status == "completed" ? [] : (dto.AssignedUsers ?? []).Distinct().ToList();
         foreach (var auid in assigned)
         {
             db.Notifications.Add(new Models.Notification
