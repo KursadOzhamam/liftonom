@@ -21,7 +21,11 @@ public class QuoteController(AppDbContext db, PdfService pdf, IEmailSender email
         string? CustomerName, string? ContactName, string? Email, string? Phone, string? Address, string? Currency,
         DateOnly? ValidUntil, DateOnly? IssueDate, List<LineItem>? Items, decimal? TaxRate, decimal? Discount,
         decimal? LaborTotal, decimal? MaterialTotal, bool? PriceVisible, string? Terms, string? Notes,
-        string? InternalNotes, string? QuoteNumber);
+        string? InternalNotes, string? QuoteNumber,
+        // ATF (asansör talep formu) spesifikasyon alanları
+        string? ElevatorType, int? ElevatorCount, int? CapacityKg, int? CapacityPersons, int? FloorCount,
+        int? StopCount, decimal? SpeedMs, string? DoorType, string? ControlSystem, decimal? UnitPrice,
+        decimal? TotalPrice, int? WarrantyYears, int? DeliveryDays, string? PaymentTerms);
     public record TemplateDto(string Name, string? Kind, string? Type, bool? IsDefault, bool? IsActive,
         JsonElement? Clauses, JsonElement? Variables);
     public record SendDto(bool? SendEmail, string? Signature);
@@ -55,6 +59,7 @@ public class QuoteController(AppDbContext db, PdfService pdf, IEmailSender email
         var projected = q.Select(x => new
         {
             x.Id, x.QuoteNumber, x.Type, x.Status, x.Total, x.Subtotal, x.Currency, x.ValidUntil, x.CreatedAt, x.Title,
+            x.ElevatorType,
             CustomerName = x.CustomerName ?? (x.Customer == null ? null : x.Customer.Name),
             ElevatorName = x.Elevator == null ? null : x.Elevator.Name,
             TemplateName = x.Template == null ? null : x.Template.Name,
@@ -76,6 +81,7 @@ public class QuoteController(AppDbContext db, PdfService pdf, IEmailSender email
     {
         var now = DateTime.UtcNow;
         var isRev = dto.Type == "revision";
+        var isAtf = dto.Type == "atf";
         var q = new Quote
         {
             TenantId = db.CurrentTenantId!.Value, CustomerId = dto.CustomerId, ElevatorId = dto.ElevatorId,
@@ -93,6 +99,11 @@ public class QuoteController(AppDbContext db, PdfService pdf, IEmailSender email
             q.Subtotal = q.LaborTotal + q.MaterialTotal; q.TaxRate = 0; q.TaxAmount = 0; q.Discount = 0;
             q.Total = q.Subtotal; q.Items = "[]";
         }
+        else if (isAtf)
+        {
+            ApplyAtf(q, dto);
+            q.TaxRate = 0; q.TaxAmount = 0; q.Discount = 0; q.Subtotal = q.Total; q.Items = "[]";
+        }
         else
         {
             var t = DocumentTotals.Compute(dto.Items, dto.TaxRate ?? 0, dto.Discount ?? 0);
@@ -102,7 +113,7 @@ public class QuoteController(AppDbContext db, PdfService pdf, IEmailSender email
         db.Quotes.Add(q);
         await db.SaveChangesAsync();
         q.QuoteNumber = string.IsNullOrWhiteSpace(dto.QuoteNumber)
-            ? $"{(isRev ? "RT" : "TKL")}-{now:yyyyMMdd}-{q.Id:D4}" : dto.QuoteNumber!.Trim();
+            ? $"{(isRev ? "RT" : isAtf ? "ATF" : "TKL")}-{now:yyyyMMdd}-{q.Id:D4}" : dto.QuoteNumber!.Trim();
         await db.SaveChangesAsync();
         return StatusCode(201, new { q.Id });
     }
@@ -122,6 +133,11 @@ public class QuoteController(AppDbContext db, PdfService pdf, IEmailSender email
         {
             q.LaborTotal = dto.LaborTotal ?? q.LaborTotal ?? 0; q.MaterialTotal = dto.MaterialTotal ?? q.MaterialTotal ?? 0;
             q.Subtotal = q.LaborTotal + q.MaterialTotal; q.TaxRate = 0; q.TaxAmount = 0; q.Discount = 0; q.Total = q.Subtotal;
+        }
+        else if (q.Type == "atf")
+        {
+            ApplyAtf(q, dto);
+            q.TaxRate = 0; q.TaxAmount = 0; q.Discount = 0; q.Subtotal = q.Total;
         }
         else if (dto.Items != null)
         {
@@ -189,9 +205,12 @@ public class QuoteController(AppDbContext db, PdfService pdf, IEmailSender email
     private byte[] MakePdf(Quote q, Tenant tenant)
     {
         var name = q.CustomerName ?? q.Customer?.Name ?? q.Elevator?.Building?.Customer?.Name ?? "-";
-        return q.Type == "revision"
-            ? pdf.GenerateRevisionQuote(q, tenant, name, q.Elevator?.Name, q.Elevator?.Building?.Name, RenderClauses(q, tenant))
-            : pdf.GenerateQuote(q, tenant, name, RenderClauses(q, tenant));
+        return q.Type switch
+        {
+            "revision" => pdf.GenerateRevisionQuote(q, tenant, name, q.Elevator?.Name, q.Elevator?.Building?.Name, RenderClauses(q, tenant)),
+            "atf" => pdf.GenerateAtf(q, tenant, name, RenderClauses(q, tenant)),
+            _ => pdf.GenerateQuote(q, tenant, name, RenderClauses(q, tenant)),
+        };
     }
 
     [HttpGet("{id:long}/pdf")]
@@ -292,6 +311,15 @@ public class QuoteController(AppDbContext db, PdfService pdf, IEmailSender email
         catch { return 0; }
     }
 
+    private static void ApplyAtf(Quote q, QuoteDto dto)
+    {
+        q.ElevatorType = dto.ElevatorType; q.ElevatorCount = dto.ElevatorCount; q.CapacityKg = dto.CapacityKg;
+        q.CapacityPersons = dto.CapacityPersons; q.FloorCount = dto.FloorCount; q.StopCount = dto.StopCount;
+        q.SpeedMs = dto.SpeedMs; q.DoorType = dto.DoorType; q.ControlSystem = dto.ControlSystem;
+        q.UnitPrice = dto.UnitPrice; q.WarrantyYears = dto.WarrantyYears; q.DeliveryDays = dto.DeliveryDays;
+        q.PaymentTerms = dto.PaymentTerms; q.Total = dto.TotalPrice ?? 0;
+    }
+
     private static Dictionary<string, string> BuildVars(Quote q, Tenant? tenant) => new()
     {
         ["firma_adi"] = tenant?.Name ?? "-",
@@ -299,6 +327,7 @@ public class QuoteController(AppDbContext db, PdfService pdf, IEmailSender email
         ["firma_adres"] = tenant?.Address ?? "-",
         ["firma_telefon"] = tenant?.Phone ?? "-",
         ["musteri_adi"] = q.CustomerName ?? q.Customer?.Name ?? q.Elevator?.Building?.Customer?.Name ?? "-",
+        ["bina_adi"] = q.Address ?? q.Elevator?.Building?.Name ?? "-",
         ["teklif_no"] = q.QuoteNumber ?? q.Id.ToString(),
         ["teklif_basligi"] = q.Title ?? "asansör bakım/revizyon",
         ["teklif_tarihi"] = q.CreatedAt.ToString("dd.MM.yyyy"),
@@ -308,6 +337,8 @@ public class QuoteController(AppDbContext db, PdfService pdf, IEmailSender email
         ["asansor_no"] = q.Elevator?.Name ?? q.Elevator?.Code ?? "-",
         ["iscilik"] = q.LaborTotal is { } l ? $"{l:N2} {q.Currency}" : "-",
         ["malzeme"] = q.MaterialTotal is { } m ? $"{m:N2} {q.Currency}" : "-",
+        ["teslim_gun"] = q.DeliveryDays?.ToString() ?? "-",
+        ["garanti_yil"] = q.WarrantyYears?.ToString() ?? "-",
     };
 
     private static List<(string Title, string Body)> RenderClauses(Quote q, Tenant? tenant)
@@ -327,7 +358,8 @@ public class QuoteController(AppDbContext db, PdfService pdf, IEmailSender email
     {
         var webBase = (config["Web:PublicUrl"] ?? "https://liftonom.rslabsdev.site").TrimEnd('/');
         var vars = BuildVars(q, tenant);
-        vars["link"] = $"{webBase}/{(q.Type == "revision" ? "revizyon-teklifi" : "quote")}/{q.PublicToken}";
+        var seg = q.Type switch { "revision" => "revizyon-teklifi", "atf" => "talep-formu", _ => "quote" };
+        vars["link"] = $"{webBase}/{seg}/{q.PublicToken}";
         var subjectTpl = "{{firma_adi}} — {{teklif_no}} numaralı teklifiniz";
         var body = Fill(DefaultEmailBody, vars).Replace("\n", "<br>");
         return (Fill(subjectTpl, vars), body);
@@ -351,6 +383,8 @@ public class QuoteController(AppDbContext db, PdfService pdf, IEmailSender email
             q.Currency, q.ValidUntil, q.CreatedAt, q.Subtotal, q.TaxRate, q.TaxAmount, q.Discount, q.Total, q.Terms,
             q.Notes, q.InternalNotes, q.PublicToken, q.LaborTotal, q.MaterialTotal, q.PriceVisible,
             q.CompanySignature, q.CustomerSignature,
+            q.ElevatorType, q.ElevatorCount, q.CapacityKg, q.CapacityPersons, q.FloorCount, q.StopCount,
+            q.SpeedMs, q.DoorType, q.ControlSystem, q.UnitPrice, q.WarrantyYears, q.DeliveryDays, q.PaymentTerms,
             Customer = q.Customer == null ? null : new { q.Customer.Name, q.Customer.Phone, q.Customer.Email },
             Elevator = q.Elevator == null ? null : new
             {
@@ -419,6 +453,16 @@ public class QuoteController(AppDbContext db, PdfService pdf, IEmailSender email
             });
             changed = true;
         }
+        if (!await db.QuoteTemplates.AnyAsync(t => t.Kind == "atf"))
+        {
+            db.QuoteTemplates.Add(new QuoteTemplate
+            {
+                TenantId = tid, Name = "Standart Asansör Talep Formu", Kind = "atf", Type = "Asansör Talep Formu",
+                IsDefault = true, IsActive = true, CreatedAt = now, UpdatedAt = now,
+                Clauses = JsonSerializer.Serialize(AtfClauses, J), Variables = "[]",
+            });
+            changed = true;
+        }
         if (changed) await db.SaveChangesAsync();
     }
 
@@ -441,6 +485,17 @@ public class QuoteController(AppDbContext db, PdfService pdf, IEmailSender email
         new { title = "3. Geçerlilik Süresi", active = true, body = "Bu teklif {{belge_tarihi}} tarihinde düzenlenmiş olup {{gecerlilik}} tarihine kadar geçerlidir." },
         new { title = "4. Garanti", active = true, body = "Değiştirilen parçalar ve yapılan işçilik, ilgili mevzuat ve üretici koşulları çerçevesinde garanti kapsamındadır. Kullanım hatası ve harici müdahaleler garanti dışıdır." },
         new { title = "5. Standart ve Mevzuat Uygunluğu", active = true, body = "Revizyon işleri TS EN 81-20/50 ve Asansör İşletme, Bakım ve Periyodik Kontrol Yönetmeliği'ne uygun olarak gerçekleştirilir." },
+        new { title = "Ek Şartlar", active = false, body = "" },
+    ];
+
+    private static readonly object[] AtfClauses =
+    [
+        new { title = "1. Teklif Kapsamı", active = true, body = "İşbu teklif, {{musteri_adi}} adına {{bina_adi}} için yeni asansör temin ve montajını kapsar. Asansör teknik özellikleri yukarıda belirtilmiştir." },
+        new { title = "2. Fiyat ve Ödeme Koşulları", active = true, body = "Toplam teklif bedeli {{tutar}}'dir. Ödeme planı taraflarca yazılı olarak mutabık kalınarak belirlenir; avans tahsilatını takiben üretim/montaj başlar." },
+        new { title = "3. Teslim Süresi", active = true, body = "Montaj, sipariş onayı ve avans tahsilatını takiben yaklaşık {{teslim_gun}} gün içinde tamamlanır. Mücbir sebep halleri süreyi etkileyebilir." },
+        new { title = "4. Garanti", active = true, body = "Asansör ve bileşenleri {{garanti_yil}} yıl süreyle garanti kapsamındadır. Garanti, periyodik bakımın firmamızca sürdürülmesi şartına bağlıdır." },
+        new { title = "5. Geçerlilik Süresi", active = true, body = "Bu teklif {{belge_tarihi}} tarihinde düzenlenmiş olup {{gecerlilik}} tarihine kadar geçerlidir." },
+        new { title = "6. Standart ve Mevzuat Uygunluğu", active = true, body = "Temin ve montaj TS EN 81-20/50 ve Asansör Yönetmeliği (2014/33/AB) ile ilgili mevzuata uygun olarak gerçekleştirilir." },
         new { title = "Ek Şartlar", active = false, body = "" },
     ];
 }
@@ -490,7 +545,10 @@ public class PublicQuoteController(AppDbContext db) : ControllerBase
             Subtotal = priceOn ? q.Subtotal : null, Discount = priceOn ? q.Discount : (decimal?)null,
             Total = priceOn ? q.Total : null,
             LaborTotal = priceOn ? q.LaborTotal : null, MaterialTotal = priceOn ? q.MaterialTotal : null,
-            q.CompanySignature, q.CustomerSignature,
+            UnitPrice = priceOn ? q.UnitPrice : null,
+            q.CompanySignature, q.CustomerSignature, q.Address, q.PaymentTerms,
+            q.ElevatorType, q.ElevatorCount, q.CapacityKg, q.CapacityPersons, q.FloorCount, q.StopCount,
+            q.SpeedMs, q.DoorType, q.ControlSystem, q.WarrantyYears, q.DeliveryDays,
             CustomerName = q.CustomerName ?? q.Customer?.Name ?? q.Elevator?.Building?.Customer?.Name,
             Elevator = q.Elevator == null ? null : new { q.Elevator.Name,
                 Building = q.Elevator.Building == null ? null : new { q.Elevator.Building.Name, q.Elevator.Building.Address } },
@@ -517,6 +575,7 @@ public class PublicQuoteController(AppDbContext db) : ControllerBase
         ["firma_adi"] = t?.Name ?? "-", ["firma_vkn"] = t?.TaxNumber ?? "-",
         ["firma_adres"] = t?.Address ?? "-", ["firma_telefon"] = t?.Phone ?? "-",
         ["musteri_adi"] = q.CustomerName ?? q.Customer?.Name ?? q.Elevator?.Building?.Customer?.Name ?? "-",
+        ["bina_adi"] = q.Address ?? q.Elevator?.Building?.Name ?? "-",
         ["teklif_no"] = q.QuoteNumber ?? q.Id.ToString(),
         ["teklif_basligi"] = q.Title ?? "asansör bakım/revizyon",
         ["teklif_tarihi"] = q.CreatedAt.ToString("dd.MM.yyyy"),
@@ -526,6 +585,8 @@ public class PublicQuoteController(AppDbContext db) : ControllerBase
         ["asansor_no"] = q.Elevator?.Name ?? q.Elevator?.Code ?? "-",
         ["iscilik"] = q.LaborTotal is { } l ? $"{l:N2} {q.Currency}" : "-",
         ["malzeme"] = q.MaterialTotal is { } m ? $"{m:N2} {q.Currency}" : "-",
+        ["teslim_gun"] = q.DeliveryDays?.ToString() ?? "-",
+        ["garanti_yil"] = q.WarrantyYears?.ToString() ?? "-",
     };
     private record ClauseEl(string title, string body, bool? active);
     private static IEnumerable<ClauseEl> ParseClauses(string json)

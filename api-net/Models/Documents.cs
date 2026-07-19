@@ -25,6 +25,20 @@ public class Quote
     public string? InternalNotes { get; set; }        // iç notlar (sadece yöneticiler)
     public string? CompanySignature { get; set; }     // firma kaşe/imza (data URL)
     public string? CustomerSignature { get; set; }    // müşteri imzası (public onay)
+    // Asansör Talep Formu (type=atf): yeni montaj talebi spesifikasyonu
+    public string? ElevatorType { get; set; }
+    public int? ElevatorCount { get; set; }
+    public int? CapacityKg { get; set; }
+    public int? CapacityPersons { get; set; }
+    public int? FloorCount { get; set; }
+    public int? StopCount { get; set; }
+    public decimal? SpeedMs { get; set; }
+    public string? DoorType { get; set; }
+    public string? ControlSystem { get; set; }
+    public decimal? UnitPrice { get; set; }           // birim fiyat (asansör başına, KDV dahil)
+    public int? WarrantyYears { get; set; }
+    public int? DeliveryDays { get; set; }
+    public string? PaymentTerms { get; set; }
     public DateOnly? ValidUntil { get; set; }
     public string? Items { get; set; } = "[]";        // jsonb
     public decimal? Subtotal { get; set; }

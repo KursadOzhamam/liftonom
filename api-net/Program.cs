@@ -315,6 +315,19 @@ using (var scope = app.Services.CreateScope())
         ALTER TABLE quotes ADD COLUMN IF NOT EXISTS company_signature text;
         ALTER TABLE quotes ADD COLUMN IF NOT EXISTS customer_signature text;
         ALTER TABLE quote_templates ADD COLUMN IF NOT EXISTS kind text NOT NULL DEFAULT 'standard';
+        ALTER TABLE quotes ADD COLUMN IF NOT EXISTS elevator_type text;
+        ALTER TABLE quotes ADD COLUMN IF NOT EXISTS elevator_count integer;
+        ALTER TABLE quotes ADD COLUMN IF NOT EXISTS capacity_kg integer;
+        ALTER TABLE quotes ADD COLUMN IF NOT EXISTS capacity_persons integer;
+        ALTER TABLE quotes ADD COLUMN IF NOT EXISTS floor_count integer;
+        ALTER TABLE quotes ADD COLUMN IF NOT EXISTS stop_count integer;
+        ALTER TABLE quotes ADD COLUMN IF NOT EXISTS speed_ms numeric;
+        ALTER TABLE quotes ADD COLUMN IF NOT EXISTS door_type text;
+        ALTER TABLE quotes ADD COLUMN IF NOT EXISTS control_system text;
+        ALTER TABLE quotes ADD COLUMN IF NOT EXISTS unit_price numeric;
+        ALTER TABLE quotes ADD COLUMN IF NOT EXISTS warranty_years integer;
+        ALTER TABLE quotes ADD COLUMN IF NOT EXISTS delivery_days integer;
+        ALTER TABLE quotes ADD COLUMN IF NOT EXISTS payment_terms text;
         """);
 
     if (!await db.PlatformSettings.AnyAsync())

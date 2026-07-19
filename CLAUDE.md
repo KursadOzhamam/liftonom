@@ -340,6 +340,20 @@ cd mobile && flutter pub get && flutter run
   `PdfService.GenerateRevisionQuote` (fiyat gizliyse tablo gösterilmez). Public: `/revizyon-teklifi/[token]`
   → müşteri imzalayıp onaylar → `status=approved` ("Kabul"). `PriceVisible=false` ise public/PDF fiyatı gizler.
 
+### Asansör Talep Formu (`/atf`) — yeni montaj teklifi belge sistemi
+- Aynı `Quote` tablosu, `type="atf"`. Ek spesifikasyon alanları: `elevator_type, elevator_count, capacity_kg,
+  capacity_persons, floor_count, stop_count, speed_ms, door_type, control_system, unit_price, warranty_years,
+  delivery_days, payment_terms` (idempotent ALTER). Talep eden = `customer_name`, toplam = `total` (Toplam Fiyat).
+  No formatı `ATF-YYYYMMDD-XXXX`.
+- **`QuoteTemplate.Kind="atf"`** → tenant başına **7 maddelik "Standart Asansör Talep Formu"** seed. Placeholder'lar:
+  `{{musteri_adi}} {{bina_adi}} {{tutar}} {{teslim_gun}} {{garanti_yil}} {{belge_tarihi}} {{gecerlilik}}`.
+- **Form** (`AtfForm.tsx`): talep eden bilgileri + Asansör Spesifikasyonu (tip/adet/kapasite/kat-durak/hız/kapı/
+  kumanda) + Birim/Toplam Fiyat (KDV dahil) + Garanti/Teslim/Ödeme. **Önizleme**: spesifikasyon kutusu + kalem
+  tablosu (Birim Fiyat / Genel Toplam N adet) + garanti/teslim/ödeme + firma imza canvas + Gönder/PDF/link.
+- `PdfService.GenerateAtf` (spesifikasyon + fiyat + garanti/teslim/ödeme + maddeler + imza). Public onay sayfası
+  **`/talep-formu/[token]`** (panel `/atf` ile çakışmaması için ayrı segment) → müşteri imzalar → `status=approved`.
+- Not: sidebar etiketi "Teklifler (Standart)" → **"Teklifler"** olarak sadeleştirildi.
+
 ### Canlı deploy doğrulama (bu oturumda kullanılan akış)
 - Değişiklik → `git push liftonom HEAD:main` → Coolify webhook otomatik deploy. Durum:
   `GET /api/v1/deployments/applications/{app_uuid}` (Coolify API + Bearer token). Scriptler & app_uuid:
