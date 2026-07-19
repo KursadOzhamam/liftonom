@@ -46,7 +46,7 @@ export const NAV: NavGroup[] = [
     title: "Belgeler",
     items: [
       { label: "Sözleşmeler", href: "/contracts", icon: FileSignature },
-      { label: "Teklifler", href: "/quotes", icon: FileText },
+      { label: "Teklifler (Standart)", href: "/quotes", icon: FileText },
       { label: "Revizyon Teklifleri", href: "/revision-quotes", icon: ScrollText },
       { label: "Asansör Talep Formu", href: "/atf", icon: ClipboardCheck },
       { label: "Durum Tespit Raporu", href: "/dtr", icon: FileCheck },

@@ -5,9 +5,16 @@ public class Quote
     public long Id { get; set; }
     public long TenantId { get; set; }
     public long? CustomerId { get; set; }
+    public long? TemplateId { get; set; }
     public string? QuoteNumber { get; set; }
     public string Type { get; set; } = "standard";    // standard | revision (revizyon teklifi)
     public string Status { get; set; } = "draft";
+    public string DocumentStatus { get; set; } = "draft"; // belge durumu: draft | sent | approved
+    public string? Title { get; set; }                // konu/başlık
+    public string? CustomerName { get; set; }         // serbest müşteri adı (kayıttan bağımsız)
+    public string? Email { get; set; }
+    public string? Phone { get; set; }
+    public string Currency { get; set; } = "TRY";
     public DateOnly? ValidUntil { get; set; }
     public string? Items { get; set; } = "[]";        // jsonb
     public decimal? Subtotal { get; set; }
@@ -15,6 +22,9 @@ public class Quote
     public decimal? TaxAmount { get; set; }
     public decimal Discount { get; set; }
     public decimal? Total { get; set; }
+    public string? Terms { get; set; }                // serbest şartlar (şablon yoksa)
+    public string? PublicToken { get; set; }
+    public DateTime? SentAt { get; set; }
     public string? Notes { get; set; }
     public long? CreatedBy { get; set; }
     public DateTime CreatedAt { get; set; }
@@ -22,6 +32,23 @@ public class Quote
     public DateTime? DeletedAt { get; set; }
 
     public Customer? Customer { get; set; }
+    public QuoteTemplate? Template { get; set; }
+}
+
+// Teklif şablonu — standart şart maddeleri + değişkenler (ContractTemplate ile aynı desen).
+public class QuoteTemplate
+{
+    public long Id { get; set; }
+    public long TenantId { get; set; }
+    public string Name { get; set; } = "";
+    public string Type { get; set; } = "Teklif";
+    public bool IsDefault { get; set; }
+    public bool IsActive { get; set; } = true;
+    public string Clauses { get; set; } = "[]";       // jsonb: [{title,body,active}]
+    public string Variables { get; set; } = "[]";     // jsonb: [{key,label}]
+    public DateTime CreatedAt { get; set; }
+    public DateTime UpdatedAt { get; set; }
+    public DateTime? DeletedAt { get; set; }
 }
 
 public class Contract

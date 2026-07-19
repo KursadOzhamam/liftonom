@@ -46,6 +46,7 @@ public class AppDbContext : DbContext
     public DbSet<Quote> Quotes => Set<Quote>();
     public DbSet<Contract> Contracts => Set<Contract>();
     public DbSet<ContractTemplate> ContractTemplates => Set<ContractTemplate>();
+    public DbSet<QuoteTemplate> QuoteTemplates => Set<QuoteTemplate>();
     public DbSet<Product> Products => Set<Product>();
     public DbSet<StockMovement> StockMovements => Set<StockMovement>();
     public DbSet<Supplier> Suppliers => Set<Supplier>();
@@ -94,6 +95,7 @@ public class AppDbContext : DbContext
         b.Entity<Quote>().HasQueryFilter(e => e.DeletedAt == null && e.TenantId == CurrentTenantId);
         b.Entity<Contract>().HasQueryFilter(e => e.DeletedAt == null && e.TenantId == CurrentTenantId);
         b.Entity<ContractTemplate>(e => { e.ToTable("contract_templates"); e.HasQueryFilter(x => x.DeletedAt == null && x.TenantId == CurrentTenantId); });
+        b.Entity<QuoteTemplate>(e => { e.ToTable("quote_templates"); e.HasQueryFilter(x => x.DeletedAt == null && x.TenantId == CurrentTenantId); });
         b.Entity<Product>().HasQueryFilter(e => e.DeletedAt == null && e.TenantId == CurrentTenantId);
         b.Entity<Supplier>().HasQueryFilter(e => e.DeletedAt == null && e.TenantId == CurrentTenantId);
         b.Entity<Project>().HasQueryFilter(e => e.DeletedAt == null && e.TenantId == CurrentTenantId);
@@ -148,6 +150,8 @@ public class AppDbContext : DbContext
         b.Entity<Contract>().Property(c => c.Clauses).HasColumnType("jsonb");
         b.Entity<ContractTemplate>().Property(c => c.Clauses).HasColumnType("jsonb");
         b.Entity<ContractTemplate>().Property(c => c.Variables).HasColumnType("jsonb");
+        b.Entity<QuoteTemplate>().Property(c => c.Clauses).HasColumnType("jsonb");
+        b.Entity<QuoteTemplate>().Property(c => c.Variables).HasColumnType("jsonb");
         b.Entity<Project>(e =>
         {
             e.Property(p => p.AssignedUsers).HasColumnType("jsonb");

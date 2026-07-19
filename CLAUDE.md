@@ -309,6 +309,22 @@ cd mobile && flutter pub get && flutter run
   Boşsa varsayılan profesyonel metin (`DefaultEmailBody`).
 - Uçlar `ContractController` (contracts + `templates` CRUD + `send`/`signature`/`pdf`) ve `PublicContractController`.
 
+### Teklif belge sistemi (`/quotes`) — Sözleşme sistemiyle aynı desen
+- **Belgeler + Şablonlar sekmeleri** (Sözleşmeler ile birebir). Liste: arama/durum/sırala + Excel CSV +
+  Önizle/Gönder/PDF/Düzenle/Sil. `Quote` genişletildi (`template_id, title, customer_name, email, phone,
+  currency, terms, public_token, document_status, sent_at`) — idempotent ALTER.
+- **Yeni `QuoteTemplate`** (`quote_templates`) + DbSet + query filter + jsonb; tenant başına 8 maddelik
+  **"Standart Teklif"** otomatik seed. Yer tutucular: `firma_*`, `musteri_adi`, `teklif_no/basligi/tarihi`,
+  `gecerlilik`, `tutar`.
+- **Tam sayfa form** (`/quotes/new`, `/quotes/[id]/edit` — `QuoteForm.tsx`): şablon + müşteri + **Kalemler
+  tablosu** (Açıklama/Miktar/Birim Fiyat KDV-dahil/Toplam, + Satır Ekle) + Genel Toplam. **KDV dahil**
+  girilir, sistem KDV hesaplamaz (`tax_rate=0`, toplam = Σ qty×price).
+- **Önizleme** (`/quotes/[id]/preview`): kalemler tablosu + toplam + doldurulmuş maddeler + Gönder
+  (e-posta onaylı, PDF ekli) + PDF + kopyalanabilir müşteri linki. **PDF** `GET /quotes/{id}/pdf`
+  (`PdfService.GenerateQuote` — başlık + kalem tablosu + toplam + maddeler). Public: `/quote/[token]`
+  (`GET /public/quotes/{token}`, AllowAnonymous).
+- Uçlar `QuoteController` (quotes + `templates` CRUD + `send`/`pdf` + `approve`/`reject`) ve `PublicQuoteController`.
+
 ### Canlı deploy doğrulama (bu oturumda kullanılan akış)
 - Değişiklik → `git push liftonom HEAD:main` → Coolify webhook otomatik deploy. Durum:
   `GET /api/v1/deployments/applications/{app_uuid}` (Coolify API + Bearer token). Scriptler & app_uuid:
