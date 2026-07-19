@@ -146,7 +146,9 @@ public class AdminExtrasController(AppDbContext db) : ControllerBase
     }
 
     // ─────────── Global Ayarlar ───────────
-    public record SettingsDto(string? PlatformName, string? SupportEmail, string? DefaultPlan);
+    public record SettingsDto(string? PlatformName, string? SupportEmail, string? DefaultPlan,
+        string? SmtpHost, int? SmtpPort, string? SmtpUser, string? SmtpPassword,
+        string? SmtpFrom, string? SmtpFromName, bool? SmtpSsl);
 
     [HttpGet("settings")]
     public async Task<IActionResult> GetSettings()
@@ -157,6 +159,14 @@ public class AdminExtrasController(AppDbContext db) : ControllerBase
             platform_name = s?.PlatformName ?? "Liftonom",
             support_email = s?.SupportEmail,
             default_plan = s?.DefaultPlan ?? "trial",
+            // SMTP — şifre GET'te dönmez (güvenlik); yalnızca "ayarlı mı" bilgisi verilir.
+            smtp_host = s?.SmtpHost,
+            smtp_port = s?.SmtpPort,
+            smtp_user = s?.SmtpUser,
+            smtp_from = s?.SmtpFrom,
+            smtp_from_name = s?.SmtpFromName,
+            smtp_ssl = s?.SmtpSsl ?? true,
+            smtp_password_set = !string.IsNullOrEmpty(s?.SmtpPassword),
             // Bilgi (salt-okunur): SMS ve OTP kapalı
             otp_enabled = false,
             sms_enabled = false,
@@ -175,6 +185,11 @@ public class AdminExtrasController(AppDbContext db) : ControllerBase
         s.PlatformName = dto.PlatformName;
         s.SupportEmail = dto.SupportEmail;
         s.DefaultPlan = dto.DefaultPlan;
+        s.SmtpHost = dto.SmtpHost; s.SmtpPort = dto.SmtpPort; s.SmtpUser = dto.SmtpUser;
+        s.SmtpFrom = dto.SmtpFrom; s.SmtpFromName = dto.SmtpFromName;
+        if (dto.SmtpSsl is { } ssl) s.SmtpSsl = ssl;
+        // Şifre yalnızca yeni bir değer gönderildiyse güncellenir (boş = mevcut korunur).
+        if (!string.IsNullOrEmpty(dto.SmtpPassword)) s.SmtpPassword = dto.SmtpPassword;
         s.UpdatedAt = DateTime.UtcNow;
         await db.SaveChangesAsync();
         return Ok(new { message = "Ayarlar kaydedildi." });

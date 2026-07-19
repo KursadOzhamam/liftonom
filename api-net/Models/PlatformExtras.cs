@@ -27,6 +27,14 @@ public class PlatformSetting
     public string? PlatformName { get; set; }
     public string? SupportEmail { get; set; }
     public string? DefaultPlan { get; set; }
+    // SMTP (e-posta gönderimi) — Süper Admin panelinden yönetilir; config Smtp:* üzerine geçer.
+    public string? SmtpHost { get; set; }
+    public int? SmtpPort { get; set; }
+    public string? SmtpUser { get; set; }
+    public string? SmtpPassword { get; set; }
+    public string? SmtpFrom { get; set; }
+    public string? SmtpFromName { get; set; }
+    public bool SmtpSsl { get; set; } = true;
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
 }

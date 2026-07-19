@@ -298,9 +298,12 @@ cd mobile && flutter pub get && flutter run
 - **Gönder + e-posta:** önizlemede *Gönder* → müşteri e-postası varsa "e-postasına gönderilsin mi?" diye
   sorar (`useConfirm`); onaylanırsa `POST /contracts/{id}/send {send_email:true}` → müşteriye **şablonlu +
   PDF ekli** mail. E-posta yoksa 422 uyarı. Yanıt `{email_sent, email_error, recipient}`.
-- **E-posta gönderici:** `IEmailSender`/`SmtpEmailSender` — config `Smtp:Host/Port/User/Password/From/FromName/Ssl`.
-  **Anahtar yoksa gönderMEZ**, log + `email_sent=false` döner (canlıda henüz Smtp:* set edilmedi → Coolify env'e eklenmeli).
-  Public link tabanı `Web:PublicUrl` (varsayılan `https://liftonom.rslabsdev.site`).
+- **E-posta gönderici:** `IEmailSender`/`SmtpEmailSender`. SMTP config **önce Süper Admin panelinden**
+  (`platform_settings.smtp_*` — Global Ayarlar → SMTP bölümü), yoksa `Smtp:*` config'ten okunur. Host yoksa
+  gönderMEZ, log + `email_sent=false`. Public link tabanı `Web:PublicUrl` (varsayılan `https://liftonom.rslabsdev.site`).
+- **Süper Admin → Global Ayarlar → SMTP:** `PlatformSetting.Smtp{Host,Port,User,Password,From,FromName,Ssl}`;
+  `GET/PUT /admin/settings` (şifre GET'te dönmez, `smtp_password_set` bool; PUT'ta boş şifre = mevcut korunur).
+  Buradan girilen SMTP tüm firmalar için geçerlidir — Coolify env'e dokunmadan panelden yönetilir.
 - **E-posta şablonu Ayarlar'da:** `Tenant.ContractEmailSubject/Body` (Settings GET/PUT + Ayarlar sayfası bölümü).
   Yer tutucular: `{{firma_adi}} {{musteri_adi}} {{sozlesme_no}} {{tutar}} {{baslangic}} {{bitis}} {{periyot}} {{link}}`.
   Boşsa varsayılan profesyonel metin (`DefaultEmailBody`).

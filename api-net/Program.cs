@@ -273,6 +273,13 @@ using (var scope = app.Services.CreateScope())
         ALTER TABLE contracts ADD COLUMN IF NOT EXISTS approved_at timestamptz;
         ALTER TABLE tenants ADD COLUMN IF NOT EXISTS contract_email_subject text;
         ALTER TABLE tenants ADD COLUMN IF NOT EXISTS contract_email_body text;
+        ALTER TABLE platform_settings ADD COLUMN IF NOT EXISTS smtp_host text;
+        ALTER TABLE platform_settings ADD COLUMN IF NOT EXISTS smtp_port integer;
+        ALTER TABLE platform_settings ADD COLUMN IF NOT EXISTS smtp_user text;
+        ALTER TABLE platform_settings ADD COLUMN IF NOT EXISTS smtp_password text;
+        ALTER TABLE platform_settings ADD COLUMN IF NOT EXISTS smtp_from text;
+        ALTER TABLE platform_settings ADD COLUMN IF NOT EXISTS smtp_from_name text;
+        ALTER TABLE platform_settings ADD COLUMN IF NOT EXISTS smtp_ssl boolean NOT NULL DEFAULT true;
         """);
 
     if (!await db.PlatformSettings.AnyAsync())
