@@ -101,9 +101,25 @@ public class ElevatorController(AppDbContext db) : ControllerBase
     [HttpGet("{id:long}")]
     public async Task<IActionResult> Show(long id)
     {
-        var e = await db.Elevators.Include(x => x.Building).FirstOrDefaultAsync(x => x.Id == id)
+        var e = await db.Elevators.Include(x => x.Building!).ThenInclude(b => b.Customer)
+            .FirstOrDefaultAsync(x => x.Id == id)
             ?? throw new ApiException(404, "Asansör bulunamadı.");
         return Ok(e);
+    }
+
+    public record TseLabelDto(string? Color, string? Note);
+
+    /// <summary>Index'ten hızlı TSE etiket rengi (kırmızı/mavi/yeşil/sarı) atama.</summary>
+    [HttpPost("{id:long}/tse-label")]
+    public async Task<IActionResult> SetTseLabel(long id, TseLabelDto dto)
+    {
+        var e = await db.Elevators.FirstOrDefaultAsync(x => x.Id == id)
+            ?? throw new ApiException(404, "Asansör bulunamadı.");
+        e.TseLabelColor = string.IsNullOrWhiteSpace(dto.Color) ? null : dto.Color;
+        if (dto.Note != null) e.TseLabelNote = dto.Note;
+        e.UpdatedAt = DateTime.UtcNow;
+        await db.SaveChangesAsync();
+        return Ok(new { message = "TSE etiketi güncellendi.", tse_label_color = e.TseLabelColor });
     }
 
     [HttpPost]

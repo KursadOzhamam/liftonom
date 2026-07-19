@@ -1,9 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import { api, ApiError } from "@/lib/api";
 import { useOptions } from "@/lib/hooks";
-import { Search, Plus, X } from "lucide-react";
+import { Search, Plus, X, Eye, Pencil } from "lucide-react";
 
 type Elevator = {
   id: number;
@@ -13,6 +14,7 @@ type Elevator = {
   status: string;
   tse_end_date: string | null;
   tse_label: "green" | "yellow" | "red" | "gray";
+  tse_label_color: string | null;
   building?: { name: string } | null;
 };
 type Paginated = { data: Elevator[]; meta: { current_page: number; last_page: number; total: number } };
@@ -23,6 +25,11 @@ const TSE: Record<string, { bg: string; text: string; label: string }> = {
   red:    { bg: "#FEE2E2", text: "#DC2626", label: "Süresi Doldu" },
   gray:   { bg: "#F3F4F6", text: "#6B7280", label: "Belge Yok" },
 };
+const LABEL: Record<string, { text: string; label: string }> = {
+  green: { text: "#16A34A", label: "Yeşil" }, blue: { text: "#2563EB", label: "Mavi" },
+  yellow: { text: "#D97706", label: "Sarı" }, red: { text: "#DC2626", label: "Kırmızı" },
+};
+const LABEL_OPTS = [["", "— Etiket —"], ["green", "🟢 Yeşil"], ["blue", "🔵 Mavi"], ["yellow", "🟡 Sarı"], ["red", "🔴 Kırmızı"]];
 const STATUS: Record<string, string> = { active: "Aktif", maintenance: "Bakımda", passive: "Pasif", faulty: "Arızalı" };
 const TYPES = [["electric", "Elektrikli"], ["hydraulic", "Hidrolik"], ["escalator", "Yürüyen Merdiven"]];
 const TSE_LABELS = [["", "— Etiket girilmedi —"], ["green", "Yeşil (Uygun)"], ["blue", "Mavi (Hafif Kusurlu)"], ["yellow", "Sarı (Kusurlu)"], ["red", "Kırmızı (Güvensiz)"]];
@@ -45,7 +52,7 @@ export default function ElevatorsPage() {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
-  const [modal, setModal] = useState(false);
+  const [modal, setModal] = useState<null | { mode: "create" | "edit"; id?: number }>(null);
   const [form, setForm] = useState<Form>(emptyForm);
   const [saving, setSaving] = useState(false);
 
@@ -62,35 +69,62 @@ export default function ElevatorsPage() {
   useEffect(() => { load(); }, [load]);
 
   function set(patch: Partial<Form>) { setForm((f) => ({ ...f, ...patch })); }
-  function open() { setForm(emptyForm); setModal(true); }
+  function open() { setForm(emptyForm); setModal({ mode: "create" }); }
+  async function openEdit(id: number) {
+    try {
+      const o = await api<Record<string, unknown>>(`/elevators/${id}`);
+      const g = (k: string) => (o[k] == null ? "" : String(o[k]));
+      setForm({
+        ...emptyForm,
+        name: g("name"), building_id: g("building_id"), type: g("type") || "electric", status: g("status") || "active",
+        brand: g("brand"), model: g("model"), serial_number: g("serial_number"), registration_no: g("registration_no"),
+        manufacture_year: g("manufacture_year"), installation_date: g("installation_date"),
+        capacity_kg: g("capacity_kg"), capacity_persons: g("capacity_persons"), served_floors: g("served_floors"),
+        stop_count: g("stop_count"), speed_ms: g("speed_ms"), door_type: g("door_type"),
+        last_maintenance: g("last_maintenance_at").slice(0, 10), next_maintenance: g("next_maintenance_at").slice(0, 10),
+        tse_start_date: g("tse_start_date"), tse_end_date: g("tse_end_date"), tse_label_color: g("tse_label_color"), tse_label_note: g("tse_label_note"),
+        has_emergency_phone: o["has_emergency_phone"] === true, has_ups: o["has_ups"] === true,
+        has_fire_system: o["has_fire_system"] === true, has_earthquake_sensor: o["has_earthquake_sensor"] === true,
+        notes: g("notes"),
+      });
+      setModal({ mode: "edit", id });
+    } catch (e) { alert(e instanceof ApiError ? e.message : "Asansör yüklenemedi."); }
+  }
 
-  async function create() {
+  async function setLabel(id: number, color: string) {
+    await api(`/elevators/${id}/tse-label`, { method: "POST", body: { color: color || null } });
+    load();
+  }
+
+  async function save() {
     setSaving(true);
     try {
       const f = form;
-      await api("/elevators", {
-        method: "POST",
-        body: {
-          building_id: num(f.building_id), name: f.name, type: f.type, status: f.status,
-          brand: str(f.brand), model: str(f.model), serial_number: str(f.serial_number), registration_no: str(f.registration_no),
-          manufacture_year: num(f.manufacture_year), installation_date: str(f.installation_date),
-          capacity_kg: num(f.capacity_kg), capacity_persons: num(f.capacity_persons),
-          served_floors: str(f.served_floors), stop_count: num(f.stop_count), speed_ms: num(f.speed_ms), door_type: str(f.door_type),
-          last_maintenance_date: str(f.last_maintenance), next_maintenance_date: str(f.next_maintenance),
-          tse_start_date: str(f.tse_start_date), tse_end_date: str(f.tse_end_date),
-          tse_label_color: str(f.tse_label_color), tse_label_note: str(f.tse_label_note),
-          has_emergency_phone: f.has_emergency_phone, has_ups: f.has_ups,
-          has_fire_system: f.has_fire_system, has_earthquake_sensor: f.has_earthquake_sensor,
-          notes: str(f.notes),
-        },
-      });
-      if (f.fee_amount.trim() && Number(f.fee_amount) > 0 && f.building_id) {
-        await api("/maintenance-fees", {
-          method: "POST",
-          body: { building_id: num(f.building_id), amount: Number(f.fee_amount), period: "monthly", valid_from: str(f.fee_from), valid_to: str(f.fee_to) },
-        });
+      const body = {
+        building_id: num(f.building_id), name: f.name, type: f.type, status: f.status,
+        brand: str(f.brand), model: str(f.model), serial_number: str(f.serial_number), registration_no: str(f.registration_no),
+        manufacture_year: num(f.manufacture_year), installation_date: str(f.installation_date),
+        capacity_kg: num(f.capacity_kg), capacity_persons: num(f.capacity_persons),
+        served_floors: str(f.served_floors), stop_count: num(f.stop_count), speed_ms: num(f.speed_ms), door_type: str(f.door_type),
+        last_maintenance_date: str(f.last_maintenance), next_maintenance_date: str(f.next_maintenance),
+        tse_start_date: str(f.tse_start_date), tse_end_date: str(f.tse_end_date),
+        tse_label_color: str(f.tse_label_color), tse_label_note: str(f.tse_label_note),
+        has_emergency_phone: f.has_emergency_phone, has_ups: f.has_ups,
+        has_fire_system: f.has_fire_system, has_earthquake_sensor: f.has_earthquake_sensor,
+        notes: str(f.notes),
+      };
+      if (modal?.mode === "edit") {
+        await api(`/elevators/${modal.id}`, { method: "PUT", body });
+      } else {
+        await api("/elevators", { method: "POST", body });
+        if (f.fee_amount.trim() && Number(f.fee_amount) > 0 && f.building_id) {
+          await api("/maintenance-fees", {
+            method: "POST",
+            body: { building_id: num(f.building_id), amount: Number(f.fee_amount), period: "monthly", valid_from: str(f.fee_from), valid_to: str(f.fee_to) },
+          });
+        }
       }
-      setModal(false); setForm(emptyForm); load();
+      setModal(null); setForm(emptyForm); load();
     } catch (e) {
       alert(e instanceof ApiError ? e.message : "Kaydedilemedi.");
     } finally { setSaving(false); }
@@ -120,16 +154,17 @@ export default function ElevatorsPage() {
             <tr className="border-b border-line text-left text-xs uppercase tracking-wide text-muted">
               <th className="px-4 py-3 font-medium">Asansör</th>
               <th className="px-4 py-3 font-medium">Bina</th>
-              <th className="px-4 py-3 font-medium">Marka</th>
               <th className="px-4 py-3 font-medium">Durum</th>
-              <th className="px-4 py-3 font-medium">TSE</th>
+              <th className="px-4 py-3 font-medium">TSE Vade</th>
+              <th className="px-4 py-3 font-medium">TSE Etiket</th>
+              <th className="px-4 py-3 font-medium text-right">İşlem</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={5} className="px-4 py-10 text-center text-muted">Yükleniyor…</td></tr>
+              <tr><td colSpan={6} className="px-4 py-10 text-center text-muted">Yükleniyor…</td></tr>
             ) : rows.length === 0 ? (
-              <tr><td colSpan={5} className="px-4 py-10 text-center text-muted">Kayıt bulunamadı.</td></tr>
+              <tr><td colSpan={6} className="px-4 py-10 text-center text-muted">Kayıt bulunamadı.</td></tr>
             ) : (
               rows.map((e) => {
                 const tse = TSE[e.tse_label];
@@ -137,14 +172,27 @@ export default function ElevatorsPage() {
                   <tr key={e.id} className="border-b border-line last:border-0 hover:bg-surface">
                     <td className="px-4 py-3 font-medium">
                       <a href={`/elevators/${e.id}`} className="text-primary hover:underline">{e.name ?? `#${e.id}`}</a>
+                      {e.brand && <div className="text-xs font-normal text-muted">{e.brand}</div>}
                     </td>
                     <td className="px-4 py-3 text-ink-soft">{e.building?.name ?? "—"}</td>
-                    <td className="px-4 py-3 text-ink-soft">{e.brand ?? "—"}</td>
                     <td className="px-4 py-3 text-ink-soft">{STATUS[e.status] ?? e.status}</td>
                     <td className="px-4 py-3">
                       <span className="rounded-full px-2 py-0.5 text-xs font-medium" style={{ background: tse.bg, color: tse.text }}>
                         {tse.label}{e.tse_end_date ? ` · ${new Date(e.tse_end_date).toLocaleDateString("tr-TR")}` : ""}
                       </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <select value={e.tse_label_color ?? ""} onChange={(ev) => setLabel(e.id, ev.target.value)}
+                        className="rounded-lg border border-line bg-card px-2 py-1 text-xs font-medium"
+                        style={{ color: e.tse_label_color ? LABEL[e.tse_label_color]?.text : "var(--color-muted)" }}>
+                        {LABEL_OPTS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                      </select>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex justify-end gap-2">
+                        <Link href={`/elevators/${e.id}`} className="text-muted hover:text-primary" title="Detay"><Eye size={16} /></Link>
+                        <button onClick={() => openEdit(e.id)} className="text-muted hover:text-primary" title="Düzenle"><Pencil size={16} /></button>
+                      </div>
                     </td>
                   </tr>
                 );
@@ -170,11 +218,11 @@ export default function ElevatorsPage() {
       </p>
 
       {modal && (
-        <div className="fade-in fixed inset-0 z-30 grid place-items-center bg-slate-950/50 p-4 backdrop-blur-sm" onClick={() => setModal(false)}>
+        <div className="fade-in fixed inset-0 z-30 grid place-items-center bg-slate-950/50 p-4 backdrop-blur-sm" onClick={() => setModal(null)}>
           <div className="pop-in surface-pop flex max-h-[92vh] w-full max-w-3xl flex-col rounded-2xl border border-line bg-card" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between border-b border-line px-6 py-4">
-              <h2 className="text-lg font-semibold tracking-tight text-ink">Yeni Asansör</h2>
-              <button onClick={() => setModal(false)} className="grid h-8 w-8 place-items-center rounded-lg text-muted hover:bg-surface hover:text-ink"><X size={18} /></button>
+              <h2 className="text-lg font-semibold tracking-tight text-ink">{modal.mode === "edit" ? "Asansör Düzenle" : "Yeni Asansör"}</h2>
+              <button onClick={() => setModal(null)} className="grid h-8 w-8 place-items-center rounded-lg text-muted hover:bg-surface hover:text-ink"><X size={18} /></button>
             </div>
 
             <div className="flex-1 space-y-6 overflow-y-auto px-6 py-5">
@@ -230,7 +278,8 @@ export default function ElevatorsPage() {
                 <Field label="Notlar"><textarea className="input min-h-20" value={form.notes} onChange={(e) => set({ notes: e.target.value })} /></Field>
               </div>
 
-              {/* Bakım ücreti */}
+              {/* Bakım ücreti (yalnızca yeni kayıtta) */}
+              {modal.mode === "create" && (
               <div className="border-t border-line pt-5">
                 <h3 className="text-sm font-semibold text-ink">Bakım Ücreti <span className="font-normal text-muted">(opsiyonel)</span></h3>
                 <p className="mt-0.5 text-xs text-muted">Aylık ücret girilirse binaya bağlı olarak “Bakım Ücretleri”ne kaydedilir. Boş bırakılırsa oluşturulmaz.</p>
@@ -240,11 +289,12 @@ export default function ElevatorsPage() {
                   <Field label="Ücret Bitiş"><input className="input" type="date" value={form.fee_to} onChange={(e) => set({ fee_to: e.target.value })} /></Field>
                 </div>
               </div>
+              )}
             </div>
 
             <div className="flex justify-end gap-2 border-t border-line px-6 py-4">
-              <button onClick={() => setModal(false)} className="btn-ghost">İptal</button>
-              <button onClick={create} disabled={saving || !form.name.trim() || !form.building_id} className="btn-primary">{saving ? "Kaydediliyor…" : "Kaydet"}</button>
+              <button onClick={() => setModal(null)} className="btn-ghost">İptal</button>
+              <button onClick={save} disabled={saving || !form.name.trim() || !form.building_id} className="btn-primary">{saving ? "Kaydediliyor…" : "Kaydet"}</button>
             </div>
           </div>
         </div>

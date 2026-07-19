@@ -3,61 +3,74 @@
 import { useCallback, useEffect, useState } from "react";
 import { api, ApiError } from "@/lib/api";
 import { useConfirm } from "@/components/ConfirmDialog";
-import { Plus, Search, Pencil, Trash2 } from "lucide-react";
+import { useOptions } from "@/lib/hooks";
+import { Plus, Search, Pencil, Trash2, X } from "lucide-react";
 
 type Customer = {
-  id: number;
-  type: string;
-  name: string;
-  authorized_person: string | null;
-  phone: string | null;
-  email: string | null;
-  city: string | null;
-  buildings_count?: number;
+  id: number; type: string; name: string; authorized_person: string | null;
+  phone: string | null; email: string | null; city: string | null; is_active?: boolean; buildings_count?: number;
 };
 type Paginated = { data: Customer[]; meta: { current_page: number; last_page: number; total: number } };
 
-const empty = { type: "corporate", name: "", authorized_person: "", phone: "", email: "", city: "" };
+const empty = {
+  type: "corporate", name: "", authorized_person: "", phone: "", email: "",
+  tax_number: "", tax_office: "", city: "", district: "", address: "", region_id: "", notes: "", is_active: true,
+};
+type Form = typeof empty;
+const str = (v: string) => (v.trim() ? v.trim() : null);
 
 export default function CustomersPage() {
+  const confirm = useConfirm();
+  const regions = useOptions("/regions");
   const [rows, setRows] = useState<Customer[]>([]);
   const [meta, setMeta] = useState<Paginated["meta"] | null>(null);
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
-  const [modal, setModal] = useState<null | { mode: "create" | "edit"; id?: number; form: typeof empty }>(null);
+  const [modal, setModal] = useState<null | { mode: "create" | "edit"; id?: number; form: Form }>(null);
   const [saving, setSaving] = useState(false);
-  const confirm = useConfirm();
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
       const res = await api<Paginated>(`/customers?search=${encodeURIComponent(search)}&page=${page}`);
-      setRows(res.data);
-      setMeta(res.meta);
-    } finally {
-      setLoading(false);
-    }
+      setRows(res.data); setMeta(res.meta);
+    } finally { setLoading(false); }
   }, [search, page]);
-
   useEffect(() => { load(); }, [load]);
+
+  function set(patch: Partial<Form>) { setModal((m) => (m ? { ...m, form: { ...m.form, ...patch } } : m)); }
+  function openCreate() { setModal({ mode: "create", form: { ...empty } }); }
+  async function openEdit(id: number) {
+    try {
+      const c = await api<Record<string, unknown>>(`/customers/${id}`);
+      const g = (k: string) => (c[k] == null ? "" : String(c[k]));
+      setModal({ mode: "edit", id, form: {
+        type: g("type") || "corporate", name: g("name"), authorized_person: g("authorized_person"),
+        phone: g("phone"), email: g("email"), tax_number: g("tax_number"), tax_office: g("tax_office"),
+        city: g("city"), district: g("district"), address: g("address"), region_id: g("region_id"),
+        notes: g("notes"), is_active: c["is_active"] !== false,
+      } });
+    } catch (e) { alert(e instanceof ApiError ? e.message : "Müşteri yüklenemedi."); }
+  }
 
   async function save() {
     if (!modal) return;
     setSaving(true);
     try {
-      if (modal.mode === "create") {
-        await api("/customers", { method: "POST", body: modal.form });
-      } else {
-        await api(`/customers/${modal.id}`, { method: "PUT", body: modal.form });
-      }
-      setModal(null);
-      load();
+      const f = modal.form;
+      const body = {
+        type: f.type, name: f.name, authorized_person: str(f.authorized_person),
+        phone: str(f.phone), email: str(f.email), tax_number: str(f.tax_number), tax_office: str(f.tax_office),
+        city: str(f.city), district: str(f.district), address: str(f.address),
+        region_id: f.region_id ? Number(f.region_id) : null, notes: str(f.notes), is_active: f.is_active,
+      };
+      if (modal.mode === "create") await api("/customers", { method: "POST", body });
+      else await api(`/customers/${modal.id}`, { method: "PUT", body });
+      setModal(null); load();
     } catch (e) {
       alert(e instanceof ApiError ? e.message : "Kaydedilemedi.");
-    } finally {
-      setSaving(false);
-    }
+    } finally { setSaving(false); }
   }
 
   async function remove(id: number) {
@@ -73,25 +86,17 @@ export default function CustomersPage() {
           <h1 className="text-2xl font-bold text-ink">Müşteriler</h1>
           <p className="mt-1 text-sm text-muted">{meta?.total ?? 0} kayıt</p>
         </div>
-        <button onClick={() => setModal({ mode: "create", form: { ...empty } })} className="btn-primary">
-          <Plus size={16} /> Yeni
-        </button>
+        <button onClick={openCreate} className="btn-primary"><Plus size={16} /> Yeni</button>
       </div>
 
-      {/* Filtre */}
       <div className="mt-5 flex items-center gap-2">
         <div className="relative flex-1 max-w-sm">
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
-          <input
-            value={search}
-            onChange={(e) => { setPage(1); setSearch(e.target.value); }}
-            placeholder="Ad, telefon, e-posta…"
-            className="input pl-9"
-          />
+          <input value={search} onChange={(e) => { setPage(1); setSearch(e.target.value); }}
+            placeholder="Ad, telefon, e-posta…" className="input pl-9" />
         </div>
       </div>
 
-      {/* Tablo */}
       <div className="mt-4 overflow-hidden rounded-xl border border-line bg-card">
         <table className="w-full text-sm">
           <thead>
@@ -117,9 +122,7 @@ export default function CustomersPage() {
                     {c.authorized_person && <div className="text-xs font-normal text-muted">Yetkili: {c.authorized_person}</div>}
                   </td>
                   <td className="px-4 py-3">
-                    <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                      c.type === "corporate" ? "bg-primary-light text-primary" : "bg-surface text-ink-soft"
-                    }`}>
+                    <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${c.type === "corporate" ? "bg-primary-light text-primary" : "bg-surface text-ink-soft"}`}>
                       {c.type === "corporate" ? "Kurumsal" : "Bireysel"}
                     </span>
                   </td>
@@ -128,16 +131,8 @@ export default function CustomersPage() {
                   <td className="px-4 py-3 text-center text-ink-soft">{c.buildings_count ?? 0}</td>
                   <td className="px-4 py-3">
                     <div className="flex justify-end gap-2">
-                      <button
-                        onClick={() => setModal({ mode: "edit", id: c.id, form: {
-                          type: c.type, name: c.name, authorized_person: c.authorized_person ?? "",
-                          phone: c.phone ?? "", email: c.email ?? "", city: c.city ?? "",
-                        } })}
-                        className="text-muted hover:text-primary" title="Düzenle"
-                      ><Pencil size={16} /></button>
-                      <button onClick={() => remove(c.id)} className="text-muted hover:text-danger" title="Sil">
-                        <Trash2 size={16} />
-                      </button>
+                      <button onClick={() => openEdit(c.id)} className="text-muted hover:text-primary" title="Düzenle"><Pencil size={16} /></button>
+                      <button onClick={() => remove(c.id)} className="text-muted hover:text-danger" title="Sil"><Trash2 size={16} /></button>
                     </div>
                   </td>
                 </tr>
@@ -147,70 +142,78 @@ export default function CustomersPage() {
         </table>
       </div>
 
-      {/* Sayfalama */}
       {meta && meta.last_page > 1 && (
         <div className="mt-4 flex items-center justify-end gap-2 text-sm">
-          <button disabled={page <= 1} onClick={() => setPage((p) => p - 1)}
-            className="rounded-lg border border-line px-3 py-1 disabled:opacity-40">Önceki</button>
+          <button disabled={page <= 1} onClick={() => setPage((p) => p - 1)} className="rounded-lg border border-line px-3 py-1 disabled:opacity-40">Önceki</button>
           <span className="text-muted">{meta.current_page} / {meta.last_page}</span>
-          <button disabled={page >= meta.last_page} onClick={() => setPage((p) => p + 1)}
-            className="rounded-lg border border-line px-3 py-1 disabled:opacity-40">Sonraki</button>
+          <button disabled={page >= meta.last_page} onClick={() => setPage((p) => p + 1)} className="rounded-lg border border-line px-3 py-1 disabled:opacity-40">Sonraki</button>
         </div>
       )}
 
-      {/* Modal */}
       {modal && (
-        <div className="fixed inset-0 z-20 grid place-items-center bg-black/40 p-4" onClick={() => setModal(null)}>
-          <div className="w-full max-w-md rounded-xl bg-card p-6 shadow-lg" onClick={(e) => e.stopPropagation()}>
-            <h2 className="text-lg font-semibold text-ink">
-              {modal.mode === "create" ? "Yeni Müşteri" : "Müşteri Düzenle"}
-            </h2>
-            <div className="mt-4 space-y-3">
-              <label className="block">
-                <span className="mb-1 block text-xs font-medium text-muted">Tip</span>
-                <select className="input" value={modal.form.type}
-                  onChange={(e) => setModal({ ...modal, form: { ...modal.form, type: e.target.value } })}>
-                  <option value="corporate">Kurumsal</option>
-                  <option value="individual">Bireysel</option>
-                </select>
-              </label>
-              <label className="block">
-                <span className="mb-1 block text-xs font-medium text-muted">Ad / Ünvan (Site adı) *</span>
-                <input className="input" value={modal.form.name} placeholder="Örn. Yeşil Vadi Sitesi"
-                  onChange={(e) => setModal({ ...modal, form: { ...modal.form, name: e.target.value } })} />
-              </label>
-              <label className="block">
-                <span className="mb-1 block text-xs font-medium text-muted">Yetkili Kişi</span>
-                <input className="input" value={modal.form.authorized_person} placeholder="Örn. Ahmet Yılmaz (Yönetici)"
-                  onChange={(e) => setModal({ ...modal, form: { ...modal.form, authorized_person: e.target.value } })} />
-              </label>
-              <div className="grid grid-cols-2 gap-3">
-                <label className="block">
-                  <span className="mb-1 block text-xs font-medium text-muted">Telefon</span>
-                  <input className="input" value={modal.form.phone}
-                    onChange={(e) => setModal({ ...modal, form: { ...modal.form, phone: e.target.value } })} />
-                </label>
-                <label className="block">
-                  <span className="mb-1 block text-xs font-medium text-muted">Şehir</span>
-                  <input className="input" value={modal.form.city}
-                    onChange={(e) => setModal({ ...modal, form: { ...modal.form, city: e.target.value } })} />
-                </label>
+        <div className="fade-in fixed inset-0 z-30 grid place-items-center bg-slate-950/50 p-4 backdrop-blur-sm" onClick={() => setModal(null)}>
+          <div className="pop-in surface-pop flex max-h-[92vh] w-full max-w-2xl flex-col rounded-2xl border border-line bg-card" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between border-b border-line px-6 py-4">
+              <h2 className="text-lg font-semibold tracking-tight text-ink">{modal.mode === "create" ? "Yeni Müşteri" : "Müşteri Düzenle"}</h2>
+              <button onClick={() => setModal(null)} className="grid h-8 w-8 place-items-center rounded-lg text-muted hover:bg-surface hover:text-ink"><X size={18} /></button>
+            </div>
+
+            <div className="flex-1 space-y-4 overflow-y-auto px-6 py-5">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <F label="Tip">
+                  <select className="input" value={modal.form.type} onChange={(e) => set({ type: e.target.value })}>
+                    <option value="corporate">Kurumsal</option>
+                    <option value="individual">Bireysel</option>
+                  </select>
+                </F>
+                <F label="Ad / Ünvan (Site adı)" req>
+                  <input className="input" placeholder="Örn. Yeşil Vadi Sitesi" value={modal.form.name} onChange={(e) => set({ name: e.target.value })} />
+                </F>
+                <F label="Yetkili Kişi">
+                  <input className="input" placeholder="Örn. Ahmet Yılmaz (Yönetici)" value={modal.form.authorized_person} onChange={(e) => set({ authorized_person: e.target.value })} />
+                </F>
+                <F label="Cep Telefonu">
+                  <div className="flex">
+                    <span className="inline-flex items-center rounded-l-[10px] border border-r-0 border-line bg-surface px-3 text-sm text-muted">+90</span>
+                    <input className="input rounded-l-none" placeholder="5XX XXX XX XX" value={modal.form.phone} onChange={(e) => set({ phone: e.target.value })} />
+                  </div>
+                </F>
+                <F label="E-posta"><input className="input" type="email" placeholder="info@firma.com" value={modal.form.email} onChange={(e) => set({ email: e.target.value })} /></F>
+                <F label="Vergi No / TCKN"><input className="input" value={modal.form.tax_number} onChange={(e) => set({ tax_number: e.target.value })} /></F>
+                <F label="Vergi Dairesi"><input className="input" value={modal.form.tax_office} onChange={(e) => set({ tax_office: e.target.value })} /></F>
+                <F label="Bölge">
+                  <select className="input" value={modal.form.region_id} onChange={(e) => set({ region_id: e.target.value })}>
+                    <option value="">— Yok —</option>
+                    {regions.map((r) => <option key={r.id} value={r.id}>{r.label}</option>)}
+                  </select>
+                </F>
+                <F label="Şehir"><input className="input" value={modal.form.city} onChange={(e) => set({ city: e.target.value })} /></F>
+                <F label="İlçe"><input className="input" value={modal.form.district} onChange={(e) => set({ district: e.target.value })} /></F>
               </div>
-              <label className="block">
-                <span className="mb-1 block text-xs font-medium text-muted">E-posta</span>
-                <input className="input" value={modal.form.email}
-                  onChange={(e) => setModal({ ...modal, form: { ...modal.form, email: e.target.value } })} />
+              <F label="Adres"><textarea className="input min-h-16" value={modal.form.address} onChange={(e) => set({ address: e.target.value })} /></F>
+              <F label="Notlar"><textarea className="input min-h-16" value={modal.form.notes} onChange={(e) => set({ notes: e.target.value })} /></F>
+              <label className="flex items-center gap-2.5 text-sm text-ink">
+                <input type="checkbox" className="h-4 w-4 rounded border-line accent-[color:var(--color-primary)]" checked={modal.form.is_active} onChange={(e) => set({ is_active: e.target.checked })} />
+                Aktif
               </label>
             </div>
-            <div className="mt-5 flex justify-end gap-2">
-              <button onClick={() => setModal(null)} className="rounded-lg border border-line px-4 py-2 text-sm">İptal</button>
-              <button onClick={save} disabled={saving || !modal.form.name} className="btn-primary">
-                {saving ? "Kaydediliyor…" : "Kaydet"}
-              </button>
+
+            <div className="flex justify-end gap-2 border-t border-line px-6 py-4">
+              <button onClick={() => setModal(null)} className="btn-ghost">İptal</button>
+              <button onClick={save} disabled={saving || !modal.form.name.trim()} className="btn-primary">{saving ? "Kaydediliyor…" : "Kaydet"}</button>
             </div>
           </div>
         </div>
       )}
     </div>
+  );
+}
+
+function F({ label, req, children }: { label: string; req?: boolean; children: React.ReactNode }) {
+  return (
+    <label className="block">
+      <span className="mb-1.5 block text-xs font-medium text-ink-soft">{label}{req && <span className="text-danger"> *</span>}</span>
+      {children}
+    </label>
   );
 }

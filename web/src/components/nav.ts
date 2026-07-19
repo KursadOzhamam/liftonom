@@ -3,7 +3,7 @@ import {
   LayoutDashboard, Users, Building2, ArrowUpDown, ShieldCheck, MapPin,
   Wrench, AlertTriangle, ClipboardList, Wallet, Landmark, FileText,
   Receipt, Package, Settings, Crown, MessageCircle,
-  FileSignature, ClipboardCheck, FileCheck, ShoppingCart, FolderKanban,
+  FileSignature, ClipboardCheck, FileCheck, ShoppingCart,
   TrendingUp, Truck, Banknote, CalendarX, CalendarDays, HandCoins, PackageMinus,
   Rocket, CalendarPlus, CircleDollarSign, ScrollText, LifeBuoy, GraduationCap,
   Coins, Tags, Warehouse, Car, Navigation, UserCircle, type LucideIcon,
@@ -40,7 +40,6 @@ export const NAV: NavGroup[] = [
       { label: "Arıza Bildirimleri", href: "/faults", icon: AlertTriangle },
       { label: "İş Emirleri", href: "/work-orders", icon: ClipboardList },
       { label: "Asansör Siparişleri", href: "/elevator-orders", icon: ShoppingCart },
-      { label: "Projeler / İşler", href: "/projects", icon: FolderKanban },
     ],
   },
   {
