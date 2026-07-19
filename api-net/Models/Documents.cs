@@ -5,6 +5,7 @@ public class Quote
     public long Id { get; set; }
     public long TenantId { get; set; }
     public long? CustomerId { get; set; }
+    public long? ElevatorId { get; set; }             // revizyon teklifi: hedef asansör
     public long? TemplateId { get; set; }
     public string? QuoteNumber { get; set; }
     public string Type { get; set; } = "standard";    // standard | revision (revizyon teklifi)
@@ -12,9 +13,18 @@ public class Quote
     public string DocumentStatus { get; set; } = "draft"; // belge durumu: draft | sent | approved
     public string? Title { get; set; }                // konu/başlık
     public string? CustomerName { get; set; }         // serbest müşteri adı (kayıttan bağımsız)
+    public string? ContactName { get; set; }          // müşteri/bina sorumlusu (revizyon)
     public string? Email { get; set; }
     public string? Phone { get; set; }
+    public string? Address { get; set; }
     public string Currency { get; set; } = "TRY";
+    // Revizyon teklifi: işçilik + malzeme (KDV dahil) → toplam
+    public decimal? LaborTotal { get; set; }
+    public decimal? MaterialTotal { get; set; }
+    public bool PriceVisible { get; set; } = true;    // fiyat müşteriye görünür mü
+    public string? InternalNotes { get; set; }        // iç notlar (sadece yöneticiler)
+    public string? CompanySignature { get; set; }     // firma kaşe/imza (data URL)
+    public string? CustomerSignature { get; set; }    // müşteri imzası (public onay)
     public DateOnly? ValidUntil { get; set; }
     public string? Items { get; set; } = "[]";        // jsonb
     public decimal? Subtotal { get; set; }
@@ -32,6 +42,7 @@ public class Quote
     public DateTime? DeletedAt { get; set; }
 
     public Customer? Customer { get; set; }
+    public Elevator? Elevator { get; set; }
     public QuoteTemplate? Template { get; set; }
 }
 
@@ -41,7 +52,8 @@ public class QuoteTemplate
     public long Id { get; set; }
     public long TenantId { get; set; }
     public string Name { get; set; } = "";
-    public string Type { get; set; } = "Teklif";
+    public string Kind { get; set; } = "standard";    // standard | revision — teklif türü
+    public string Type { get; set; } = "Teklif";      // görünen tür etiketi
     public bool IsDefault { get; set; }
     public bool IsActive { get; set; } = true;
     public string Clauses { get; set; } = "[]";       // jsonb: [{title,body,active}]

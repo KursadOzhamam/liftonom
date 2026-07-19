@@ -325,6 +325,21 @@ cd mobile && flutter pub get && flutter run
   (`GET /public/quotes/{token}`, AllowAnonymous).
 - Uçlar `QuoteController` (quotes + `templates` CRUD + `send`/`pdf` + `approve`/`reject`) ve `PublicQuoteController`.
 
+### Revizyon Teklifleri (`/revision-quotes`) — asansör bazlı belge sistemi
+- Aynı `Quote` tablosu, `type="revision"`. Ek alanlar: `elevator_id, contact_name, address, labor_total,
+  material_total, price_visible, internal_notes, company_signature, customer_signature` (idempotent ALTER).
+  No formatı `RT-YYYYMMDD-XXXX`. Toplam = İşçilik + Malzeme (KDV dahil, tax=0).
+- **`QuoteTemplate.Kind`** ("standard" | "revision") eklendi — şablon uçları `?kind=` ile filtrelenir;
+  tenant başına **6 maddelik "Standart Revizyon Teklifi"** (kind=revision) otomatik seed. Placeholder'lar:
+  `{{asansor_no}} {{iscilik}} {{malzeme}} {{tutar}} {{belge_tarihi}} {{gecerlilik}} {{musteri_adi}}`.
+- **Form** (`RevisionForm.tsx`): asansör seç (zorunlu), İşçilik/Malzeme (KDV dahil) → otomatik Genel Toplam,
+  **Fiyat Müşteriye Görünür** toggle, müşteri/bina sorumlusu, telefon/e-posta, geçerlilik, adres, açıklama
+  (müşteri görür), iç notlar (yönetici).
+- **Önizleme** (`/revision-quotes/[id]/preview`): İşçilik/Malzeme kutusu + Genel Toplam + maddeler + **firma
+  imza canvas** ("İmzayı Bu Teklife Kaydet") + Gönder (e-posta onaylı, PDF ekli) + PDF + public link.
+  `PdfService.GenerateRevisionQuote` (fiyat gizliyse tablo gösterilmez). Public: `/revizyon-teklifi/[token]`
+  → müşteri imzalayıp onaylar → `status=approved` ("Kabul"). `PriceVisible=false` ise public/PDF fiyatı gizler.
+
 ### Canlı deploy doğrulama (bu oturumda kullanılan akış)
 - Değişiklik → `git push liftonom HEAD:main` → Coolify webhook otomatik deploy. Durum:
   `GET /api/v1/deployments/applications/{app_uuid}` (Coolify API + Bearer token). Scriptler & app_uuid:

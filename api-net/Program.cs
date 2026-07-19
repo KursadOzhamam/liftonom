@@ -305,6 +305,16 @@ using (var scope = app.Services.CreateScope())
         ALTER TABLE quotes ADD COLUMN IF NOT EXISTS terms text;
         ALTER TABLE quotes ADD COLUMN IF NOT EXISTS public_token text;
         ALTER TABLE quotes ADD COLUMN IF NOT EXISTS sent_at timestamptz;
+        ALTER TABLE quotes ADD COLUMN IF NOT EXISTS elevator_id bigint;
+        ALTER TABLE quotes ADD COLUMN IF NOT EXISTS contact_name text;
+        ALTER TABLE quotes ADD COLUMN IF NOT EXISTS address text;
+        ALTER TABLE quotes ADD COLUMN IF NOT EXISTS labor_total numeric;
+        ALTER TABLE quotes ADD COLUMN IF NOT EXISTS material_total numeric;
+        ALTER TABLE quotes ADD COLUMN IF NOT EXISTS price_visible boolean NOT NULL DEFAULT true;
+        ALTER TABLE quotes ADD COLUMN IF NOT EXISTS internal_notes text;
+        ALTER TABLE quotes ADD COLUMN IF NOT EXISTS company_signature text;
+        ALTER TABLE quotes ADD COLUMN IF NOT EXISTS customer_signature text;
+        ALTER TABLE quote_templates ADD COLUMN IF NOT EXISTS kind text NOT NULL DEFAULT 'standard';
         """);
 
     if (!await db.PlatformSettings.AnyAsync())

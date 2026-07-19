@@ -1,131 +1,137 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { api, ApiError } from "@/lib/api";
-import { dateTR, TRY } from "@/lib/format";
-import { useOptions } from "@/lib/hooks";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { api, ApiError, downloadFile } from "@/lib/api";
+import { dateTR } from "@/lib/format";
+import { useConfirm } from "@/components/ConfirmDialog";
 import Badge from "@/components/Badge";
-import Modal, { Field } from "@/components/Modal";
-import { Plus, Trash2, Pencil } from "lucide-react";
+import { Plus, Eye, Send, FileDown, Pencil, Trash2, Star } from "lucide-react";
 
-type Row = { id: number; quote_number: string | null; total: number | null; valid_until: string | null; status: string; customer?: { name: string } | null };
-type Paginated = { data: Row[]; meta: { total: number } };
-type Item = { description: string; quantity: string; unit_price: string };
-
-const newItem = (): Item => ({ description: "", quantity: "1", unit_price: "" });
-
-type QuoteDetail = {
-  customer_id: number | null; valid_until: string | null;
-  tax_rate: number | null; discount: number | null; notes: string | null; items: string | null;
+type Row = {
+  id: number; quote_number: string | null; status: string; total: number | null; subtotal: number | null;
+  currency: string | null; created_at: string; elevator_name: string | null;
 };
+type Tpl = { id: number; name: string; type: string; is_default: boolean; is_active: boolean; clause_count: number };
 
-function parseQuoteItems(raw: string | null): Item[] {
-  if (raw) {
-    try {
-      const arr = JSON.parse(raw) as Record<string, unknown>[];
-      if (Array.isArray(arr) && arr.length) {
-        return arr.map((x) => ({
-          description: String(x.description ?? x.Description ?? ""),
-          quantity: String(x.quantity ?? x.Quantity ?? "1"),
-          unit_price: String(x.unit_price ?? x.UnitPrice ?? ""),
-        }));
-      }
-    } catch { /* ignore */ }
-  }
-  return [newItem()];
-}
+const STATUSES = [
+  { v: "draft", l: "Taslak" }, { v: "sent", l: "Gönderildi" },
+  { v: "approved", l: "Kabul" }, { v: "rejected", l: "Reddedildi" },
+];
+const fmt = (n: number | null, cur?: string | null) =>
+  n == null ? "—" : `${new Intl.NumberFormat("tr-TR", { minimumFractionDigits: 2 }).format(n)} ${cur ?? "TRY"}`;
 
 export default function RevisionQuotesPage() {
-  const [rows, setRows] = useState<Row[]>([]);
-  const [total, setTotal] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [modal, setModal] = useState(false);
-  const [editId, setEditId] = useState<number | null>(null);
-  const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState({ customer_id: "", valid_until: "", tax_rate: "20", discount: "0", notes: "" });
-  const [items, setItems] = useState<Item[]>([newItem()]);
+  const [tab, setTab] = useState<"docs" | "templates">("docs");
+  const [tplCount, setTplCount] = useState(0);
 
-  const customers = useOptions("/customers");
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    try { const r = await api<Paginated>("/quotes?type=revision"); setRows(r.data); setTotal(r.meta.total); }
-    finally { setLoading(false); }
+  const loadTplCount = useCallback(async () => {
+    try { const r = await api<{ data: Tpl[] }>("/quotes/templates?kind=revision"); setTplCount(r.data.length); } catch { /* ignore */ }
   }, []);
-  useEffect(() => { load(); }, [load]);
-
-  function openNew() { setForm({ customer_id: "", valid_until: "", tax_rate: "20", discount: "0", notes: "" }); setItems([newItem()]); setEditId(null); setModal(true); }
-  function setItem(i: number, patch: Partial<Item>) { setItems((arr) => arr.map((it, idx) => idx === i ? { ...it, ...patch } : it)); }
-
-  const subtotal = items.reduce((s, it) => s + (Number(it.quantity) || 0) * (Number(it.unit_price) || 0), 0);
-
-  async function openEdit(id: number) {
-    try {
-      const d = await api<QuoteDetail>(`/quotes/${id}`);
-      setForm({
-        customer_id: d.customer_id != null ? String(d.customer_id) : "",
-        valid_until: d.valid_until ?? "",
-        tax_rate: d.tax_rate != null ? String(d.tax_rate) : "20",
-        discount: d.discount != null ? String(d.discount) : "0",
-        notes: d.notes ?? "",
-      });
-      setItems(parseQuoteItems(d.items));
-      setEditId(id); setModal(true);
-    } catch (e) { alert(e instanceof ApiError ? e.message : "Kayıt yüklenemedi."); }
-  }
-
-  async function save() {
-    setSaving(true);
-    try {
-      const body = {
-        customer_id: Number(form.customer_id), type: "revision",
-        valid_until: form.valid_until || null,
-        items: items.filter((it) => it.description).map((it) => ({ description: it.description, quantity: Number(it.quantity) || 0, unit_price: Number(it.unit_price) || 0 })),
-        tax_rate: Number(form.tax_rate) || 0, discount: Number(form.discount) || 0, notes: form.notes || null,
-      };
-      if (editId == null) await api("/quotes", { method: "POST", body });
-      else await api(`/quotes/${editId}`, { method: "PUT", body });
-      setModal(false); setEditId(null); load();
-    } catch (e) { alert(e instanceof ApiError ? e.message : "Kaydedilemedi."); } finally { setSaving(false); }
-  }
+  useEffect(() => { loadTplCount(); }, [loadTplCount]);
 
   return (
     <div>
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-ink">Revizyon Teklifleri</h1>
-          <p className="mt-1 text-sm text-muted">{total} revizyon teklifi · asansör modernizasyon/revizyon</p>
-        </div>
-        <button onClick={openNew} className="btn-primary"><Plus size={16} /> Yeni</button>
+      <h1 className="text-2xl font-bold text-ink">{tab === "docs" ? "Revizyon Teklifleri" : "Revizyon Teklifi Şablonları"}</h1>
+      <p className="mt-1 text-sm text-muted">Mevcut asansör için onarım/güncelleme teklifleri.</p>
+
+      <div className="mt-4 flex w-fit gap-1 rounded-xl border border-line bg-surface p-1">
+        <button onClick={() => setTab("docs")}
+          className={`rounded-lg px-4 py-2 text-sm font-medium transition ${tab === "docs" ? "bg-card text-ink shadow-sm" : "text-muted hover:text-ink"}`}>
+          Belgeler
+        </button>
+        <button onClick={() => setTab("templates")}
+          className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition ${tab === "templates" ? "bg-card text-ink shadow-sm" : "text-muted hover:text-ink"}`}>
+          Şablonlar
+          <span className="grid h-5 min-w-5 place-items-center rounded-full bg-primary/10 px-1.5 text-xs font-semibold text-primary">{tplCount}</span>
+        </button>
       </div>
 
-      <div className="mt-4 overflow-hidden rounded-xl border border-line bg-card">
+      <div className="mt-5">{tab === "docs" ? <DocsTab /> : <TemplatesTab onChange={loadTplCount} />}</div>
+    </div>
+  );
+}
+
+function DocsTab() {
+  const [rows, setRows] = useState<Row[]>([]);
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [status, setStatus] = useState("");
+  const [sort, setSort] = useState("");
+  const confirm = useConfirm();
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const p = new URLSearchParams();
+      if (search.trim()) p.set("search", search.trim());
+      if (status) p.set("status", status);
+      if (sort) p.set("sort", sort);
+      p.set("type", "revision"); p.set("per_page", "50");
+      const r = await api<{ data: Row[]; meta: { total: number } }>(`/quotes?${p}`);
+      setRows(r.data); setTotal(r.meta.total);
+    } finally { setLoading(false); }
+  }, [search, status, sort]);
+
+  useEffect(() => { const t = setTimeout(load, 250); return () => clearTimeout(t); }, [load]);
+
+  async function del(id: number) {
+    if (!(await confirm("Bu revizyon teklifi silinsin mi?", { danger: true }))) return;
+    await api(`/quotes/${id}`, { method: "DELETE" }); load();
+  }
+
+  return (
+    <div className="rounded-2xl border border-line bg-card p-5">
+      <input className="input" placeholder="Teklif no veya asansör…" value={search} onChange={(e) => setSearch(e.target.value)} />
+      <div className="mt-3 grid gap-3 sm:grid-cols-2">
+        <Sel label="Durum" value={status} onChange={setStatus} opts={[{ v: "", l: "Tüm Durumlar" }, ...STATUSES]} />
+        <Sel label="Sırala" value={sort} onChange={setSort} opts={[
+          { v: "", l: "En yeni tarih" }, { v: "valid_asc", l: "Geçerliliğe göre" },
+          { v: "amount_desc", l: "Tutar (çok→az)" }, { v: "amount_asc", l: "Tutar (az→çok)" },
+        ]} />
+      </div>
+
+      <div className="mt-4 flex items-center justify-end">
+        <Link href="/revision-quotes/new" className="btn-primary"><Plus size={16} /> Yeni</Link>
+      </div>
+
+      <p className="mt-4 text-sm text-muted"><b className="text-ink">{total}</b> kayıt</p>
+
+      <div className="mt-2 overflow-x-auto rounded-xl border border-line">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-line text-left text-xs uppercase tracking-wide text-muted">
               <th className="px-4 py-3 font-medium">No</th>
-              <th className="px-4 py-3 font-medium">Müşteri</th>
-              <th className="px-4 py-3 font-medium">Geçerlilik</th>
-              <th className="px-4 py-3 font-medium text-right">Tutar</th>
+              <th className="px-4 py-3 font-medium">Tarih</th>
+              <th className="px-4 py-3 font-medium">Asansör</th>
+              <th className="px-4 py-3 font-medium text-right">Ara Toplam</th>
+              <th className="px-4 py-3 font-medium text-right">Toplam</th>
               <th className="px-4 py-3 font-medium">Durum</th>
-              <th className="px-4 py-3 font-medium text-right">İşlem</th>
+              <th className="px-4 py-3 font-medium text-right">İşlemler</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={6} className="px-4 py-10 text-center text-muted">Yükleniyor…</td></tr>
+              <tr><td colSpan={7} className="px-4 py-10 text-center text-muted">Yükleniyor…</td></tr>
             ) : rows.length === 0 ? (
-              <tr><td colSpan={6} className="px-4 py-10 text-center text-muted">Henüz revizyon teklifi yok.</td></tr>
-            ) : rows.map((q) => (
-              <tr key={q.id} className="border-b border-line last:border-0 hover:bg-surface">
-                <td className="px-4 py-3 font-mono text-xs text-ink-soft">{q.quote_number ?? `#${q.id}`}</td>
-                <td className="px-4 py-3 font-medium text-ink">{q.customer?.name ?? "—"}</td>
-                <td className="px-4 py-3 text-ink-soft">{dateTR(q.valid_until)}</td>
-                <td className="px-4 py-3 text-right tabular-nums text-ink-soft">{q.total != null ? TRY(q.total) : "—"}</td>
-                <td className="px-4 py-3"><Badge status={q.status} /></td>
+              <tr><td colSpan={7} className="px-4 py-10 text-center text-muted">Henüz revizyon teklifi yok.</td></tr>
+            ) : rows.map((r) => (
+              <tr key={r.id} className="border-b border-line last:border-0 hover:bg-surface">
+                <td className="px-4 py-3 font-mono text-xs text-ink-soft">{r.quote_number ?? `#${r.id}`}</td>
+                <td className="px-4 py-3 text-ink-soft">{dateTR(r.created_at)}</td>
+                <td className="px-4 py-3 font-medium text-ink">{r.elevator_name ?? "—"}</td>
+                <td className="px-4 py-3 text-right tabular-nums text-ink-soft">{r.subtotal ? fmt(r.subtotal, r.currency) : "—"}</td>
+                <td className="px-4 py-3 text-right tabular-nums text-ink-soft">{r.total ? fmt(r.total, r.currency) : "—"}</td>
+                <td className="px-4 py-3"><Badge status={r.status} /></td>
                 <td className="px-4 py-3">
-                  <div className="flex justify-end">
-                    <button onClick={() => openEdit(q.id)} className="text-muted hover:text-primary" title="Görüntüle / Düzenle"><Pencil size={16} /></button>
+                  <div className="flex items-center justify-end gap-1">
+                    <Link href={`/revision-quotes/${r.id}/preview`} className="btn-primary px-2.5 py-1.5 text-xs"><Eye size={14} /> Önizle</Link>
+                    <Link href={`/revision-quotes/${r.id}/preview?send=1`} className="btn-ghost px-2.5 py-1.5 text-xs"><Send size={14} /> Gönder</Link>
+                    <button onClick={() => downloadFile(`/quotes/${r.id}/pdf`, `${r.quote_number ?? `revizyon-${r.id}`}.pdf`)} className="btn-ghost px-2.5 py-1.5 text-xs" title="PDF"><FileDown size={14} /></button>
+                    <Link href={`/revision-quotes/${r.id}/edit`} className="btn-ghost px-2.5 py-1.5 text-xs"><Pencil size={14} /> Düzenle</Link>
+                    <button onClick={() => del(r.id)} className="btn-danger px-2.5 py-1.5 text-xs"><Trash2 size={14} /> Sil</button>
                   </div>
                 </td>
               </tr>
@@ -133,42 +139,99 @@ export default function RevisionQuotesPage() {
           </tbody>
         </table>
       </div>
-
-      {modal && (
-        <Modal title={editId == null ? "Yeni Revizyon Teklifi" : "Revizyon Teklifi Düzenle"} onClose={() => setModal(false)} footer={
-          <>
-            <button onClick={() => setModal(false)} className="rounded-lg border border-line px-4 py-2 text-sm">İptal</button>
-            <button onClick={save} disabled={saving || !form.customer_id} className="btn-primary">{saving ? "Kaydediliyor…" : "Kaydet"}</button>
-          </>
-        }>
-          <Field label="Müşteri *">
-            <select className="input" value={form.customer_id} onChange={(e) => setForm({ ...form, customer_id: e.target.value })}>
-              <option value="">Seçiniz…</option>
-              {customers.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
-            </select>
-          </Field>
-          <div>
-            <span className="mb-1 block text-xs font-medium text-muted">Kalemler</span>
-            <div className="space-y-2">
-              {items.map((it, i) => (
-                <div key={i} className="flex gap-2">
-                  <input className="input flex-1" placeholder="Açıklama" value={it.description} onChange={(e) => setItem(i, { description: e.target.value })} />
-                  <input className="input w-16" type="number" placeholder="Adet" value={it.quantity} onChange={(e) => setItem(i, { quantity: e.target.value })} />
-                  <input className="input w-24" type="number" placeholder="B.Fiyat" value={it.unit_price} onChange={(e) => setItem(i, { unit_price: e.target.value })} />
-                  {items.length > 1 && <button onClick={() => setItems((a) => a.filter((_, idx) => idx !== i))} className="rounded-lg px-2 text-muted hover:text-danger"><Trash2 size={15} /></button>}
-                </div>
-              ))}
-            </div>
-            <button onClick={() => setItems((a) => [...a, newItem()])} className="mt-2 text-xs text-primary hover:underline">+ Kalem ekle</button>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="KDV %"><input className="input" type="number" value={form.tax_rate} onChange={(e) => setForm({ ...form, tax_rate: e.target.value })} /></Field>
-            <Field label="İskonto (₺)"><input className="input" type="number" value={form.discount} onChange={(e) => setForm({ ...form, discount: e.target.value })} /></Field>
-          </div>
-          <Field label="Geçerlilik"><input className="input" type="date" value={form.valid_until} onChange={(e) => setForm({ ...form, valid_until: e.target.value })} /></Field>
-          <div className="rounded-lg bg-surface px-3 py-2 text-sm"><span className="text-muted">Ara toplam: </span><span className="font-semibold tabular-nums text-ink">{TRY(subtotal)}</span></div>
-        </Modal>
-      )}
     </div>
+  );
+}
+
+function TemplatesTab({ onChange }: { onChange: () => void }) {
+  const [rows, setRows] = useState<Tpl[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [sort, setSort] = useState("az");
+  const confirm = useConfirm();
+  const router = useRouter();
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const p = new URLSearchParams();
+      if (search.trim()) p.set("search", search.trim());
+      p.set("sort", sort); p.set("kind", "revision");
+      const r = await api<{ data: Tpl[] }>(`/quotes/templates?${p}`);
+      setRows(r.data);
+    } finally { setLoading(false); }
+  }, [search, sort]);
+
+  useEffect(() => { const t = setTimeout(load, 250); return () => clearTimeout(t); }, [load]);
+
+  async function del(id: number) {
+    if (!(await confirm("Bu şablon silinsin mi?", { danger: true }))) return;
+    try { await api(`/quotes/templates/${id}`, { method: "DELETE" }); load(); onChange(); }
+    catch (e) { alert(e instanceof ApiError ? e.message : "Silinemedi."); }
+  }
+
+  return (
+    <div className="rounded-2xl border border-line bg-card p-5">
+      <div className="grid gap-3 sm:grid-cols-2">
+        <input className="input" placeholder="Şablon adıyla ara…" value={search} onChange={(e) => setSearch(e.target.value)} />
+        <Sel label="Sırala" value={sort} onChange={setSort} opts={[{ v: "az", l: "Ada göre (A→Z)" }, { v: "za", l: "Ada göre (Z→A)" }]} />
+      </div>
+      <div className="mt-4 flex justify-end">
+        <Link href="/revision-quotes/templates/new" className="btn-primary"><Plus size={16} /> Yeni</Link>
+      </div>
+      <p className="mt-4 text-sm text-muted"><b className="text-ink">{rows.length}</b> kayıt</p>
+      <div className="mt-2 overflow-x-auto rounded-xl border border-line">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-line text-left text-xs uppercase tracking-wide text-muted">
+              <th className="px-4 py-3 font-medium">Şablon Adı</th>
+              <th className="px-4 py-3 font-medium">Tür</th>
+              <th className="px-4 py-3 font-medium">İçerik</th>
+              <th className="px-4 py-3 font-medium">Varsayılan</th>
+              <th className="px-4 py-3 font-medium">Durum</th>
+              <th className="px-4 py-3 font-medium text-right">İşlemler</th>
+            </tr>
+          </thead>
+          <tbody>
+            {loading ? (
+              <tr><td colSpan={6} className="px-4 py-10 text-center text-muted">Yükleniyor…</td></tr>
+            ) : rows.length === 0 ? (
+              <tr><td colSpan={6} className="px-4 py-10 text-center text-muted">Henüz şablon yok.</td></tr>
+            ) : rows.map((t) => (
+              <tr key={t.id} className="border-b border-line last:border-0 hover:bg-surface">
+                <td className="px-4 py-3 font-medium text-ink">
+                  <button onClick={() => router.push(`/revision-quotes/templates/${t.id}`)} className="hover:text-primary">{t.name}</button>
+                </td>
+                <td className="px-4 py-3 text-ink-soft">{t.type}</td>
+                <td className="px-4 py-3 text-ink-soft">{t.clause_count} madde</td>
+                <td className="px-4 py-3">
+                  {t.is_default
+                    ? <span className="inline-flex items-center gap-1 text-sm font-medium text-amber-600"><Star size={14} className="fill-amber-400 text-amber-500" /> Varsayılan</span>
+                    : <span className="text-muted">—</span>}
+                </td>
+                <td className="px-4 py-3">{t.is_active ? <span className="font-medium text-success">Aktif</span> : <span className="text-muted">Pasif</span>}</td>
+                <td className="px-4 py-3">
+                  <div className="flex items-center justify-end gap-1">
+                    <Link href={`/revision-quotes/templates/${t.id}`} className="btn-ghost px-2.5 py-1.5 text-xs"><Pencil size={14} /> Düzenle</Link>
+                    <button onClick={() => del(t.id)} className="btn-danger px-2.5 py-1.5 text-xs"><Trash2 size={14} /> Sil</button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function Sel({ label, value, onChange, opts }: { label: string; value: string; onChange: (v: string) => void; opts: { v: string; l: string }[] }) {
+  return (
+    <label className="block">
+      <span className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-muted">{label}</span>
+      <select className="input" value={value} onChange={(e) => onChange(e.target.value)}>
+        {opts.map((o) => <option key={o.v} value={o.v}>{o.l}</option>)}
+      </select>
+    </label>
   );
 }

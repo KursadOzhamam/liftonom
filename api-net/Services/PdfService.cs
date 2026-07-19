@@ -331,6 +331,121 @@ public class PdfService
         return document.GeneratePdf();
     }
 
+    /// <summary>Revizyon teklifi PDF'i — asansör, İşçilik/Malzeme, genel toplam (fiyat gizliyse gösterilmez), maddeler, imza.</summary>
+    public byte[] GenerateRevisionQuote(Quote q, Tenant tenant, string customerName, string? elevatorName,
+        string? buildingName, List<(string Title, string Body)> clauses)
+    {
+        var cur = q.Currency ?? "TRY";
+        string M(decimal? n) => (n ?? 0).ToString("#,##0.00") + " " + cur;
+        var priceOn = q.PriceVisible;
+        var companySig = DecodeDataUrl(q.CompanySignature);
+        var customerSig = DecodeDataUrl(q.CustomerSignature);
+
+        var document = Document.Create(container =>
+        {
+            container.Page(page =>
+            {
+                page.Size(PageSizes.A4);
+                page.Margin(40);
+                page.DefaultTextStyle(x => x.FontSize(10).FontColor("#1E293B"));
+
+                page.Header().Row(row =>
+                {
+                    row.RelativeItem().Column(col =>
+                    {
+                        col.Item().Text(tenant.Name).Bold().FontSize(16).FontColor("#4F63F5");
+                        if (!string.IsNullOrEmpty(tenant.Phone)) col.Item().Text(tenant.Phone).FontSize(9).FontColor("#64748B");
+                    });
+                    row.ConstantItem(200).Column(col =>
+                    {
+                        col.Item().AlignRight().Text("REVİZYON TEKLİFİ NO").FontSize(8).FontColor("#94A3B8");
+                        col.Item().AlignRight().Text(q.QuoteNumber ?? $"#{q.Id}").Bold().FontSize(14);
+                        col.Item().PaddingTop(4).AlignRight().Text($"Düzenleme: {q.CreatedAt:dd.MM.yyyy}").FontSize(9).FontColor("#64748B");
+                        col.Item().AlignRight().Text($"Geçerlilik: {q.ValidUntil:dd.MM.yyyy}").FontSize(9).FontColor("#64748B");
+                    });
+                });
+
+                page.Content().PaddingVertical(14).Column(col =>
+                {
+                    col.Item().Row(r =>
+                    {
+                        r.RelativeItem().Border(1).BorderColor("#E2E8F0").Padding(10).Column(b =>
+                        {
+                            b.Item().Text("Sayın Müşterimiz").FontSize(8).FontColor("#94A3B8");
+                            b.Item().Text(customerName).Bold();
+                            if (!string.IsNullOrEmpty(q.ContactName)) b.Item().Text($"Yetkili: {q.ContactName}").FontSize(9);
+                        });
+                        r.ConstantItem(14);
+                        r.RelativeItem().Border(1).BorderColor("#E2E8F0").Padding(10).Column(b =>
+                        {
+                            b.Item().Text("Asansör").FontSize(8).FontColor("#94A3B8");
+                            b.Item().Text(elevatorName ?? "-").Bold();
+                            if (!string.IsNullOrEmpty(buildingName)) b.Item().Text(buildingName!).FontSize(9).FontColor("#64748B");
+                        });
+                    });
+
+                    if (priceOn)
+                    {
+                        col.Item().PaddingTop(14).Table(table =>
+                        {
+                            table.ColumnsDefinition(c => { c.RelativeColumn(3); c.RelativeColumn(2); });
+                            table.Cell().Background("#F1F5F9").Padding(6).Text("KALEM").Bold().FontSize(9);
+                            table.Cell().Background("#F1F5F9").Padding(6).AlignRight().Text("TUTAR (KDV DAHİL)").Bold().FontSize(9);
+                            table.Cell().BorderBottom(0.5f).BorderColor("#E2E8F0").Padding(6).Text("İşçilik");
+                            table.Cell().BorderBottom(0.5f).BorderColor("#E2E8F0").Padding(6).AlignRight().Text(M(q.LaborTotal));
+                            table.Cell().BorderBottom(0.5f).BorderColor("#E2E8F0").Padding(6).Text("Malzeme");
+                            table.Cell().BorderBottom(0.5f).BorderColor("#E2E8F0").Padding(6).AlignRight().Text(M(q.MaterialTotal));
+                        });
+                        col.Item().PaddingTop(8).AlignRight().Column(t =>
+                        {
+                            t.Item().Text($"GENEL TOPLAM: {M(q.Total)}").Bold().FontSize(13).FontColor("#4F63F5");
+                            t.Item().Text("Tutarlar KDV dahildir.").FontSize(8).FontColor("#94A3B8");
+                        });
+                    }
+
+                    foreach (var cl in clauses)
+                    {
+                        col.Item().PaddingTop(12).Text(cl.Title).Bold().FontSize(11);
+                        col.Item().PaddingTop(2).Text(cl.Body).FontSize(9.5f).LineHeight(1.4f).FontColor("#334155");
+                    }
+
+                    if (!string.IsNullOrWhiteSpace(q.Notes))
+                    {
+                        col.Item().PaddingTop(12).Text("Açıklama").Bold().FontSize(11);
+                        col.Item().PaddingTop(2).Text(q.Notes!).FontSize(9.5f).FontColor("#334155");
+                    }
+
+                    col.Item().PaddingTop(30).Row(r =>
+                    {
+                        r.RelativeItem().Column(s =>
+                        {
+                            if (companySig != null) s.Item().Height(50).AlignCenter().Image(companySig).FitArea();
+                            else s.Item().Height(50);
+                            s.Item().BorderTop(1).BorderColor("#1E293B").PaddingTop(4).AlignCenter().Text($"Firma Kaşesi / İmzası\n{tenant.Name}").FontSize(9);
+                        });
+                        r.ConstantItem(40);
+                        r.RelativeItem().Column(s =>
+                        {
+                            if (customerSig != null) s.Item().Height(50).AlignCenter().Image(customerSig).FitArea();
+                            else s.Item().Height(50);
+                            s.Item().BorderTop(1).BorderColor("#1E293B").PaddingTop(4).AlignCenter().Text($"Müşteri İmzası\n{customerName}").FontSize(9);
+                        });
+                    });
+                });
+
+                page.Footer().AlignCenter().Text(t =>
+                {
+                    t.Span("Liftonom ile oluşturulmuştur · Sayfa ").FontSize(8).FontColor("#94A3B8");
+                    t.CurrentPageNumber().FontSize(8).FontColor("#94A3B8");
+                    t.Span(" / ").FontSize(8).FontColor("#94A3B8");
+                    t.TotalPages().FontSize(8).FontColor("#94A3B8");
+                });
+            });
+        });
+
+        return document.GeneratePdf();
+    }
+
     /// <summary>Teklif belgesi PDF'i — başlık, müşteri kutusu, kalemler tablosu, toplam ve şart maddeleri.</summary>
     public byte[] GenerateQuote(Quote q, Tenant tenant, string customerName, List<(string Title, string Body)> clauses)
     {
