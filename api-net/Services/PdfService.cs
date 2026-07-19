@@ -304,14 +304,14 @@ public class PdfService
                     {
                         r.RelativeItem().Column(s =>
                         {
-                            if (companySig != null) s.Item().Height(50).AlignCenter().Image(companySig);
+                            if (companySig != null) s.Item().Height(50).AlignCenter().Image(companySig).FitArea();
                             else s.Item().Height(50);
                             s.Item().BorderTop(1).BorderColor("#1E293B").PaddingTop(4).AlignCenter().Text($"Firma Kaşesi / İmzası\n{tenant.Name}").FontSize(9);
                         });
                         r.ConstantItem(40);
                         r.RelativeItem().Column(s =>
                         {
-                            if (customerSig != null) s.Item().Height(50).AlignCenter().Image(customerSig);
+                            if (customerSig != null) s.Item().Height(50).AlignCenter().Image(customerSig).FitArea();
                             else s.Item().Height(50);
                             s.Item().BorderTop(1).BorderColor("#1E293B").PaddingTop(4).AlignCenter().Text($"Müşteri İmzası\n{customerName}").FontSize(9);
                         });
