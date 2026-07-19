@@ -16,28 +16,46 @@ public class MaintenanceController(AppDbContext db, PdfService pdf) : Controller
     public record CreateDto(long ElevatorId, string Type, DateTime PlannedDate,
         List<long>? AssignedUsers, bool? IsRecurring, string? RecurringPeriod, string? TechnicianNote,
         string? Description, bool? IsCritical, string? Notes, string? Status, DateTime? CompletedAt);
-    public record UpdateDto(string? Type, DateTime? PlannedDate, string? Status, string? TechnicianNote);
+    public record UpdateDto(string? Type, DateTime? PlannedDate, string? Status, string? TechnicianNote,
+        List<long>? AssignedUsers, string? Description, bool? IsCritical, string? Notes);
     public record CompleteDto(string? TechnicianNote, string? CustomerSignatureUrl);
 
     [HttpGet]
-    public async Task<IActionResult> Index([FromQuery] string? status, [FromQuery] string? type,
-        [FromQuery(Name = "elevator_id")] long? elevatorId, [FromQuery] DateTime? from, [FromQuery] DateTime? to,
-        [FromQuery] bool mine = false,
+    public async Task<IActionResult> Index([FromQuery] string? search, [FromQuery] string? status, [FromQuery] string? type,
+        [FromQuery(Name = "elevator_id")] long? elevatorId, [FromQuery(Name = "region_id")] long? regionId,
+        [FromQuery(Name = "technician_id")] long? technicianId, [FromQuery] DateTime? from, [FromQuery] DateTime? to,
+        [FromQuery] bool mine = false, [FromQuery] string sort = "newest",
         [FromQuery(Name = "per_page")] int perPage = 25, [FromQuery] int page = 1)
     {
         var q = db.MaintenanceRecords.AsQueryable();
+        if (!string.IsNullOrWhiteSpace(search))
+            q = q.Where(m => EF.Functions.ILike(m.Elevator!.Name ?? "", $"%{search}%")
+                || EF.Functions.ILike(m.Elevator!.Building!.Name, $"%{search}%")
+                || EF.Functions.ILike(m.Elevator!.Building!.Customer!.Name, $"%{search}%")
+                || EF.Functions.ILike(m.Notes ?? "", $"%{search}%")
+                || EF.Functions.ILike(m.Description ?? "", $"%{search}%"));
         if (!string.IsNullOrEmpty(status)) q = q.Where(m => m.Status == status);
         if (!string.IsNullOrEmpty(type)) q = q.Where(m => m.Type == type);
         if (elevatorId is { } e) q = q.Where(m => m.ElevatorId == e);
-        if (from is { } f) q = q.Where(m => m.PlannedDate >= f);
-        if (to is { } t) q = q.Where(m => m.PlannedDate <= t);
-        // Teknisyene atanan bakımlar: assigned_users jsonb dizisi uid'yi içerir
+        if (regionId is { } r) q = q.Where(m => m.Elevator!.Building!.RegionId == r);
+        if (from is { } f) { var fu = DateTime.SpecifyKind(f, DateTimeKind.Utc); q = q.Where(m => m.PlannedDate >= fu); }
+        if (to is { } t) { var tu = DateTime.SpecifyKind(t, DateTimeKind.Utc); q = q.Where(m => m.PlannedDate <= tu); }
+        if (technicianId is { } tid) q = q.Where(m => EF.Functions.JsonContains(m.AssignedUsers!, $"[{tid}]"));
         if (mine) { var uid = long.Parse(User.FindFirst("uid")!.Value); q = q.Where(m => EF.Functions.JsonContains(m.AssignedUsers!, $"[{uid}]")); }
 
-        var projected = q.OrderByDescending(m => m.PlannedDate).Select(m => new
+        q = sort switch
         {
-            m.Id, m.Type, m.Status, m.PlannedDate, m.CompletedAt,
-            Elevator = m.ElevatorId == null ? null : new { Name = m.Elevator!.Name },
+            "oldest" => q.OrderBy(m => m.PlannedDate),
+            "planned_asc" => q.OrderBy(m => m.PlannedDate),
+            _ => q.OrderByDescending(m => m.PlannedDate).ThenByDescending(m => m.Id),
+        };
+
+        var projected = q.Select(m => new
+        {
+            m.Id, m.Type, m.Status, m.PlannedDate, m.CompletedAt, m.IsCritical, m.AssignedUsers,
+            ElevatorName = m.Elevator!.Name,
+            BuildingName = m.Elevator!.Building!.Name,
+            CustomerName = m.Elevator!.Building!.Customer!.Name,
         });
         return Ok(await projected.ToPagedAsync(page, perPage));
     }
@@ -211,7 +229,8 @@ public class MaintenanceController(AppDbContext db, PdfService pdf) : Controller
 
     [HttpGet("{id:long}")]
     public async Task<IActionResult> Show(long id) =>
-        Ok(await db.MaintenanceRecords.Include(m => m.Elevator).FirstOrDefaultAsync(m => m.Id == id)
+        Ok(await db.MaintenanceRecords.Include(m => m.Elevator!).ThenInclude(e => e.Building!).ThenInclude(b => b.Customer)
+            .FirstOrDefaultAsync(m => m.Id == id)
             ?? throw new ApiException(404, "Bakım kaydı bulunamadı."));
 
     [HttpPut("{id:long}")]
@@ -223,6 +242,10 @@ public class MaintenanceController(AppDbContext db, PdfService pdf) : Controller
         if (dto.PlannedDate is { } pd) m.PlannedDate = DateTime.SpecifyKind(pd, DateTimeKind.Utc);
         if (dto.Status != null) m.Status = dto.Status;
         if (dto.TechnicianNote != null) m.TechnicianNote = dto.TechnicianNote;
+        if (dto.AssignedUsers != null) m.AssignedUsers = System.Text.Json.JsonSerializer.Serialize(dto.AssignedUsers);
+        if (dto.Description != null) m.Description = dto.Description;
+        if (dto.IsCritical is { } ic) m.IsCritical = ic;
+        if (dto.Notes != null) m.Notes = dto.Notes;
         m.UpdatedAt = DateTime.UtcNow;
         await db.SaveChangesAsync();
         return Ok(m);
