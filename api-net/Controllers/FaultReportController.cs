@@ -32,22 +32,32 @@ public class FaultReportController(AppDbContext db, FaultNotificationService not
     public async Task<IActionResult> Index([FromQuery] string? search, [FromQuery] string? status,
         [FromQuery] string? priority, [FromQuery(Name = "elevator_id")] long? elevatorId,
         [FromQuery(Name = "assigned_user_id")] long? assignedUserId, [FromQuery] bool mine = false,
+        [FromQuery] bool open = false, [FromQuery] bool unassigned = false,
         [FromQuery(Name = "per_page")] int perPage = 25, [FromQuery] int page = 1)
     {
         var q = db.FaultReports.AsQueryable();
-        if (!string.IsNullOrWhiteSpace(search)) q = q.Where(f => EF.Functions.ILike(f.Description ?? "", $"%{search}%"));
+        if (!string.IsNullOrWhiteSpace(search))
+            q = q.Where(f => EF.Functions.ILike(f.Title ?? "", $"%{search}%")
+                || EF.Functions.ILike(f.Description ?? "", $"%{search}%")
+                || EF.Functions.ILike(f.Elevator!.Name ?? "", $"%{search}%")
+                || EF.Functions.ILike(f.Elevator!.Building!.Name, $"%{search}%")
+                || EF.Functions.ILike(f.Elevator!.Building!.Customer!.Name, $"%{search}%"));
         if (!string.IsNullOrEmpty(status)) q = q.Where(f => f.Status == status);
         if (!string.IsNullOrEmpty(priority)) q = q.Where(f => f.Priority == priority);
         if (elevatorId is { } e) q = q.Where(f => f.ElevatorId == e);
         if (assignedUserId is { } u) q = q.Where(f => f.AssignedUserId == u);
+        if (open) q = q.Where(f => f.Status != "completed");
+        if (unassigned) q = q.Where(f => f.AssignedUserId == null);
         if (mine) { var uid = long.Parse(User.FindFirst("uid")!.Value); q = q.Where(f => f.AssignedUserId == uid); }
 
         var projected = q.OrderByDescending(f => f.Id).Select(f => new
         {
-            f.Id, f.Priority, f.Status, f.Description, f.CreatedAt, f.EstimatedRepair,
+            f.Id, f.Title, f.Type, f.Priority, f.Status, f.Description, f.CreatedAt, f.EstimatedRepair,
             f.FaultDiagnosis, f.NeedsPart, f.PartDetails,
-            Elevator = f.ElevatorId == null ? null : new { Name = f.Elevator!.Name },
-            AssignedUser = f.AssignedUserId == null ? null : new { f.AssignedUser!.Name, f.AssignedUser.Surname },
+            ElevatorName = f.Elevator!.Name,
+            BuildingName = f.Elevator!.Building!.Name,
+            CustomerName = f.Elevator!.Building!.Customer!.Name,
+            AssignedUser = f.AssignedUserId == null ? null : new { f.AssignedUserId, f.AssignedUser!.Name, f.AssignedUser.Surname },
             CommentsCount = db.FaultReportComments.Count(c => c.FaultReportId == f.Id),
         });
         return Ok(await projected.ToPagedAsync(page, perPage));
@@ -60,11 +70,15 @@ public class FaultReportController(AppDbContext db, FaultNotificationService not
         var today = DateTime.UtcNow.Date;
         IQueryable<Models.FaultReport> all = db.FaultReports;
         if (mine) { var uid = long.Parse(User.FindFirst("uid")!.Value); all = all.Where(f => f.AssignedUserId == uid); }
+        var myUid = long.Parse(User.FindFirst("uid")!.Value);
         return Ok(new
         {
             active = await all.CountAsync(f => f.Status != "completed"),
             completed = await all.CountAsync(f => f.Status == "completed"),
             today = await all.CountAsync(f => f.CreatedAt >= today),
+            today_resolved = await all.CountAsync(f => f.Status == "completed" && f.CompletedAt >= today),
+            unowned = await db.FaultReports.CountAsync(f => f.Status != "completed" && f.AssignedUserId == null),
+            mine = await db.FaultReports.CountAsync(f => f.Status != "completed" && f.AssignedUserId == myUid),
             high = await all.CountAsync(f => (f.Priority == "high" || f.Priority == "urgent") && f.Status != "completed"),
         });
     }
@@ -214,12 +228,35 @@ public class FaultReportController(AppDbContext db, FaultNotificationService not
             .Select(e => new { e.Building!.Latitude, e.Building.Longitude, e.Building.Address, e.Building.Name, e.Building.City })
             .FirstOrDefaultAsync();
 
-        return Ok(new { f.Id, f.Priority, f.Status, f.Description, f.ResolutionNote, f.CreatedAt, f.ResolvedAt,
+        return Ok(new { f.Id, f.Title, f.Type, f.Code, f.Priority, f.Status, f.AssignedUserId,
+            f.ContactName, f.ContactPhone, f.Description, f.Symptoms, f.WorkDone, f.UnderWarranty, f.Billable, f.Notes,
+            f.ResolutionNote, f.CreatedAt, f.ResolvedAt,
             f.EstimatedRepair, f.DispatchedAt, f.DiagnosedAt, f.AcknowledgedAt, f.InspectedAt, f.RepairStartedAt, f.CompletedAt,
             f.FaultDiagnosis, f.NeedsPart, f.PartDetails, f.TechnicianLat, f.TechnicianLng, f.LocationUpdatedAt,
             DestinationLat = dest?.Latitude, DestinationLng = dest?.Longitude,
             DestinationAddress = dest?.Address, DestinationName = dest?.Name, DestinationCity = dest?.City,
             f.Elevator, f.AssignedUser, Comments = comments });
+    }
+
+    public record EditDto(string? Title, string? Type, string? Priority, string? Status, string? Code, long? AssignedUserId,
+        string? ContactName, string? ContactPhone, string? Description, string? Symptoms, string? Diagnosis,
+        string? Solution, string? WorkDone, bool? UnderWarranty, bool? Billable, string? Notes);
+
+    [HttpPut("{id:long}")]
+    public async Task<IActionResult> Edit(long id, EditDto dto)
+    {
+        var f = await db.FaultReports.FirstOrDefaultAsync(x => x.Id == id) ?? throw new ApiException(404, "Arıza bulunamadı.");
+        f.Title = dto.Title; f.Type = dto.Type; f.Code = dto.Code;
+        if (dto.Priority != null) f.Priority = dto.Priority;
+        if (dto.Status != null && Statuses.Contains(dto.Status)) f.Status = dto.Status;
+        f.AssignedUserId = dto.AssignedUserId; f.ContactName = dto.ContactName; f.ContactPhone = dto.ContactPhone;
+        f.Description = dto.Description; f.Symptoms = dto.Symptoms; f.FaultDiagnosis = dto.Diagnosis;
+        f.ResolutionNote = dto.Solution; f.WorkDone = dto.WorkDone; f.Notes = dto.Notes;
+        if (dto.UnderWarranty is { } uw) f.UnderWarranty = uw;
+        if (dto.Billable is { } b) f.Billable = b;
+        f.UpdatedAt = DateTime.UtcNow;
+        await db.SaveChangesAsync();
+        return Ok(f);
     }
 
     [HttpPut("{id:long}/status")]
