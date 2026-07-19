@@ -13,6 +13,38 @@
 
 ---
 
+## 🚀 ÇALIŞMA AKIŞI — EN ÖNCE BUNU OKU (yerelde DB kurma!)
+
+**Bu proje CANLIDA yaşıyor (Coolify + VPS).** Değişiklikler push ile otomatik yayına girer.
+Yerelde PostgreSQL/veritabanı **KURMA**, `dotnet run` ile localde ayağa kaldırmaya **ÇALIŞMA** —
+gerek yok, `appsettings.json`'daki connection string orijinal geliştiriciye ait (sende yok).
+
+**Standart değişiklik döngüsü (her seferinde bu):**
+1. **Kodu düzenle** (api-net / web).
+2. **Derle/doğrula (yerelde, DB'siz):**
+   - Backend: `cd api-net && dotnet build` → `Build succeeded`.
+   - Web: `cd web && npx tsc --noEmit` ve `npm run build` → `Compiled successfully`.
+     (Sayfa sildiysen `rm -rf .next` ile eski tip önbelleğini temizle.)
+3. **Yayına al:** `git push liftonom HEAD:main` — `liftonom` remote'u (`RasulSonmez/liftonom`) **repoda
+   kayıtlı**; Coolify bu push'u webhook ile yakalar ve **otomatik deploy eder** (~2-3 dk). Ayrıca komut
+   çalıştırmana gerek yok, bir daha "deploy nasıl?" diye sorma.
+4. **CANLIDA doğrula (yerelde değil):** ~2-3 dk sonra canlı API'ye curl at:
+   - API: `https://liftonom-api.rslabsdev.site/api/v1` · Web: `https://liftonom.rslabsdev.site`
+   - Login (canlı demo tenant): `POST /auth/login {email:"demo@liftonom.com", password:"demo1234"}` → `token`
+   - `Authorization: Bearer <token>` ile ilgili endpoint'i çağır, alan/veri geldi mi bak.
+5. **Şema değişikliği (yeni tablo/kolon):** EF model + `Program.cs` idempotent `ALTER … ADD COLUMN
+   IF NOT EXISTS` → push → deploy → açılışta çalışır → canlıda hazır. (bkz. aşağıdaki madde 2.)
+
+**Yeni oturumda Coolify deploy durumunu API'den izlemek istersen** (şart değil, push sonrası curl
+yeterli): Coolify `https://coolify.rslabsdev.site` + **deploy yetkili Bearer token'ı kullanıcıdan iste**
+(güvenlik gereği repoda tutulmaz), `GET /api/v1/deployments/applications/{app_uuid}`. Önceki oturumun
+`scratchpad/` scriptleri **o oturuma özeldir, yeni oturumda yoktur.**
+
+**ÖZET — YAPMA:** ❌ yerelde postgres kurmak ❌ connection string aramak ❌ localde `dotnet run`
+❌ deploy için ek adım sormak. **YAP:** ✅ derle ✅ `git push liftonom HEAD:main` ✅ canlıda curl ile doğrula.
+
+---
+
 ## ⛔ ÖNCE OKU — Sık Yapılan Hatalar (halüsinasyon önleyici)
 
 1. **Backend TEK: .NET 10** (`api-net/`). **Laravel YOK.** Eski `api/` (PHP) klasörü **silindi**;
@@ -33,9 +65,11 @@
 4. **Multi-tenant**: tenant izolasyonu EF **global query filter** ile otomatik
    (`e.TenantId == CurrentTenantId`). Filtreyi aşmak için `IgnoreQueryFilters()` (sadece Süper Admin
    veya token/cihaz gibi tenant-ötesi işlemlerde).
-5. **`git`**: aktif branch `feature/web-admin-mobile-push`, remote `KursadOzhamam/liftonom`. Default
-   branch'e doğrudan push etme. **Canlı/production repo ayrı:** `RasulSonmez/liftonom` (`main`) — Coolify
-   buradan otomatik deploy eder; production değişikliği bu repoya `main` push'uyla yayına girer.
+5. **`git` / deploy remote'u**: İki remote var — `origin` = `KursadOzhamam/liftonom` (dev, buraya
+   otomatik push etme), **`liftonom` = `RasulSonmez/liftonom` (CANLI/production, Coolify buradan deploy eder).**
+   **Yayına almak için: `git push liftonom HEAD:main`** (yukarıdaki Çalışma Akışı). Bu, "default branch'e
+   push etme" istisnasıdır — production akışı kasıtlı olarak `liftonom main`'dir. Aktif yerel branch
+   `feature/web-admin-mobile-push`; commit'i oradan `liftonom main`'e push ediyoruz.
 6. **Gizli anahtarlar ASLA commit edilmez** — bkz. [Sırlar](#sırlar--güvenlik).
 7. **Mobil uygulama YALNIZCA teknisyenler içindir** (rol kontrolü login'de).
 8. Konum/port sabitleri: **API `5080`**, **Web `3000`**. Mobil API adresi build-time `--dart-define`.
@@ -239,6 +273,26 @@ cd mobile && flutter pub get && flutter run
   Sırala + tablo. Endpoint `GET /elevators/tse-report?list=&search=&sort=`.
 - **Dashboard**: `GET /dashboard/overview` (banner: paket/deneme/… — **SMS bakiyesi kaldırıldı**;
   sayaçlar/hasılat bugün-hafta-ay/kasa/çek-senet) — hepsi gerçek veri.
+
+### Sözleşme belge sistemi (`/contracts`) — Belgeler + Şablonlar
+- **İki sekme:** *Belgeler* (sözleşme listesi: arama + Durum/Belge/Sırala filtreleri, Excel CSV, satır işlemleri
+  Önizle/Gönder/PDF/Düzenle/Sil) ve *Şablonlar* (madde tabanlı bakım sözleşmesi şablonları; Varsayılan/Aktif,
+  madde sayısı). Sekme sayacı şablon sayısını gösterir.
+- **Yeni model `ContractTemplate`** (`contract_templates`, jsonb `clauses`=[{title,body,active}] + `variables`=[{key,label}]);
+  DbSet + query filter + `Program.cs` CREATE TABLE. Her tenant ilk erişimde **"Standart Bakım Sözleşmesi"** (13 madde,
+  varsayılan) otomatik seed edilir (`EnsureDefaultTemplate`).
+- **`Contract` genişletildi** (hepsi idempotent ALTER): `building_id, template_id, currency, period, annual_visits,
+  renewal_notice_days, document_status(draft|sent|approved), customer_name, rep_name, phone, email, terms, clauses,
+  public_token, company_signature, customer_signature, sent_at, approved_at`. Sözleşme no boşsa `SOZ-YYYYMMDD-XXXX`.
+- **Tam sayfa form** (`/contracts/new`, `/contracts/[id]/edit` — ortak `ContractForm.tsx`): şablon seçimi (varsayılan
+  ön-seçili), müşteri/bina, serbest müşteri adı/temsilci/iletişim, tarih/tutar/para birimi/periyot/ziyaret, yaşam
+  döngüsü, yenileme gün, otomatik yenile, serbest şartlar. Kaydet → önizlemeye yönlendirir.
+- **Önizleme** (`/contracts/[id]/preview`): şablon maddeleri `{{yer_tutucu}}`larla firma/müşteri/bina verisiyle
+  **doldurulmuş** (backend `Render`) render edilir; firma imza **canvas** (data URL), *Gönder* (`POST /contracts/{id}/send`
+  → `document_status=sent`, public token), *PDF* (window.print), *Şablon Olarak Kaydet*, kopyalanabilir müşteri linki.
+- **Müşteri public sayfası** (`/contract/[token]`, panel dışı): `GET /public/contracts/{token}` (AllowAnonymous +
+  IgnoreQueryFilters) belgeyi gösterir; müşteri imza çizip `POST .../approve` → `document_status=approved`.
+- Uçlar `ContractController` (contracts + `templates` CRUD + `send`/`signature`) ve `PublicContractController`.
 
 ### Canlı deploy doğrulama (bu oturumda kullanılan akış)
 - Değişiklik → `git push liftonom HEAD:main` → Coolify webhook otomatik deploy. Durum:
