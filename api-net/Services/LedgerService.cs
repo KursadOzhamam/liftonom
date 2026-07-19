@@ -102,4 +102,46 @@ public class LedgerService(AppDbContext db)
         await db.SaveChangesAsync();
         return cashbox.Balance;
     });
+
+    /// <summary>Tahsilat iptali/iadesi: cari +tutar (ters debit), kasa −tutar (out). Çift iade engellenir.</summary>
+    public Task<CollectResult> ReverseCollectionAsync(long accountTxId, long? userId) => RunAsync(async () =>
+    {
+        var orig = await db.AccountTransactions.FirstOrDefaultAsync(t => t.Id == accountTxId)
+            ?? throw new ApiException(404, "Tahsilat hareketi bulunamadı.");
+        if (orig.SourceType != "collection") throw new ApiException(422, "Bu hareket bir tahsilat değil.");
+        if (await db.AccountTransactions.AnyAsync(t => t.SourceType == "collection_reversal" && t.SourceId == orig.Id))
+            throw new ApiException(422, "Bu tahsilat zaten iade edilmiş.");
+
+        var account = await db.CurrentAccounts.FirstOrDefaultAsync(a => a.Id == orig.AccountId)
+            ?? throw new ApiException(404, "Cari hesap bulunamadı.");
+        var now = DateTime.UtcNow;
+        var tid = db.CurrentTenantId!.Value;
+
+        account.Balance += orig.Amount; account.UpdatedAt = now;
+        db.AccountTransactions.Add(new AccountTransaction
+        {
+            TenantId = tid, AccountId = account.Id, Type = "debit", Amount = orig.Amount, BalanceAfter = account.Balance,
+            Description = $"Tahsilat iadesi (#{orig.Id})", SourceType = "collection_reversal", SourceId = orig.Id,
+            CashboxId = orig.CashboxId, PaymentMethod = orig.PaymentMethod, CreatedBy = userId, CreatedAt = now,
+        });
+
+        decimal cashboxBalance = 0;
+        if (orig.CashboxId is { } cbId)
+        {
+            var cb = await db.Cashboxes.FirstOrDefaultAsync(c => c.Id == cbId);
+            if (cb != null)
+            {
+                cb.Balance -= orig.Amount; cb.UpdatedAt = now;
+                db.CashboxTransactions.Add(new CashboxTransaction
+                {
+                    TenantId = tid, CashboxId = cb.Id, Type = "out", Amount = orig.Amount, BalanceAfter = cb.Balance,
+                    Description = $"Tahsilat iadesi (#{orig.Id})", SourceType = "collection_reversal", SourceId = orig.Id,
+                    CreatedBy = userId, CreatedAt = now,
+                });
+                cashboxBalance = cb.Balance;
+            }
+        }
+        await db.SaveChangesAsync();
+        return new CollectResult(account.Balance, cashboxBalance, orig.Id);
+    });
 }

@@ -25,4 +25,13 @@ public class CollectionController(LedgerService ledger) : ControllerBase
             transaction_id = r.TransactionId,
         });
     }
+
+    /// <summary>Tahsilat iptali/iadesi — kasa ve cari ters kayıtla düzeltilir.</summary>
+    [HttpPost("{accountTxId:long}/reverse")]
+    public async Task<IActionResult> Reverse(long accountTxId)
+    {
+        var uid = long.Parse(User.FindFirst("uid")!.Value);
+        var r = await ledger.ReverseCollectionAsync(accountTxId, uid);
+        return Ok(new { message = "Tahsilat iade edildi.", account_balance = r.AccountBalance, cashbox_balance = r.CashboxBalance });
+    }
 }
