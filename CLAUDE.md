@@ -292,7 +292,19 @@ cd mobile && flutter pub get && flutter run
   → `document_status=sent`, public token), *PDF* (window.print), *Şablon Olarak Kaydet*, kopyalanabilir müşteri linki.
 - **Müşteri public sayfası** (`/contract/[token]`, panel dışı): `GET /public/contracts/{token}` (AllowAnonymous +
   IgnoreQueryFilters) belgeyi gösterir; müşteri imza çizip `POST .../approve` → `document_status=approved`.
-- Uçlar `ContractController` (contracts + `templates` CRUD + `send`/`signature`) ve `PublicContractController`.
+- **Gerçek PDF** (`GET /contracts/{id}/pdf`, QuestPDF `PdfService.GenerateContract`): A4 çok sayfalı, başlık
+  her sayfada, doldurulmuş maddeler + firma/müşteri imza görselleri (`FitArea` — sabit yükseklikle çakışmaz)
+  + sayfa no. Web'de PDF butonları `downloadFile` ile indirir (window.print DEĞİL).
+- **Gönder + e-posta:** önizlemede *Gönder* → müşteri e-postası varsa "e-postasına gönderilsin mi?" diye
+  sorar (`useConfirm`); onaylanırsa `POST /contracts/{id}/send {send_email:true}` → müşteriye **şablonlu +
+  PDF ekli** mail. E-posta yoksa 422 uyarı. Yanıt `{email_sent, email_error, recipient}`.
+- **E-posta gönderici:** `IEmailSender`/`SmtpEmailSender` — config `Smtp:Host/Port/User/Password/From/FromName/Ssl`.
+  **Anahtar yoksa gönderMEZ**, log + `email_sent=false` döner (canlıda henüz Smtp:* set edilmedi → Coolify env'e eklenmeli).
+  Public link tabanı `Web:PublicUrl` (varsayılan `https://liftonom.rslabsdev.site`).
+- **E-posta şablonu Ayarlar'da:** `Tenant.ContractEmailSubject/Body` (Settings GET/PUT + Ayarlar sayfası bölümü).
+  Yer tutucular: `{{firma_adi}} {{musteri_adi}} {{sozlesme_no}} {{tutar}} {{baslangic}} {{bitis}} {{periyot}} {{link}}`.
+  Boşsa varsayılan profesyonel metin (`DefaultEmailBody`).
+- Uçlar `ContractController` (contracts + `templates` CRUD + `send`/`signature`/`pdf`) ve `PublicContractController`.
 
 ### Canlı deploy doğrulama (bu oturumda kullanılan akış)
 - Değişiklik → `git push liftonom HEAD:main` → Coolify webhook otomatik deploy. Durum:
