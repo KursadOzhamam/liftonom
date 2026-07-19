@@ -31,6 +31,7 @@ builder.Services.AddScoped<LedgerService>();
 builder.Services.AddScoped<ScheduledJobs>();
 builder.Services.AddScoped<PdfService>();
 builder.Services.AddScoped<ISmsSender, LogSmsSender>();
+builder.Services.AddScoped<IEmailSender, SmtpEmailSender>();
 builder.Services.AddScoped<FaultNotificationService>();
 builder.Services.AddScoped<PushService>();
 builder.Services.AddHttpClient();
@@ -270,6 +271,8 @@ using (var scope = app.Services.CreateScope())
         ALTER TABLE contracts ADD COLUMN IF NOT EXISTS customer_signature text;
         ALTER TABLE contracts ADD COLUMN IF NOT EXISTS sent_at timestamptz;
         ALTER TABLE contracts ADD COLUMN IF NOT EXISTS approved_at timestamptz;
+        ALTER TABLE tenants ADD COLUMN IF NOT EXISTS contract_email_subject text;
+        ALTER TABLE tenants ADD COLUMN IF NOT EXISTS contract_email_body text;
         """);
 
     if (!await db.PlatformSettings.AnyAsync())

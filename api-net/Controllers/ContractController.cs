@@ -11,7 +11,7 @@ namespace Liftonom.Api.Controllers;
 [ApiController]
 [Authorize]
 [Route("api/v1/contracts")]
-public class ContractController(AppDbContext db) : ControllerBase
+public class ContractController(AppDbContext db, PdfService pdf, IEmailSender email, IConfiguration config) : ControllerBase
 {
     private static readonly JsonSerializerOptions J = new(JsonSerializerDefaults.Web);
 
@@ -22,7 +22,7 @@ public class ContractController(AppDbContext db) : ControllerBase
     public record RenewDto(int? Months);
     public record TemplateDto(string Name, string? Type, bool? IsDefault, bool? IsActive,
         JsonElement? Clauses, JsonElement? Variables);
-    public record SignDto(string? Signature);
+    public record SignDto(string? Signature, bool? SendEmail);
 
     // ───────────────────────────── Sözleşmeler ─────────────────────────────
 
@@ -121,16 +121,45 @@ public class ContractController(AppDbContext db) : ControllerBase
         return Ok(c);
     }
 
-    // Firma imzasını bu sözleşmeye kaydet ve/veya müşteriye gönder (belge durumu → sent)
+    // Firma imzasını bu sözleşmeye kaydet ve/veya müşteriye gönder (belge durumu → sent).
+    // send_email=true ise müşterinin e-postasına şablona göre PDF ekli mail atılır.
     [HttpPost("{id:long}/send")]
     public async Task<IActionResult> Send(long id, SignDto dto)
     {
-        var c = await db.Contracts.FirstOrDefaultAsync(x => x.Id == id) ?? throw new ApiException(404, "Sözleşme bulunamadı.");
+        var c = await db.Contracts.Include(x => x.Customer).Include(x => x.Building).Include(x => x.Template)
+            .FirstOrDefaultAsync(x => x.Id == id) ?? throw new ApiException(404, "Sözleşme bulunamadı.");
         if (!string.IsNullOrWhiteSpace(dto.Signature)) c.CompanySignature = dto.Signature;
         c.DocumentStatus = "sent"; c.SentAt = DateTime.UtcNow; c.UpdatedAt = DateTime.UtcNow;
         if (string.IsNullOrEmpty(c.PublicToken)) c.PublicToken = Guid.NewGuid().ToString("N");
         await db.SaveChangesAsync();
-        return Ok(new { c.PublicToken, c.DocumentStatus });
+
+        bool emailSent = false; string? emailError = null; string? recipient = null;
+        if (dto.SendEmail == true)
+        {
+            recipient = !string.IsNullOrWhiteSpace(c.Email) ? c.Email : c.Customer?.Email;
+            if (string.IsNullOrWhiteSpace(recipient))
+                throw new ApiException(422, "Müşterinin e-posta adresi yok. Sözleşme veya müşteri kaydına e-posta ekleyin.");
+            var tenant = await db.Tenants.IgnoreQueryFilters().FirstAsync(t => t.Id == c.TenantId);
+            var (subject, body) = BuildEmail(c, tenant, recipient!);
+            byte[]? pdfBytes = null;
+            try { pdfBytes = pdf.GenerateContract(c, tenant, c.CustomerName ?? c.Customer?.Name ?? "-", c.Building?.Name, c.Building?.Address, RenderClauses(c, tenant)); }
+            catch { /* PDF üretilemezse eksiz gönder */ }
+            var att = pdfBytes != null ? new EmailAttachment($"{c.ContractNumber ?? c.Id.ToString()}.pdf", pdfBytes, "application/pdf") : null;
+            var res = await email.SendAsync(recipient!, subject, body, att);
+            emailSent = res.Sent; emailError = res.Error;
+        }
+        return Ok(new { c.PublicToken, c.DocumentStatus, email_sent = emailSent, email_error = emailError, recipient });
+    }
+
+    [HttpGet("{id:long}/pdf")]
+    public async Task<IActionResult> Pdf(long id)
+    {
+        var c = await db.Contracts.Include(x => x.Customer).Include(x => x.Building).Include(x => x.Template)
+            .FirstOrDefaultAsync(x => x.Id == id) ?? throw new ApiException(404, "Sözleşme bulunamadı.");
+        var tenant = await db.Tenants.IgnoreQueryFilters().FirstAsync(t => t.Id == c.TenantId);
+        var bytes = pdf.GenerateContract(c, tenant, c.CustomerName ?? c.Customer?.Name ?? "-",
+            c.Building?.Name, c.Building?.Address, RenderClauses(c, tenant));
+        return File(bytes, "application/pdf", $"{c.ContractNumber ?? $"sozlesme-{c.Id}"}.pdf");
     }
 
     // Sadece firma kaşe/imza kaydet (göndermeden)
@@ -236,39 +265,66 @@ public class ContractController(AppDbContext db) : ControllerBase
         catch { return 0; }
     }
 
+    private static Dictionary<string, string> BuildVars(Contract c, Tenant? tenant) => new()
+    {
+        ["firma_adi"] = tenant?.Name ?? "-",
+        ["firma_vkn"] = tenant?.TaxNumber ?? "-",
+        ["firma_adres"] = tenant?.Address ?? "-",
+        ["firma_telefon"] = tenant?.Phone ?? "-",
+        ["musteri_adi"] = c.CustomerName ?? c.Customer?.Name ?? "-",
+        ["bina_adi"] = c.Building?.Name ?? "-",
+        ["bina_adres"] = c.Building?.Address ?? "-",
+        ["yonetici_adi"] = c.RepName ?? c.Building?.ManagerName ?? "-",
+        ["baslangic"] = c.StartDate?.ToString("dd.MM.yyyy") ?? "-",
+        ["bitis"] = c.EndDate?.ToString("dd.MM.yyyy") ?? "-",
+        ["sozlesme_no"] = c.ContractNumber ?? c.Id.ToString(),
+        ["periyot"] = c.Period ?? "-",
+        ["yillik_ziyaret"] = c.AnnualVisits?.ToString() ?? "-",
+        ["tutar"] = c.MonthlyFee is { } f ? $"{f:N2} {c.Currency}" : "-",
+        ["yenileme_gun"] = c.RenewalNoticeDays.ToString(),
+    };
+
+    // c.Template yüklü olmalı (Include). Doldurulmuş (title,body) madde listesi döndürür.
+    private static List<(string Title, string Body)> RenderClauses(Contract c, Tenant? tenant)
+    {
+        var vars = BuildVars(c, tenant);
+        var list = new List<(string, string)>();
+        if (c.Template != null)
+            foreach (var el in ParseClauses(c.Template.Clauses))
+            {
+                if (el.active == false) continue;
+                list.Add((Fill(el.title, vars), Fill(el.body, vars)));
+            }
+        return list;
+    }
+
+    // Sözleşme gönderim e-postası — tenant şablonu (yoksa varsayılan), yer tutucular + public link.
+    private (string Subject, string Body) BuildEmail(Contract c, Tenant tenant, string recipient)
+    {
+        var webBase = (config["Web:PublicUrl"] ?? "https://liftonom.rslabsdev.site").TrimEnd('/');
+        var link = $"{webBase}/contract/{c.PublicToken}";
+        var vars = BuildVars(c, tenant);
+        vars["link"] = link;
+        vars["alici"] = recipient;
+        var subjectTpl = string.IsNullOrWhiteSpace(tenant.ContractEmailSubject)
+            ? "{{firma_adi}} — {{sozlesme_no}} numaralı sözleşmeniz" : tenant.ContractEmailSubject!;
+        var bodyTpl = string.IsNullOrWhiteSpace(tenant.ContractEmailBody) ? DefaultEmailBody : tenant.ContractEmailBody!;
+        var body = Fill(bodyTpl, vars).Replace("\n", "<br>");
+        return (Fill(subjectTpl, vars), body);
+    }
+
+    private const string DefaultEmailBody =
+        "Sayın {{musteri_adi}},\n\n" +
+        "{{firma_adi}} tarafından hazırlanan {{sozlesme_no}} numaralı {{periyot}} bakım sözleşmeniz ekte PDF olarak yer almaktadır.\n\n" +
+        "Sözleşmeyi çevrim içi görüntülemek ve dijital olarak imzalamak için:\n{{link}}\n\n" +
+        "Sözleşme bedeli: {{tutar}} · Geçerlilik: {{baslangic}} - {{bitis}}\n\n" +
+        "Saygılarımızla,\n{{firma_adi}}\n{{firma_telefon}}";
+
     // Şablon maddelerini + serbest şartları müşteri/bina bilgileriyle doldurup önizleme verisi döndürür.
     private async Task<object> Render(Contract c)
     {
         var tenant = await db.Tenants.IgnoreQueryFilters().FirstOrDefaultAsync(t => t.Id == c.TenantId);
-        var vars = new Dictionary<string, string>
-        {
-            ["firma_adi"] = tenant?.Name ?? "-",
-            ["firma_vkn"] = tenant?.TaxNumber ?? "-",
-            ["firma_adres"] = tenant?.Address ?? "-",
-            ["firma_telefon"] = tenant?.Phone ?? "-",
-            ["musteri_adi"] = c.CustomerName ?? c.Customer?.Name ?? "-",
-            ["bina_adi"] = c.Building?.Name ?? "-",
-            ["bina_adres"] = c.Building?.Address ?? "-",
-            ["yonetici_adi"] = c.RepName ?? c.Building?.ManagerName ?? "-",
-            ["baslangic"] = c.StartDate?.ToString("dd.MM.yyyy") ?? "-",
-            ["bitis"] = c.EndDate?.ToString("dd.MM.yyyy") ?? "-",
-            ["sozlesme_no"] = c.ContractNumber ?? c.Id.ToString(),
-            ["periyot"] = c.Period ?? "-",
-            ["yillik_ziyaret"] = c.AnnualVisits?.ToString() ?? "-",
-            ["tutar"] = c.MonthlyFee is { } f ? $"{f:N2} {c.Currency}" : "-",
-            ["yenileme_gun"] = c.RenewalNoticeDays.ToString(),
-        };
-        var rendered = new List<object>();
-        if (c.TemplateId != null)
-        {
-            var tpl = await db.ContractTemplates.FirstOrDefaultAsync(t => t.Id == c.TemplateId);
-            if (tpl != null)
-                foreach (var el in ParseClauses(tpl.Clauses))
-                {
-                    if (el.active == false) continue;
-                    rendered.Add(new { title = Fill(el.title, vars), body = Fill(el.body, vars) });
-                }
-        }
+        var rendered = RenderClauses(c, tenant).Select(x => new { title = x.Title, body = x.Body }).ToList();
         return new
         {
             c.Id, c.ContractNumber, c.Type, c.StartDate, c.EndDate, c.MonthlyFee, c.Currency, c.Period,

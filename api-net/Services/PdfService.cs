@@ -228,4 +228,106 @@ public class PdfService
 
         return document.GeneratePdf();
     }
+
+    private static byte[]? DecodeDataUrl(string? dataUrl)
+    {
+        if (string.IsNullOrWhiteSpace(dataUrl)) return null;
+        var comma = dataUrl.IndexOf(',');
+        var b64 = comma >= 0 ? dataUrl[(comma + 1)..] : dataUrl;
+        try { return Convert.FromBase64String(b64); } catch { return null; }
+    }
+
+    /// <summary>Sözleşme belgesi PDF'i — başlık, bilgi kutuları, doldurulmuş maddeler ve imza alanları.</summary>
+    public byte[] GenerateContract(Contract c, Tenant tenant, string customerName, string? buildingName,
+        string? buildingAddress, List<(string Title, string Body)> clauses)
+    {
+        var companySig = DecodeDataUrl(c.CompanySignature);
+        var customerSig = DecodeDataUrl(c.CustomerSignature);
+        var amount = c.MonthlyFee is { } f ? $"{f:#,##0.00} {c.Currency}" : "-";
+
+        var document = Document.Create(container =>
+        {
+            container.Page(page =>
+            {
+                page.Size(PageSizes.A4);
+                page.Margin(40);
+                page.DefaultTextStyle(x => x.FontSize(10).FontColor("#1E293B"));
+
+                page.Header().Row(row =>
+                {
+                    row.RelativeItem().Column(col =>
+                    {
+                        col.Item().Text(tenant.Name).Bold().FontSize(16).FontColor("#4F63F5");
+                        if (!string.IsNullOrEmpty(tenant.Phone)) col.Item().Text(tenant.Phone).FontSize(9).FontColor("#64748B");
+                        if (!string.IsNullOrEmpty(tenant.TaxNumber)) col.Item().Text($"VKN: {tenant.TaxNumber}").FontSize(9).FontColor("#64748B");
+                    });
+                    row.ConstantItem(180).Column(col =>
+                    {
+                        col.Item().AlignRight().Text("SÖZLEŞME NO").FontSize(8).FontColor("#94A3B8");
+                        col.Item().AlignRight().Text(c.ContractNumber ?? $"#{c.Id}").Bold().FontSize(14);
+                        col.Item().PaddingTop(4).AlignRight().Text($"Başlangıç: {c.StartDate:dd.MM.yyyy}").FontSize(9).FontColor("#64748B");
+                        col.Item().AlignRight().Text($"Bitiş: {c.EndDate:dd.MM.yyyy}").FontSize(9).FontColor("#64748B");
+                    });
+                });
+
+                page.Content().PaddingVertical(14).Column(col =>
+                {
+                    col.Item().Row(r =>
+                    {
+                        r.RelativeItem().Border(1).BorderColor("#E2E8F0").Padding(10).Column(b =>
+                        {
+                            b.Item().Text("Sayın Müşterimiz").FontSize(8).FontColor("#94A3B8");
+                            b.Item().Text(customerName).Bold();
+                            if (!string.IsNullOrEmpty(c.RepName)) b.Item().Text($"Yetkili: {c.RepName}").FontSize(9);
+                            if (!string.IsNullOrEmpty(c.Phone)) b.Item().Text(c.Phone!).FontSize(9);
+                            if (!string.IsNullOrEmpty(c.Email)) b.Item().Text(c.Email!).FontSize(9);
+                            if (!string.IsNullOrEmpty(buildingName)) b.Item().Text($"Bina: {buildingName}").FontSize(9).FontColor("#64748B");
+                        });
+                        r.ConstantItem(14);
+                        r.RelativeItem().Border(1).BorderColor("#E2E8F0").Padding(10).Column(b =>
+                        {
+                            b.Item().Text($"{c.Type ?? "Bakım"} Sözleşmesi").Bold();
+                            b.Item().Text($"Periyot: {c.Period ?? "-"}{(c.AnnualVisits is { } v ? $" · Yıllık {v} ziyaret" : "")}").FontSize(9).FontColor("#64748B");
+                            b.Item().PaddingTop(6).Text("Tutar").FontSize(8).FontColor("#94A3B8");
+                            b.Item().Text(amount).Bold().FontColor("#4F63F5");
+                            b.Item().PaddingTop(4).Text($"Yenileme bildirimi: {c.RenewalNoticeDays} gün").FontSize(9).FontColor("#64748B");
+                        });
+                    });
+
+                    foreach (var cl in clauses)
+                    {
+                        col.Item().PaddingTop(12).Text(cl.Title).Bold().FontSize(11);
+                        col.Item().PaddingTop(2).Text(cl.Body).FontSize(9.5f).LineHeight(1.4f).FontColor("#334155");
+                    }
+
+                    col.Item().PaddingTop(36).Row(r =>
+                    {
+                        r.RelativeItem().Column(s =>
+                        {
+                            if (companySig != null) s.Item().Height(50).AlignCenter().Image(companySig);
+                            else s.Item().Height(50);
+                            s.Item().BorderTop(1).BorderColor("#1E293B").PaddingTop(4).AlignCenter().Text($"Firma Kaşesi / İmzası\n{tenant.Name}").FontSize(9);
+                        });
+                        r.ConstantItem(40);
+                        r.RelativeItem().Column(s =>
+                        {
+                            if (customerSig != null) s.Item().Height(50).AlignCenter().Image(customerSig);
+                            else s.Item().Height(50);
+                            s.Item().BorderTop(1).BorderColor("#1E293B").PaddingTop(4).AlignCenter().Text($"Müşteri İmzası\n{customerName}").FontSize(9);
+                        });
+                    });
+                });
+
+                page.Footer().AlignCenter().Text(t =>
+                {
+                    t.Span("Liftonom ile oluşturulmuştur · Sayfa ").FontSize(8).FontColor("#94A3B8");
+                    t.CurrentPageNumber().FontSize(8).FontColor("#94A3B8");
+                    t.Span(" / ").FontSize(8).FontColor("#94A3B8");
+                    t.TotalPages().FontSize(8).FontColor("#94A3B8");
+                });
+            });
+        });
+
+        return document.GeneratePdf();
+    }
 }

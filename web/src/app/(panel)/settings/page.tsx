@@ -7,8 +7,11 @@ import { dateTR } from "@/lib/format";
 type Settings = {
   name: string; phone: string | null; email: string | null; address: string | null;
   tax_number: string | null; tax_office: string | null;
+  contract_email_subject: string | null; contract_email_body: string | null;
   plan: string; plan_expires_at: string | null; sms_balance: number;
 };
+
+const PLACEHOLDERS = ["firma_adi", "musteri_adi", "sozlesme_no", "tutar", "baslangic", "bitis", "periyot", "link"];
 
 const PLAN: Record<string, string> = { trial: "Deneme", starter: "Başlangıç", pro: "Pro", enterprise: "Kurumsal" };
 
@@ -31,6 +34,7 @@ export default function SettingsPage() {
       await api("/settings", { method: "PUT", body: {
         name: data.name, phone: data.phone, email: data.email,
         address: data.address, tax_number: data.tax_number, tax_office: data.tax_office,
+        contract_email_subject: data.contract_email_subject, contract_email_body: data.contract_email_body,
       } });
       setSaved(true);
     } catch (e) {
@@ -69,6 +73,34 @@ export default function SettingsPage() {
           <Field label="Adres" full><textarea className="input min-h-20" value={data.address ?? ""} onChange={(e) => set("address", e.target.value)} /></Field>
         </div>
         <div className="mt-5 flex items-center gap-3">
+          <button onClick={save} disabled={saving} className="btn-primary">{saving ? "Kaydediliyor…" : "Kaydet"}</button>
+          {saved && <span className="text-sm text-success">✓ Kaydedildi</span>}
+        </div>
+      </div>
+
+      {/* Sözleşme e-posta şablonu */}
+      <div className="mt-5 rounded-xl border border-line bg-card p-5">
+        <h2 className="text-sm font-semibold text-ink">Sözleşme E-posta Şablonu</h2>
+        <p className="mt-1 text-xs text-muted">
+          Sözleşme önizlemesinde <b>Gönder → E-posta ile gönder</b> seçildiğinde müşteriye bu şablonla, sözleşme PDF&apos;i ekli olarak mail atılır.
+          Boş bırakırsanız varsayılan metin kullanılır.
+        </p>
+        <div className="mt-3 flex flex-wrap gap-1.5">
+          {PLACEHOLDERS.map((p) => (
+            <code key={p} className="rounded-md border border-line bg-surface px-2 py-0.5 text-xs text-primary">{`{{${p}}}`}</code>
+          ))}
+        </div>
+        <div className="mt-4 grid gap-4">
+          <Field label="Konu">
+            <input className="input" placeholder="{{firma_adi}} — {{sozlesme_no}} numaralı sözleşmeniz"
+              value={data.contract_email_subject ?? ""} onChange={(e) => set("contract_email_subject", e.target.value)} />
+          </Field>
+          <Field label="Gövde">
+            <textarea className="input min-h-40" placeholder="Sayın {{musteri_adi}}, ... {{link}}"
+              value={data.contract_email_body ?? ""} onChange={(e) => set("contract_email_body", e.target.value)} />
+          </Field>
+        </div>
+        <div className="mt-4 flex items-center gap-3">
           <button onClick={save} disabled={saving} className="btn-primary">{saving ? "Kaydediliyor…" : "Kaydet"}</button>
           {saved && <span className="text-sm text-success">✓ Kaydedildi</span>}
         </div>

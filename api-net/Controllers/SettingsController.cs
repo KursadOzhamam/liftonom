@@ -10,7 +10,8 @@ namespace Liftonom.Api.Controllers;
 [Route("api/v1/settings")]
 public class SettingsController(AppDbContext db) : ControllerBase
 {
-    public record SettingsDto(string? Name, string? Phone, string? Email, string? Address, string? TaxNumber, string? TaxOffice);
+    public record SettingsDto(string? Name, string? Phone, string? Email, string? Address, string? TaxNumber,
+        string? TaxOffice, string? ContractEmailSubject, string? ContractEmailBody);
 
     [HttpGet]
     public async Task<IActionResult> Show()
@@ -19,6 +20,7 @@ public class SettingsController(AppDbContext db) : ControllerBase
         return Ok(new
         {
             t.Name, t.Slug, t.Phone, t.Email, t.Address, t.TaxNumber, t.TaxOffice, t.LogoUrl,
+            t.ContractEmailSubject, t.ContractEmailBody,
             t.Plan, t.PlanExpiresAt, t.SmsBalance,
         });
     }
@@ -30,7 +32,9 @@ public class SettingsController(AppDbContext db) : ControllerBase
         var t = await db.Tenants.FindAsync(db.CurrentTenantId!.Value) ?? throw new ApiException(404, "Firma bulunamadı.");
         if (!string.IsNullOrWhiteSpace(dto.Name)) t.Name = dto.Name;
         t.Phone = dto.Phone; t.Email = dto.Email; t.Address = dto.Address;
-        t.TaxNumber = dto.TaxNumber; t.TaxOffice = dto.TaxOffice; t.UpdatedAt = DateTime.UtcNow;
+        t.TaxNumber = dto.TaxNumber; t.TaxOffice = dto.TaxOffice;
+        t.ContractEmailSubject = dto.ContractEmailSubject; t.ContractEmailBody = dto.ContractEmailBody;
+        t.UpdatedAt = DateTime.UtcNow;
         await db.SaveChangesAsync();
         return Ok(new { message = "Firma bilgileri güncellendi." });
     }

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { api, ApiError } from "@/lib/api";
+import { api, ApiError, downloadFile } from "@/lib/api";
 import { dateTR } from "@/lib/format";
 import { useConfirm } from "@/components/ConfirmDialog";
 import Badge from "@/components/Badge";
@@ -161,7 +161,7 @@ function DocsTab() {
                   <div className="flex items-center justify-end gap-1">
                     <Link href={`/contracts/${c.id}/preview`} className="btn-primary px-2.5 py-1.5 text-xs"><Eye size={14} /> Önizle</Link>
                     <Link href={`/contracts/${c.id}/preview?send=1`} className="btn-ghost px-2.5 py-1.5 text-xs"><Send size={14} /> Gönder</Link>
-                    <Link href={`/contracts/${c.id}/preview?print=1`} className="btn-ghost px-2.5 py-1.5 text-xs" title="PDF"><FileDown size={14} /></Link>
+                    <button onClick={() => downloadFile(`/contracts/${c.id}/pdf`, `${c.contract_number ?? `sozlesme-${c.id}`}.pdf`)} className="btn-ghost px-2.5 py-1.5 text-xs" title="PDF"><FileDown size={14} /></button>
                     <Link href={`/contracts/${c.id}/edit`} className="btn-ghost px-2.5 py-1.5 text-xs"><Pencil size={14} /> Düzenle</Link>
                     <button onClick={() => del(c.id)} className="btn-danger px-2.5 py-1.5 text-xs"><Trash2 size={14} /> Sil</button>
                   </div>

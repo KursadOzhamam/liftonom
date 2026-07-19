@@ -3,7 +3,8 @@
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { api, ApiError } from "@/lib/api";
+import { api, ApiError, downloadFile } from "@/lib/api";
+import { useConfirm } from "@/components/ConfirmDialog";
 import Badge from "@/components/Badge";
 import { Send, FileDown, Pencil, ArrowLeft, Check, Copy } from "lucide-react";
 
@@ -36,6 +37,8 @@ export default function ContractPreviewPage() {
   const [tplName, setTplName] = useState("");
   const [tplMsg, setTplMsg] = useState<string | null>(null);
   const padRef = useRef<SignaturePadHandle>(null);
+  const autoSent = useRef(false);
+  const confirm = useConfirm();
 
   const load = useCallback(async () => {
     try { setC(await api<Preview>(`/contracts/${id}`)); }
@@ -43,7 +46,11 @@ export default function ContractPreviewPage() {
   }, [id]);
   useEffect(() => { load(); }, [load]);
 
-  useEffect(() => { if (c && sp.get("print")) setTimeout(() => window.print(), 400); }, [c, sp]);
+  // Listedeki "Gönder" → ?send=1 ile gelir: belge yüklenince gönder akışını bir kez başlat.
+  useEffect(() => {
+    if (c && sp.get("send") && !autoSent.current) { autoSent.current = true; send(); }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [c, sp]);
 
   async function saveSignature() {
     const sig = padRef.current?.dataUrl();
@@ -52,12 +59,27 @@ export default function ContractPreviewPage() {
     load();
   }
 
+  function pdf() { downloadFile(`/contracts/${id}/pdf`, `${c?.contract_number ?? `sozlesme-${id}`}.pdf`); }
+
+  // "Gönder": müşteri e-postası varsa "e-postasına gönderilsin mi?" diye sorar; yoksa uyarır.
   async function send() {
+    const email = c?.email || c?.customer?.email || "";
+    let sendEmail = false;
+    if (email) {
+      sendEmail = await confirm(`Sözleşme müşterinin e-posta adresine (${email}) PDF ekiyle gönderilsin mi?`, { danger: false, confirmText: "E-posta ile gönder", cancelText: "E-postasız işaretle" });
+    } else {
+      const ok = await confirm("Müşterinin e-posta adresi yok — e-posta ile gönderilemez. Yine de 'Gönderildi' olarak işaretlensin mi? (Müşteri linkini kopyalayıp elle paylaşabilirsiniz.)", { danger: true });
+      if (!ok) return;
+    }
     setBusy(true);
     try {
       const sig = padRef.current?.dataUrl() ?? c?.company_signature ?? null;
-      await api(`/contracts/${id}/send`, { method: "POST", body: { signature: sig } });
+      const r = await api<{ email_sent: boolean; email_error: string | null }>(`/contracts/${id}/send`, { method: "POST", body: { signature: sig, send_email: sendEmail } });
       await load();
+      if (sendEmail) {
+        if (r.email_sent) alert(`Sözleşme ${email} adresine gönderildi.`);
+        else alert(`Belge 'Gönderildi' olarak işaretlendi ancak e-posta iletilemedi: ${r.email_error ?? "bilinmeyen hata"}`);
+      }
     } catch (e) { alert(e instanceof ApiError ? e.message : "Gönderilemedi."); }
     finally { setBusy(false); }
   }
@@ -98,7 +120,7 @@ export default function ContractPreviewPage() {
         </div>
         <div className="flex items-center gap-2">
           <button onClick={send} disabled={busy} className="btn-primary"><Send size={15} /> Gönder</button>
-          <button onClick={() => window.print()} className="btn-ghost"><FileDown size={15} /> PDF</button>
+          <button onClick={pdf} className="btn-ghost"><FileDown size={15} /> PDF</button>
           <Link href={`/contracts/${id}/edit`} className="btn-ghost"><Pencil size={15} /> Düzenle</Link>
           <Link href="/contracts" className="btn-ghost"><ArrowLeft size={15} /> Listeye Dön</Link>
         </div>
@@ -204,7 +226,7 @@ export default function ContractPreviewPage() {
             <h3 className="text-sm font-semibold text-ink">Sonraki Adım</h3>
             <p className="mt-1 text-xs text-muted">Sözleşme hazır. Müşteriye public linkten gönderin; müşteri imzaladığında belge durumu <b>Onaylandı</b>ya geçer.</p>
             <button onClick={send} disabled={busy} className="btn-primary mt-3 w-full justify-center"><Send size={15} /> Müşteriye Gönder</button>
-            <button onClick={() => window.print()} className="btn-ghost mt-2 w-full justify-center"><FileDown size={15} /> PDF İndir</button>
+            <button onClick={pdf} className="btn-ghost mt-2 w-full justify-center"><FileDown size={15} /> PDF İndir</button>
           </div>
 
           <div className="rounded-2xl border border-line bg-card p-5">

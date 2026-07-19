@@ -11,6 +11,8 @@ public class Tenant
     public string? TaxNumber { get; set; }
     public string? TaxOffice { get; set; }
     public string? LogoUrl { get; set; }
+    public string? ContractEmailSubject { get; set; }   // sözleşme gönderim e-posta şablonu — konu
+    public string? ContractEmailBody { get; set; }       // sözleşme gönderim e-posta şablonu — gövde
     public string Plan { get; set; } = "trial";
     public DateTime? PlanExpiresAt { get; set; }
     public int SmsBalance { get; set; } = 100;
