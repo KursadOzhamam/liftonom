@@ -14,6 +14,8 @@ namespace Liftonom.Api.Controllers;
 public class QuoteController(AppDbContext db, PdfService pdf, IEmailSender email, IConfiguration config) : ControllerBase
 {
     private static readonly JsonSerializerOptions J = new(JsonSerializerDefaults.Web);
+    // Kalemler DB'de snake_case saklanır (description/quantity/unit_price) — PdfService & Render böyle okur.
+    private static readonly JsonSerializerOptions SnakeJson = new() { PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower };
 
     public record QuoteDto(long? CustomerId, long? TemplateId, string? Type, string? Title, string? CustomerName,
         string? Email, string? Phone, string? Currency, DateOnly? ValidUntil, List<LineItem>? Items,
@@ -75,7 +77,7 @@ public class QuoteController(AppDbContext db, PdfService pdf, IEmailSender email
             TenantId = db.CurrentTenantId!.Value, CustomerId = dto.CustomerId, TemplateId = dto.TemplateId,
             Status = "draft", Type = dto.Type ?? "standard", Title = dto.Title, CustomerName = dto.CustomerName,
             Email = dto.Email, Phone = dto.Phone, Currency = dto.Currency ?? "TRY", ValidUntil = dto.ValidUntil,
-            Items = JsonSerializer.Serialize(dto.Items ?? []),
+            Items = JsonSerializer.Serialize(dto.Items ?? [], SnakeJson),
             Subtotal = t.Subtotal, TaxRate = t.TaxRate, TaxAmount = t.TaxAmount, Discount = t.Discount, Total = t.Total,
             Terms = dto.Terms, Notes = dto.Notes, PublicToken = Guid.NewGuid().ToString("N"),
             CreatedBy = long.Parse(User.FindFirst("uid")!.Value), CreatedAt = now, UpdatedAt = now,
@@ -99,7 +101,7 @@ public class QuoteController(AppDbContext db, PdfService pdf, IEmailSender email
         if (dto.Items != null)
         {
             var t = DocumentTotals.Compute(dto.Items, dto.TaxRate ?? 0, dto.Discount ?? q.Discount);
-            q.Items = JsonSerializer.Serialize(dto.Items);
+            q.Items = JsonSerializer.Serialize(dto.Items, SnakeJson);
             q.Subtotal = t.Subtotal; q.TaxRate = t.TaxRate; q.TaxAmount = t.TaxAmount; q.Discount = t.Discount; q.Total = t.Total;
         }
         q.Terms = dto.Terms; q.Notes = dto.Notes; q.UpdatedAt = DateTime.UtcNow;
