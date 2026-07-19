@@ -238,7 +238,7 @@ public class QuoteController(AppDbContext db, PdfService pdf, IEmailSender email
     [HttpGet("templates")]
     public async Task<IActionResult> Templates([FromQuery] string? search, [FromQuery] string? sort, [FromQuery] string? kind)
     {
-        var k = kind == "revision" ? "revision" : "standard";
+        var k = kind is "revision" or "atf" ? kind : "standard";
         await EnsureDefaultTemplate();
         var qy = db.QuoteTemplates.Where(t => t.Kind == k);
         if (!string.IsNullOrWhiteSpace(search)) qy = qy.Where(t => EF.Functions.ILike(t.Name, $"%{search.Trim()}%"));
@@ -257,11 +257,11 @@ public class QuoteController(AppDbContext db, PdfService pdf, IEmailSender email
     {
         if (string.IsNullOrWhiteSpace(dto.Name)) throw new ApiException(422, "Şablon adı zorunludur.");
         var now = DateTime.UtcNow;
-        var kind = dto.Kind == "revision" ? "revision" : "standard";
+        var kind = dto.Kind is "revision" or "atf" ? dto.Kind : "standard";
         var t = new QuoteTemplate
         {
             TenantId = db.CurrentTenantId!.Value, Name = dto.Name.Trim(), Kind = kind,
-            Type = dto.Type ?? (kind == "revision" ? "Revizyon Teklifi" : "Teklif"),
+            Type = dto.Type ?? (kind == "revision" ? "Revizyon Teklifi" : kind == "atf" ? "Asansör Talep Formu" : "Teklif"),
             IsDefault = dto.IsDefault ?? false, IsActive = dto.IsActive ?? true,
             Clauses = dto.Clauses?.GetRawText() ?? "[]", Variables = dto.Variables?.GetRawText() ?? "[]",
             CreatedAt = now, UpdatedAt = now,
