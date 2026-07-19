@@ -157,8 +157,10 @@ public class ContractController(AppDbContext db, PdfService pdf, IEmailSender em
         var c = await db.Contracts.Include(x => x.Customer).Include(x => x.Building).Include(x => x.Template)
             .FirstOrDefaultAsync(x => x.Id == id) ?? throw new ApiException(404, "Sözleşme bulunamadı.");
         var tenant = await db.Tenants.IgnoreQueryFilters().FirstAsync(t => t.Id == c.TenantId);
-        var bytes = pdf.GenerateContract(c, tenant, c.CustomerName ?? c.Customer?.Name ?? "-",
-            c.Building?.Name, c.Building?.Address, RenderClauses(c, tenant));
+        byte[] bytes;
+        try { bytes = pdf.GenerateContract(c, tenant, c.CustomerName ?? c.Customer?.Name ?? "-",
+            c.Building?.Name, c.Building?.Address, RenderClauses(c, tenant)); }
+        catch (Exception ex) { throw new ApiException(500, "PDF hata: " + ex.Message); }
         return File(bytes, "application/pdf", $"{c.ContractNumber ?? $"sozlesme-{c.Id}"}.pdf");
     }
 
