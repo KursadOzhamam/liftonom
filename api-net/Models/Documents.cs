@@ -39,6 +39,10 @@ public class Quote
     public int? WarrantyYears { get; set; }
     public int? DeliveryDays { get; set; }
     public string? PaymentTerms { get; set; }
+    // Durum Tespit Raporu (type=dtr)
+    public string? InspectorName { get; set; }        // muayene eden / yetkili servis
+    public string? Defects { get; set; } = "[]";      // jsonb: tespit edilen eksiklik/kusurlar (string dizisi)
+    public string? Actions { get; set; } = "[]";      // jsonb: yapılması gereken işlemler (string dizisi)
     public DateOnly? ValidUntil { get; set; }
     public string? Items { get; set; } = "[]";        // jsonb
     public decimal? Subtotal { get; set; }

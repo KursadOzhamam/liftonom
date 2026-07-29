@@ -446,6 +446,120 @@ public class PdfService
         return document.GeneratePdf();
     }
 
+    private static List<string> ParseStringList(string? json)
+    {
+        var list = new List<string>();
+        if (string.IsNullOrWhiteSpace(json)) return list;
+        try { using var d = JsonDocument.Parse(json); foreach (var e in d.RootElement.EnumerateArray()) if (e.ValueKind == JsonValueKind.String) list.Add(e.GetString() ?? ""); }
+        catch { }
+        return list;
+    }
+
+    /// <summary>Durum Tespit Raporu PDF'i — asansör/bina bilgileri, eksiklikler/işlemler, maddeler, çift imza.</summary>
+    public byte[] GenerateDtr(Quote q, Tenant tenant, Elevator? elevator, Building? building, List<(string Title, string Body)> clauses)
+    {
+        var defects = ParseStringList(q.Defects);
+        var actions = ParseStringList(q.Actions);
+        var buildingSig = DecodeDataUrl(q.CustomerSignature);
+        var serviceSig = DecodeDataUrl(q.CompanySignature);
+        var buildingMgr = building?.ManagerName ?? "";
+        var serviceName = q.InspectorName ?? "";
+
+        var document = Document.Create(container =>
+        {
+            container.Page(page =>
+            {
+                page.Size(PageSizes.A4);
+                page.Margin(40);
+                page.DefaultTextStyle(x => x.FontSize(10).FontColor("#1E293B"));
+
+                page.Header().Column(h =>
+                {
+                    h.Item().Row(row =>
+                    {
+                        row.RelativeItem().Column(col =>
+                        {
+                            col.Item().Text(tenant.Name).Bold().FontSize(16).FontColor("#4F63F5");
+                            if (!string.IsNullOrEmpty(tenant.Phone)) col.Item().Text(tenant.Phone).FontSize(9).FontColor("#64748B");
+                        });
+                        row.RelativeItem().Column(col =>
+                        {
+                            col.Item().AlignRight().Text("DURUM TESPİT RAPORU").Bold().FontSize(13);
+                            col.Item().AlignRight().Text("Rapor Tarihi").FontSize(8).FontColor("#94A3B8");
+                            col.Item().AlignRight().Text($"{q.CreatedAt:dd.MM.yyyy}").Bold().FontSize(11);
+                        });
+                    });
+                    h.Item().PaddingTop(6).LineHorizontal(1.5f).LineColor("#4F63F5");
+                });
+
+                page.Content().PaddingVertical(12).Column(col =>
+                {
+                    void Section(string t) => col.Item().PaddingTop(10).Text(t).Bold().FontSize(11).FontColor("#4F63F5");
+                    void Row(string k, string v) => col.Item().PaddingVertical(2).Row(r =>
+                    { r.ConstantItem(150).Text(k).Bold().FontSize(9.5f); r.RelativeItem().Text(v).FontSize(9.5f); });
+
+                    Section("ASANSÖRE İLİŞKİN BİLGİLER");
+                    Row("Asansör Adı / No", elevator?.Name ?? "-");
+                    Row("Marka", elevator?.Brand ?? "-");
+                    Row("Model", elevator?.Model ?? "-");
+                    Row("Seri No", elevator?.SerialNumber ?? "-");
+                    Row("Kapasite", $"{elevator?.CapacityKg?.ToString() ?? "-"} kg / {elevator?.CapacityPersons?.ToString() ?? "-"} kişi");
+                    Row("Hız", elevator?.SpeedMs is { } s ? $"{s:#,##0.##} m/s" : "-");
+                    Row("Durak Sayısı", elevator?.StopCount?.ToString() ?? "-");
+
+                    Section("BİNA YAPI VE BİNA SORUMLUSU");
+                    Row("Bina Adı", building?.Name ?? "-");
+                    Row("Bina Adresi", building?.Address ?? "-");
+                    Row("Bina Sorumlusu", buildingMgr.Length > 0 ? buildingMgr : "-");
+                    Row("Telefon", building?.ManagerPhone ?? "-");
+                    Row("E-posta", building?.ManagerEmail ?? "-");
+
+                    Section("ASANSÖRÜN DURUMUNA İLİŞKİN BİLGİLER");
+                    col.Item().PaddingTop(4).Text("Tespit Edilen Eksiklik / Kusurlar:").Bold().FontSize(10);
+                    if (defects.Count == 0) col.Item().PaddingLeft(10).Text("—").FontSize(9.5f);
+                    for (int i = 0; i < defects.Count; i++) col.Item().PaddingLeft(10).Text($"{i + 1}. {defects[i]}").FontSize(9.5f);
+                    col.Item().PaddingTop(6).Text("Yapılması Gereken İşlemler:").Bold().FontSize(10);
+                    if (actions.Count == 0) col.Item().PaddingLeft(10).Text("—").FontSize(9.5f);
+                    for (int i = 0; i < actions.Count; i++) col.Item().PaddingLeft(10).Text($"{i + 1}. {actions[i]}").FontSize(9.5f);
+
+                    foreach (var cl in clauses)
+                    {
+                        col.Item().PaddingTop(10).Text(cl.Title).Bold().FontSize(11);
+                        col.Item().PaddingTop(2).Text(cl.Body).FontSize(9.5f).LineHeight(1.4f).FontColor("#334155");
+                    }
+                    if (serviceName.Length > 0) col.Item().PaddingTop(8).Text(t => { t.Span("Yetkili Servis: ").FontSize(9.5f); t.Span(serviceName).Bold().FontSize(9.5f); });
+
+                    col.Item().PaddingTop(36).Row(r =>
+                    {
+                        r.RelativeItem().Column(s =>
+                        {
+                            if (buildingSig != null) s.Item().Height(50).AlignCenter().Image(buildingSig).FitArea();
+                            else s.Item().Height(50);
+                            s.Item().BorderTop(1).BorderColor("#1E293B").PaddingTop(4).AlignCenter().Text($"Bina Sorumlusu Yetkili İmzası\n{buildingMgr}").FontSize(9);
+                        });
+                        r.ConstantItem(40);
+                        r.RelativeItem().Column(s =>
+                        {
+                            if (serviceSig != null) s.Item().Height(50).AlignCenter().Image(serviceSig).FitArea();
+                            else s.Item().Height(50);
+                            s.Item().BorderTop(1).BorderColor("#1E293B").PaddingTop(4).AlignCenter().Text($"Asansör Yetkili Servisi İmzası\n{serviceName}").FontSize(9);
+                        });
+                    });
+                });
+
+                page.Footer().AlignCenter().Text(t =>
+                {
+                    t.Span("Liftonom ile oluşturulmuştur · Sayfa ").FontSize(8).FontColor("#94A3B8");
+                    t.CurrentPageNumber().FontSize(8).FontColor("#94A3B8");
+                    t.Span(" / ").FontSize(8).FontColor("#94A3B8");
+                    t.TotalPages().FontSize(8).FontColor("#94A3B8");
+                });
+            });
+        });
+
+        return document.GeneratePdf();
+    }
+
     /// <summary>Asansör Talep Formu PDF'i — talep eden + asansör spesifikasyonu + fiyat + garanti/teslim + maddeler + imza.</summary>
     public byte[] GenerateAtf(Quote q, Tenant tenant, string customerName, List<(string Title, string Body)> clauses)
     {

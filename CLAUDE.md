@@ -354,6 +354,20 @@ cd mobile && flutter pub get && flutter run
   **`/talep-formu/[token]`** (panel `/atf` ile çakışmaması için ayrı segment) → müşteri imzalar → `status=approved`.
 - Not: sidebar etiketi "Teklifler (Standart)" → **"Teklifler"** olarak sadeleştirildi.
 
+### Durum Tespit Raporu (`/dtr`) — çift imzalı saha belge sistemi
+- Aynı `Quote` tablosu, `type="dtr"`. Ek alanlar: `inspector_name` (muayene eden/yetkili servis),
+  `defects` jsonb (tespit edilen eksiklikler string dizisi), `actions` jsonb (yapılması gereken işlemler).
+  Elevator_id üzerinden asansör (marka/model/seri/kapasite/hız/durak) + bina (ad/adres/sorumlu/tel/eposta)
+  otomatik gelir. No formatı `DTR-YYYYMMDD-XXXX`. Fiyat/e-posta/public **yok**.
+- **`QuoteTemplate.Kind="dtr"`** → tenant başına **4 maddelik "Standart Durum Tespit Raporu"** seed
+  (Raporun Amacı ve Kapsamı, Standart ve Mevzuat Dayanağı, Sorumluluk ve Yükümlülükler, Beyan). Placeholder'lar:
+  `{{asansor_no}} {{muayene_eden}} {{belge_tarihi}} {{gecerlilik}}`.
+- **İki imza:** `/quotes/{id}/signature` `{role}` — `building` → `customer_signature` (bina sorumlusu),
+  aksi → `company_signature` (yetkili servis). Önizlemede iki ayrı imza canvas'ı; PDF `GenerateDtr`
+  (asansöre/binaya ilişkin bilgiler + eksiklik/işlem listeleri + maddeler + çift imza). Gönder/public yok.
+- **Form** (`DtrForm.tsx`): şablon + asansör (zorunlu) + muayene eden + rapor tarihi + eksiklikler/işlemler
+  (her satır bir madde → jsonb dizi). Liste: Tarih/Asansör/Muayene Eden/Durum.
+
 ### Canlı deploy doğrulama (bu oturumda kullanılan akış)
 - Değişiklik → `git push liftonom HEAD:main` → Coolify webhook otomatik deploy. Durum:
   `GET /api/v1/deployments/applications/{app_uuid}` (Coolify API + Bearer token). Scriptler & app_uuid:

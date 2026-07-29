@@ -315,6 +315,9 @@ using (var scope = app.Services.CreateScope())
         ALTER TABLE quotes ADD COLUMN IF NOT EXISTS company_signature text;
         ALTER TABLE quotes ADD COLUMN IF NOT EXISTS customer_signature text;
         ALTER TABLE quote_templates ADD COLUMN IF NOT EXISTS kind text NOT NULL DEFAULT 'standard';
+        ALTER TABLE quotes ADD COLUMN IF NOT EXISTS inspector_name text;
+        ALTER TABLE quotes ADD COLUMN IF NOT EXISTS defects jsonb NOT NULL DEFAULT '[]';
+        ALTER TABLE quotes ADD COLUMN IF NOT EXISTS actions jsonb NOT NULL DEFAULT '[]';
         ALTER TABLE quotes ADD COLUMN IF NOT EXISTS elevator_type text;
         ALTER TABLE quotes ADD COLUMN IF NOT EXISTS elevator_count integer;
         ALTER TABLE quotes ADD COLUMN IF NOT EXISTS capacity_kg integer;

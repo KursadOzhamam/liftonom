@@ -145,6 +145,8 @@ public class AppDbContext : DbContext
             e.Property(m => m.Photos).HasColumnType("jsonb");
         });
         b.Entity<Quote>().Property(q => q.Items).HasColumnType("jsonb");
+        b.Entity<Quote>().Property(q => q.Defects).HasColumnType("jsonb");
+        b.Entity<Quote>().Property(q => q.Actions).HasColumnType("jsonb");
         b.Entity<Invoice>().Property(i => i.Items).HasColumnType("jsonb");
         b.Entity<Contract>().Property(c => c.Elevators).HasColumnType("jsonb");
         b.Entity<Contract>().Property(c => c.Clauses).HasColumnType("jsonb");

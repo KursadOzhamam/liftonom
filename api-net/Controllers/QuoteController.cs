@@ -25,10 +25,12 @@ public class QuoteController(AppDbContext db, PdfService pdf, IEmailSender email
         // ATF (asansör talep formu) spesifikasyon alanları
         string? ElevatorType, int? ElevatorCount, int? CapacityKg, int? CapacityPersons, int? FloorCount,
         int? StopCount, decimal? SpeedMs, string? DoorType, string? ControlSystem, decimal? UnitPrice,
-        decimal? TotalPrice, int? WarrantyYears, int? DeliveryDays, string? PaymentTerms);
+        decimal? TotalPrice, int? WarrantyYears, int? DeliveryDays, string? PaymentTerms,
+        // DTR (durum tespit raporu)
+        string? InspectorName, List<string>? Defects, List<string>? Actions);
     public record TemplateDto(string Name, string? Kind, string? Type, bool? IsDefault, bool? IsActive,
         JsonElement? Clauses, JsonElement? Variables);
-    public record SendDto(bool? SendEmail, string? Signature);
+    public record SendDto(bool? SendEmail, string? Signature, string? Role);
 
     // ───────────────────────────── Teklifler ─────────────────────────────
 
@@ -59,7 +61,7 @@ public class QuoteController(AppDbContext db, PdfService pdf, IEmailSender email
         var projected = q.Select(x => new
         {
             x.Id, x.QuoteNumber, x.Type, x.Status, x.Total, x.Subtotal, x.Currency, x.ValidUntil, x.CreatedAt, x.Title,
-            x.ElevatorType,
+            x.ElevatorType, x.InspectorName,
             CustomerName = x.CustomerName ?? (x.Customer == null ? null : x.Customer.Name),
             ElevatorName = x.Elevator == null ? null : x.Elevator.Name,
             TemplateName = x.Template == null ? null : x.Template.Name,
@@ -82,6 +84,7 @@ public class QuoteController(AppDbContext db, PdfService pdf, IEmailSender email
         var now = DateTime.UtcNow;
         var isRev = dto.Type == "revision";
         var isAtf = dto.Type == "atf";
+        var isDtr = dto.Type == "dtr";
         var q = new Quote
         {
             TenantId = db.CurrentTenantId!.Value, CustomerId = dto.CustomerId, ElevatorId = dto.ElevatorId,
@@ -104,6 +107,13 @@ public class QuoteController(AppDbContext db, PdfService pdf, IEmailSender email
             ApplyAtf(q, dto);
             q.TaxRate = 0; q.TaxAmount = 0; q.Discount = 0; q.Subtotal = q.Total; q.Items = "[]";
         }
+        else if (isDtr)
+        {
+            q.InspectorName = dto.InspectorName;
+            q.Defects = JsonSerializer.Serialize(dto.Defects ?? [], J);
+            q.Actions = JsonSerializer.Serialize(dto.Actions ?? [], J);
+            q.TaxRate = 0; q.TaxAmount = 0; q.Discount = 0; q.Subtotal = 0; q.Total = 0; q.Items = "[]";
+        }
         else
         {
             var t = DocumentTotals.Compute(dto.Items, dto.TaxRate ?? 0, dto.Discount ?? 0);
@@ -113,7 +123,7 @@ public class QuoteController(AppDbContext db, PdfService pdf, IEmailSender email
         db.Quotes.Add(q);
         await db.SaveChangesAsync();
         q.QuoteNumber = string.IsNullOrWhiteSpace(dto.QuoteNumber)
-            ? $"{(isRev ? "RT" : isAtf ? "ATF" : "TKL")}-{now:yyyyMMdd}-{q.Id:D4}" : dto.QuoteNumber!.Trim();
+            ? $"{(isRev ? "RT" : isAtf ? "ATF" : isDtr ? "DTR" : "TKL")}-{now:yyyyMMdd}-{q.Id:D4}" : dto.QuoteNumber!.Trim();
         await db.SaveChangesAsync();
         return StatusCode(201, new { q.Id });
     }
@@ -139,6 +149,13 @@ public class QuoteController(AppDbContext db, PdfService pdf, IEmailSender email
             ApplyAtf(q, dto);
             q.TaxRate = 0; q.TaxAmount = 0; q.Discount = 0; q.Subtotal = q.Total;
         }
+        else if (q.Type == "dtr")
+        {
+            q.InspectorName = dto.InspectorName;
+            if (dto.Defects != null) q.Defects = JsonSerializer.Serialize(dto.Defects, J);
+            if (dto.Actions != null) q.Actions = JsonSerializer.Serialize(dto.Actions, J);
+            q.Total = 0; q.Subtotal = 0;
+        }
         else if (dto.Items != null)
         {
             var t = DocumentTotals.Compute(dto.Items, dto.TaxRate ?? 0, dto.Discount ?? q.Discount);
@@ -152,12 +169,14 @@ public class QuoteController(AppDbContext db, PdfService pdf, IEmailSender email
         return Ok(new { q.Id });
     }
 
-    // Firma kaşe/imza kaydet (göndermeden)
+    // İmza kaydet (göndermeden). role=building → müşteri/bina sorumlusu imzası, aksi → firma/yetkili servis.
     [HttpPost("{id:long}/signature")]
     public async Task<IActionResult> Signature(long id, SendDto dto)
     {
         var q = await db.Quotes.FirstOrDefaultAsync(x => x.Id == id) ?? throw new ApiException(404, "Teklif bulunamadı.");
-        q.CompanySignature = dto.Signature; q.UpdatedAt = DateTime.UtcNow;
+        if (dto.Role == "building") q.CustomerSignature = dto.Signature;
+        else q.CompanySignature = dto.Signature;
+        q.UpdatedAt = DateTime.UtcNow;
         await db.SaveChangesAsync();
         return Ok(new { message = "İmza kaydedildi." });
     }
@@ -209,6 +228,7 @@ public class QuoteController(AppDbContext db, PdfService pdf, IEmailSender email
         {
             "revision" => pdf.GenerateRevisionQuote(q, tenant, name, q.Elevator?.Name, q.Elevator?.Building?.Name, RenderClauses(q, tenant)),
             "atf" => pdf.GenerateAtf(q, tenant, name, RenderClauses(q, tenant)),
+            "dtr" => pdf.GenerateDtr(q, tenant, q.Elevator, q.Elevator?.Building, RenderClauses(q, tenant)),
             _ => pdf.GenerateQuote(q, tenant, name, RenderClauses(q, tenant)),
         };
     }
@@ -238,7 +258,7 @@ public class QuoteController(AppDbContext db, PdfService pdf, IEmailSender email
     [HttpGet("templates")]
     public async Task<IActionResult> Templates([FromQuery] string? search, [FromQuery] string? sort, [FromQuery] string? kind)
     {
-        var k = kind is "revision" or "atf" ? kind : "standard";
+        var k = kind is "revision" or "atf" or "dtr" ? kind : "standard";
         await EnsureDefaultTemplate();
         var qy = db.QuoteTemplates.Where(t => t.Kind == k);
         if (!string.IsNullOrWhiteSpace(search)) qy = qy.Where(t => EF.Functions.ILike(t.Name, $"%{search.Trim()}%"));
@@ -257,11 +277,11 @@ public class QuoteController(AppDbContext db, PdfService pdf, IEmailSender email
     {
         if (string.IsNullOrWhiteSpace(dto.Name)) throw new ApiException(422, "Şablon adı zorunludur.");
         var now = DateTime.UtcNow;
-        var kind = dto.Kind is "revision" or "atf" ? dto.Kind : "standard";
+        var kind = dto.Kind is "revision" or "atf" or "dtr" ? dto.Kind : "standard";
         var t = new QuoteTemplate
         {
             TenantId = db.CurrentTenantId!.Value, Name = dto.Name.Trim(), Kind = kind,
-            Type = dto.Type ?? (kind == "revision" ? "Revizyon Teklifi" : kind == "atf" ? "Asansör Talep Formu" : "Teklif"),
+            Type = dto.Type ?? (kind == "revision" ? "Revizyon Teklifi" : kind == "atf" ? "Asansör Talep Formu" : kind == "dtr" ? "Durum Tespit Raporu" : "Teklif"),
             IsDefault = dto.IsDefault ?? false, IsActive = dto.IsActive ?? true,
             Clauses = dto.Clauses?.GetRawText() ?? "[]", Variables = dto.Variables?.GetRawText() ?? "[]",
             CreatedAt = now, UpdatedAt = now,
@@ -339,6 +359,7 @@ public class QuoteController(AppDbContext db, PdfService pdf, IEmailSender email
         ["malzeme"] = q.MaterialTotal is { } m ? $"{m:N2} {q.Currency}" : "-",
         ["teslim_gun"] = q.DeliveryDays?.ToString() ?? "-",
         ["garanti_yil"] = q.WarrantyYears?.ToString() ?? "-",
+        ["muayene_eden"] = q.InspectorName ?? "-",
     };
 
     private static List<(string Title, string Body)> RenderClauses(Quote q, Tenant? tenant)
@@ -385,11 +406,15 @@ public class QuoteController(AppDbContext db, PdfService pdf, IEmailSender email
             q.CompanySignature, q.CustomerSignature,
             q.ElevatorType, q.ElevatorCount, q.CapacityKg, q.CapacityPersons, q.FloorCount, q.StopCount,
             q.SpeedMs, q.DoorType, q.ControlSystem, q.UnitPrice, q.WarrantyYears, q.DeliveryDays, q.PaymentTerms,
+            q.InspectorName,
+            Defects = ParseStrings(q.Defects), Actions = ParseStrings(q.Actions),
             Customer = q.Customer == null ? null : new { q.Customer.Name, q.Customer.Phone, q.Customer.Email },
             Elevator = q.Elevator == null ? null : new
             {
-                q.Elevator.Name, q.Elevator.Code,
+                q.Elevator.Name, q.Elevator.Code, q.Elevator.Brand, q.Elevator.Model, q.Elevator.SerialNumber,
+                q.Elevator.CapacityKg, q.Elevator.CapacityPersons, q.Elevator.SpeedMs, q.Elevator.StopCount,
                 Building = q.Elevator.Building == null ? null : new { q.Elevator.Building.Name, q.Elevator.Building.Address,
+                    q.Elevator.Building.ManagerName, q.Elevator.Building.ManagerPhone, q.Elevator.Building.ManagerEmail,
                     CustomerName = q.Elevator.Building.Customer == null ? null : q.Elevator.Building.Customer.Name },
             },
             Company = new { tenant?.Name, tenant?.Phone, tenant?.Email, tenant?.Address, tenant?.TaxNumber },
@@ -413,6 +438,12 @@ public class QuoteController(AppDbContext db, PdfService pdf, IEmailSender email
         }
         catch { /* boş */ }
         return items;
+    }
+
+    private static List<string> ParseStrings(string? json)
+    {
+        try { return JsonSerializer.Deserialize<List<string>>(json ?? "[]", J) ?? []; }
+        catch { return []; }
     }
 
     private record ClauseEl(string title, string body, bool? active);
@@ -463,6 +494,16 @@ public class QuoteController(AppDbContext db, PdfService pdf, IEmailSender email
             });
             changed = true;
         }
+        if (!await db.QuoteTemplates.AnyAsync(t => t.Kind == "dtr"))
+        {
+            db.QuoteTemplates.Add(new QuoteTemplate
+            {
+                TenantId = tid, Name = "Standart Durum Tespit Raporu", Kind = "dtr", Type = "Durum Tespit Raporu",
+                IsDefault = true, IsActive = true, CreatedAt = now, UpdatedAt = now,
+                Clauses = JsonSerializer.Serialize(DtrClauses, J), Variables = "[]",
+            });
+            changed = true;
+        }
         if (changed) await db.SaveChangesAsync();
     }
 
@@ -497,6 +538,14 @@ public class QuoteController(AppDbContext db, PdfService pdf, IEmailSender email
         new { title = "5. Geçerlilik Süresi", active = true, body = "Bu teklif {{belge_tarihi}} tarihinde düzenlenmiş olup {{gecerlilik}} tarihine kadar geçerlidir." },
         new { title = "6. Standart ve Mevzuat Uygunluğu", active = true, body = "Temin ve montaj TS EN 81-20/50 ve Asansör Yönetmeliği (2014/33/AB) ile ilgili mevzuata uygun olarak gerçekleştirilir." },
         new { title = "Ek Şartlar", active = false, body = "" },
+    ];
+
+    private static readonly object[] DtrClauses =
+    [
+        new { title = "Raporun Amacı ve Kapsamı", active = true, body = "İşbu durum tespit raporu, {{asansor_no}} asansörünün mevcut durumunun tespiti amacıyla {{muayene_eden}} tarafından {{belge_tarihi}} tarihinde düzenlenmiştir. Tespit edilen bulgular ve yapılması gereken işler aşağıda belirtilmiştir." },
+        new { title = "Standart ve Mevzuat Dayanağı", active = true, body = "Değerlendirme TS EN 81-20/50 ve Asansör İşletme, Bakım ve Periyodik Kontrol Yönetmeliği esas alınarak yapılmıştır." },
+        new { title = "Sorumluluk ve Yükümlülükler", active = true, body = "Belirtilen eksikliklerin giderilmesi bina yönetiminin sorumluluğundadır. Eksiklikler giderilene kadar oluşabilecek risklerden bina yönetimi sorumludur." },
+        new { title = "Beyan", active = true, body = "Rapor içeriği yetkili servis ve bina sorumlusu tarafından incelenip imza altına alınmıştır." },
     ];
 }
 
@@ -587,6 +636,7 @@ public class PublicQuoteController(AppDbContext db) : ControllerBase
         ["malzeme"] = q.MaterialTotal is { } m ? $"{m:N2} {q.Currency}" : "-",
         ["teslim_gun"] = q.DeliveryDays?.ToString() ?? "-",
         ["garanti_yil"] = q.WarrantyYears?.ToString() ?? "-",
+        ["muayene_eden"] = q.InspectorName ?? "-",
     };
     private record ClauseEl(string title, string body, bool? active);
     private static IEnumerable<ClauseEl> ParseClauses(string json)
